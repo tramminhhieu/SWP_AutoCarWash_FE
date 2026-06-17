@@ -1,7 +1,8 @@
 import "./App.css";
+import QueuePage from "./pages/queue/QueuePage";
 
 function App() {
-  return null;
+  return <QueuePage />;
 }
 
 export default App;

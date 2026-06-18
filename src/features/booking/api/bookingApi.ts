@@ -1,6 +1,6 @@
 import axiosClient from "../../../lib/axiosClient";
 import { API } from "../../../constants/apiEndpoints";
-import type { ApiResponse } from "../../../types/apiResponse";
+import type { ApiSuccessResponse } from "../../../types/apiResponse";
 import type { BookingCard } from "../types/booking";
 
 /**
@@ -11,7 +11,7 @@ import type { BookingCard } from "../types/booking";
  *   backend's `ApiResponse` envelope.
  */
 export async function getUpcomingBookings(customerId: number): Promise<BookingCard[]> {
-  const response = await axiosClient.get<ApiResponse<BookingCard[]>>(API.BOOKINGS.UPCOMING, {
+  const response = await axiosClient.get<ApiSuccessResponse<BookingCard[]>>(API.BOOKINGS.UPCOMING, {
     params: { customerId },
   });
   return response.data.data;
@@ -25,7 +25,7 @@ export async function getUpcomingBookings(customerId: number): Promise<BookingCa
  *   backend's `ApiResponse` envelope.
  */
 export async function getPastBookings(customerId: number): Promise<BookingCard[]> {
-  const response = await axiosClient.get<ApiResponse<BookingCard[]>>(API.BOOKINGS.PAST, {
+  const response = await axiosClient.get<ApiSuccessResponse<BookingCard[]>>(API.BOOKINGS.PAST, {
     params: { customerId },
   });
   return response.data.data;

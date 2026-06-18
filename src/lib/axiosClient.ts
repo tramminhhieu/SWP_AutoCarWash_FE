@@ -1,17 +1,33 @@
 import axios from "axios";
+import { getToken, clearTokens } from "../utils/storage";
 
-/**
- * Shared axios instance for all calls to the AutoCarWash backend.
- *
- * Base URL points at the Spring Boot API (`SWP_AutoCarWash_BE`, default port 8080).
- * The backend does not require an `Authorization` header yet (its auth module is
- * still a placeholder), so no request interceptor is added here.
- */
+// 1 instance axios dùng chung toàn app
 const axiosClient = axios.create({
-  baseURL: "http://localhost:8080/api",
+  baseURL: import.meta.env.VITE_API_BASE_URL || "http://localhost:8080",
   headers: {
     "Content-Type": "application/json",
   },
 });
+
+// Tự gắn Authorization header nếu có token
+axiosClient.interceptors.request.use((config) => {
+  const token = getToken();
+  if (token) {
+    config.headers.Authorization = `Bearer ${token}`;
+  }
+  return config;
+});
+
+// Tự xử lý khi 401 (hết hạn token) — ở đây để stub, phần refresh token
+// sẽ implement chi tiết hơn khi làm module Auth
+axiosClient.interceptors.response.use(
+  (response) => response,
+  (error) => {
+    if (error.response?.status === 401) {
+      clearTokens();
+    }
+    return Promise.reject(error);
+  },
+);
 
 export default axiosClient;

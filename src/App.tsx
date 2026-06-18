@@ -1,8 +1,13 @@
 import "./App.css";
-import BookingHistory from "./features/booking/pages/BookingHistory";
+import { AuthProvider } from "./context/AuthContext";
+import AppRouter from "./routes/AppRouter";
 
 function App() {
-  return <BookingHistory />;
+  return (
+    <AuthProvider>
+      <AppRouter />
+    </AuthProvider>
+  );
 }
 
 export default App;

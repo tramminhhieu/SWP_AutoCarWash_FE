@@ -8,9 +8,9 @@ interface StationCardProps {
 
 // Hiển thị 1 chi nhánh (station). Dùng trong StationList và trong
 // AddressSelector (bước chọn station ở flow booking).
-// isOperating = false => mờ cả card, không click được, badge đổi thành CLOSED.
+// operating = false => mờ cả card, không click được, badge đổi thành CLOSED.
 const StationCard = ({ station, isSelected, onSelect }: StationCardProps) => {
-  const isCardDisabled = !station.isOperating;
+  const isCardDisabled = !station.operating;
 
   return (
     <button
@@ -33,12 +33,12 @@ const StationCard = ({ station, isSelected, onSelect }: StationCardProps) => {
         <span
           className={`shrink-0 rounded-full px-2.5 py-1 text-label-md font-bold
             ${
-              station.isOperating
+              station.operating
                 ? "bg-tertiary-fixed/20 text-tertiary-fixed-dim"
                 : "bg-surface-container-high text-on-surface-variant"
             }`}
         >
-          {station.isOperating ? "OPEN" : "CLOSED"}
+          {station.operating ? "OPEN" : "CLOSED"}
         </span>
       </div>
 

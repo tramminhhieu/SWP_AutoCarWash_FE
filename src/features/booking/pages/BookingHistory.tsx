@@ -12,8 +12,6 @@ import { getPastBookings, getUpcomingBookings } from "../api/bookingApi";
 import type { BookingCard } from "../types/booking";
 import { STATUS_STYLES } from "../constants/statusStyles";
 import { formatAppointmentDate, formatTimeRange } from "../utils/bookingFormatters";
-import { BookingPageHeader } from "../components/BookingPageHeader";
-import { BookingPageFooter } from "../components/BookingPageFooter";
 
 /**
  * Temporary hard-coded customer id used to query the backend.
@@ -143,79 +141,73 @@ export default function BookingHistory() {
   }
 
   return (
-    <div className="min-h-screen bg-white">
-      <BookingPageHeader />
+    <div className="mx-auto flex max-w-[1440px] flex-col gap-8 px-12 py-8">
+      <div className="flex items-end justify-between">
+        <div className="flex flex-col gap-2">
+          <div className="flex items-center gap-1">
+            <span className="text-xs font-semibold text-outline">Profile</span>
+            <ChevronRight className="size-3 text-outline" />
+            <span className="text-xs font-semibold text-on-surface-variant">My Booking</span>
+          </div>
+          <h1 className="font-heading text-headline-xl font-bold tracking-[-1.2px] text-on-surface">
+            Service History &amp; Bookings
+          </h1>
+        </div>
+        <button className="flex items-center gap-2 rounded-[8px] border border-outline-variant/30 bg-surface-container-high px-[25px] py-[17px]">
+          <CalendarPlus className="size-5 text-on-surface" />
+          <span className="text-sm font-bold tracking-[0.14px] text-on-surface">
+            Book New Service
+          </span>
+        </button>
+      </div>
 
-      <main className="mx-auto flex max-w-[1440px] flex-col gap-8 px-12 py-8">
-        <div className="flex items-end justify-between">
-          <div className="flex flex-col gap-2">
-            <div className="flex items-center gap-1">
-              <span className="text-xs font-semibold text-outline">Profile</span>
-              <ChevronRight className="size-3 text-outline" />
-              <span className="text-xs font-semibold text-on-surface-variant">My Booking</span>
+      <div className="flex gap-8 border-b border-outline-variant/30">
+        <button
+          onClick={() => handleTabChange("upcoming")}
+          className={`pb-[26px] text-sm tracking-[0.14px] ${
+            activeTab === "upcoming"
+              ? "border-b-2 border-primary font-semibold text-primary"
+              : "font-medium text-on-surface-variant"
+          }`}
+        >
+          Upcoming Appointments
+        </button>
+        <button
+          onClick={() => handleTabChange("past")}
+          className={`pb-[26px] text-sm tracking-[0.14px] ${
+            activeTab === "past"
+              ? "border-b-2 border-primary font-semibold text-primary"
+              : "font-medium text-on-surface-variant"
+          }`}
+        >
+          Past Services
+        </button>
+      </div>
+
+      {error ? (
+        <div className="flex h-48 items-center justify-center text-base text-error">{error}</div>
+      ) : isLoading ? (
+        <div className="flex h-48 items-center justify-center text-base text-outline">
+          Đang tải...
+        </div>
+      ) : bookings.length === 0 ? (
+        <div className="flex h-48 items-center justify-center text-base text-outline">
+          {activeTab === "upcoming" ? "Không có lịch hẹn sắp tới." : "Chưa có lịch sử dịch vụ nào."}
+        </div>
+      ) : (
+        <div className="flex flex-col gap-6">
+          {bookings.map((booking) => (
+            <BookingCardItem key={booking.bookingId} booking={booking} />
+          ))}
+
+          {activeTab === "upcoming" && (
+            <div className="flex h-48 flex-col items-center justify-center gap-3 rounded-[8px] border border-dashed border-outline-variant bg-surface-container-low">
+              <CirclePlus className="size-10 text-outline" />
+              <span className="text-base text-outline">Schedule another maintenance session</span>
             </div>
-            <h1 className="font-heading text-headline-xl font-bold tracking-[-1.2px] text-on-surface">
-              Service History &amp; Bookings
-            </h1>
-          </div>
-          <button className="flex items-center gap-2 rounded-[8px] border border-outline-variant/30 bg-surface-container-high px-[25px] py-[17px]">
-            <CalendarPlus className="size-5 text-on-surface" />
-            <span className="text-sm font-bold tracking-[0.14px] text-on-surface">
-              Book New Service
-            </span>
-          </button>
+          )}
         </div>
-
-        <div className="flex gap-8 border-b border-outline-variant/30">
-          <button
-            onClick={() => handleTabChange("upcoming")}
-            className={`pb-[26px] text-sm tracking-[0.14px] ${
-              activeTab === "upcoming"
-                ? "border-b-2 border-primary font-semibold text-primary"
-                : "font-medium text-on-surface-variant"
-            }`}
-          >
-            Upcoming Appointments
-          </button>
-          <button
-            onClick={() => handleTabChange("past")}
-            className={`pb-[26px] text-sm tracking-[0.14px] ${
-              activeTab === "past"
-                ? "border-b-2 border-primary font-semibold text-primary"
-                : "font-medium text-on-surface-variant"
-            }`}
-          >
-            Past Services
-          </button>
-        </div>
-
-        {error ? (
-          <div className="flex h-48 items-center justify-center text-base text-error">{error}</div>
-        ) : isLoading ? (
-          <div className="flex h-48 items-center justify-center text-base text-outline">
-            Đang tải...
-          </div>
-        ) : bookings.length === 0 ? (
-          <div className="flex h-48 items-center justify-center text-base text-outline">
-            {activeTab === "upcoming" ? "Không có lịch hẹn sắp tới." : "Chưa có lịch sử dịch vụ nào."}
-          </div>
-        ) : (
-          <div className="flex flex-col gap-6">
-            {bookings.map((booking) => (
-              <BookingCardItem key={booking.bookingId} booking={booking} />
-            ))}
-
-            {activeTab === "upcoming" && (
-              <div className="flex h-48 flex-col items-center justify-center gap-3 rounded-[8px] border border-dashed border-outline-variant bg-surface-container-low">
-                <CirclePlus className="size-10 text-outline" />
-                <span className="text-base text-outline">Schedule another maintenance session</span>
-              </div>
-            )}
-          </div>
-        )}
-      </main>
-
-      <BookingPageFooter />
+      )}
     </div>
   );
 }

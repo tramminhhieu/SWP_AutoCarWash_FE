@@ -19,10 +19,9 @@ export default function AppRouter() {
         <Route path="/booking/location" element={<SelectStation />} />
         {/* Bước 2: chọn dịch vụ/slot/addon/submit (đang là placeholder, làm chi tiết ở task khác) */}
         <Route path="/booking/details" element={<BookingCreate />} />
+        <Route path="/booking/history" element={<BookingHistory />} />
+        <Route path="/booking/history/:bookingId" element={<BookingDetail />} />
       </Route>
-      {/* BookingHistory và BookingDetail đã có header/footer riêng nên để route đứng ngoài CustomerLayout, tránh lặp header */}
-      <Route path="/booking/history" element={<BookingHistory />} />
-      <Route path="/booking/history/:bookingId" element={<BookingDetail />} />
     </Routes>
   );
 }

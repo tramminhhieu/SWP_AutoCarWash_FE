@@ -1,5 +1,6 @@
 import { Outlet } from "react-router-dom";
 import CustomerHeader from "./CustomerHeader";
+import CustomerFooter from "./CustomerFooter";
 import { useAuth } from "../hooks/useAuth";
 
 /**
@@ -29,7 +30,7 @@ export default function CustomerLayout() {
         <Outlet />
       </main>
 
-      {/* TODO: thêm CustomerFooter ở đây khi sẵn sàng */}
+      <CustomerFooter />
     </div>
   );
 }

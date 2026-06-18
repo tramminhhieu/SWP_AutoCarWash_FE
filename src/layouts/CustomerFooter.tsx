@@ -5,12 +5,13 @@ const FOOTER_LINKS = {
   Company: ["Privacy Policy", "Terms of Service"],
 };
 
-export function BookingPageFooter() {
+/** Footer chung cho toàn bộ trang khách hàng, render trong CustomerLayout. */
+export default function CustomerFooter() {
   return (
     <footer className="border-t border-outline-variant/30 bg-white pt-px">
       <div className="mx-auto flex max-w-[1440px] items-start justify-between px-12 py-8">
         <div className="flex max-w-[320px] flex-col gap-4">
-          <span className="font-heading text-xl font-bold text-on-surface">GLOSS &amp; GEAR</span>
+          <span className="font-heading text-xl font-bold text-on-surface">HydroLux</span>
           <p className="text-sm text-on-surface-variant">
             Hydro-Industrial grade automotive detailing and protection for the discerning
             enthusiast.

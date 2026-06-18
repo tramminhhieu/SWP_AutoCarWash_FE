@@ -202,7 +202,7 @@ function BookingHistoryHeader() {
     <header className="border-b border-outline-variant/30 bg-white">
       <div className="mx-auto flex max-w-[1440px] items-center justify-between px-12 py-4">
         <span className="font-heading text-2xl font-bold tracking-[-0.6px] text-on-surface">
-          GLOSS &amp; GEAR
+          HydroLux
         </span>
         <nav className="flex items-center gap-6">
           {["Service", "How It Works", "Family", "Review"].map((link) => (
@@ -255,7 +255,7 @@ function BookingHistoryFooter() {
       </div>
       <div className="mx-auto flex max-w-[1440px] items-center justify-between border-t border-outline-variant/10 px-12 py-6">
         <span className="text-xs font-semibold text-on-surface-variant">
-          © 2024 GLOSS &amp; GEAR Automotive. All rights reserved.
+          © 2024 HydroLux Automotive. All rights reserved.
         </span>
         <div className="flex items-center gap-6">
           <Globe className="size-5 text-on-surface-variant" />

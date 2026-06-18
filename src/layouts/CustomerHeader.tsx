@@ -1,6 +1,12 @@
 import { useState, useRef, useEffect } from "react";
 import { Link } from "react-router-dom";
-import { ChevronDown, User as UserIcon, LogOut, Settings } from "lucide-react";
+import {
+  ChevronDown,
+  User as UserIcon,
+  LogOut,
+  Settings,
+  Calendar,
+} from "lucide-react";
 import NotificationBell from "../features/crm/components/NotificationBell";
 
 /**
@@ -138,6 +144,18 @@ export default function CustomerHeader({
                         strokeWidth={1.75}
                       />
                       My Profile
+                    </Link>
+                    <Link
+                      to="/booking/history"
+                      role="menuitem"
+                      className="flex items-center gap-2 px-4 py-2 font-body text-sm text-on-surface hover:bg-surface-container-low"
+                      onClick={() => setIsProfileOpen(false)}
+                    >
+                      <Calendar
+                        className="h-4 w-4 text-outline"
+                        strokeWidth={1.75}
+                      />
+                      My Booking
                     </Link>
                     <button
                       type="button"

@@ -15,26 +15,31 @@ export default function BookingDetail() {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
-    let isMounted = true;
-    setIsLoading(true);
-    setError(null);
+    useEffect(() => {
+        let isMounted = true;
 
-    getBookingDetail(Number(bookingId))
-      .then((data) => {
-        if (isMounted) setBooking(data);
-      })
-      .catch(() => {
-        if (isMounted) setError("Không thể tải thông tin booking. Vui lòng thử lại sau.");
-      })
-      .finally(() => {
-        if (isMounted) setIsLoading(false);
-      });
+        const fetchData = () => {
+            setIsLoading(true);
+            setError(null);
 
-    return () => {
-      isMounted = false;
-    };
-  }, [bookingId]);
+            getBookingDetail(Number(bookingId))
+                .then((data) => {
+                    if (isMounted) setBooking(data);
+                })
+                .catch(() => {
+                    if (isMounted) setError("Không thể tải thông tin booking. Vui lòng thử lại sau.");
+                })
+                .finally(() => {
+                    if (isMounted) setIsLoading(false);
+                });
+        };
+
+        fetchData();
+
+        return () => {
+            isMounted = false;
+        };
+    }, [bookingId]);
 
   const statusStyle = booking ? STATUS_STYLES[booking.status] : null;
 

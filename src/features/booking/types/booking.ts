@@ -47,3 +47,46 @@ export interface BookingCard {
   /** Actions the customer may currently perform on this booking. */
   allowedActions: BookingAction[];
 }
+
+/** An addon service applied to a booking, as returned in `BookingDetail.addons`. */
+export interface BookingAddon {
+  /** Name of the addon service, e.g. "Vacuum". */
+  addonName: string;
+  /** Price actually applied for this addon in this booking. */
+  addonPrice: number;
+}
+
+/**
+ * Mirrors the backend's `BookingDetailResponse` DTO
+ * (`com.swp.autocarwash.booking.dto.response.BookingDetailResponse`), as
+ * returned by `GET /api/bookings/{bookingId}`.
+ */
+export interface BookingDetail {
+  bookingId: number;
+  status: BookingStatus;
+  serviceName: string;
+  addons: BookingAddon[];
+  licensePlate: string;
+  brandName: string;
+  color: string;
+  /** Name of the station/branch where the service takes place. */
+  stationName: string | null;
+  stationAddress: string | null;
+  /** Appointment date, formatted `yyyy-MM-dd`. */
+  appointmentDate: string;
+  /** Start of the booked time slot, formatted `HH:mm:ss`. */
+  startTime: string | null;
+  /** End of the booked time slot, formatted `HH:mm:ss`. */
+  endTime: string | null;
+  /** Full name of the technician who checked the customer in, if any. */
+  technicianName: string | null;
+  servicePrice: number;
+  addonTotal: number;
+  voucherCode: string | null;
+  voucherDiscountPercent: number | null;
+  voucherDiscountAmount: number;
+  totalAmount: number;
+  isDepositPaid: boolean;
+  depositAmount: number | null;
+  remainingAmount: number;
+}

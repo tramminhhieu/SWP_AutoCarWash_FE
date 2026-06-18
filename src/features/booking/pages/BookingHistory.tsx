@@ -1,18 +1,19 @@
 import { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import {
-  Bell,
   Calendar,
   CalendarPlus,
   Car,
   ChevronRight,
-  CircleUserRound,
   CirclePlus,
-  Globe,
-  Share2,
   Star,
 } from "lucide-react";
 import { getPastBookings, getUpcomingBookings } from "../api/bookingApi";
-import type { BookingCard, BookingStatus } from "../types/booking";
+import type { BookingCard } from "../types/booking";
+import { STATUS_STYLES } from "../constants/statusStyles";
+import { formatAppointmentDate, formatTimeRange } from "../utils/bookingFormatters";
+import { BookingPageHeader } from "../components/BookingPageHeader";
+import { BookingPageFooter } from "../components/BookingPageFooter";
 
 /**
  * Temporary hard-coded customer id used to query the backend.
@@ -23,101 +24,9 @@ import type { BookingCard, BookingStatus } from "../types/booking";
  */
 const CUSTOMER_ID = 1;
 
-const FOOTER_LINKS = {
-  Support: ["FAQ", "Contact Us"],
-  Company: ["Privacy Policy", "Terms of Service"],
-};
-
-/** Visual style for a given {@link BookingStatus}, used by the status pill. */
-interface StatusStyle {
-  /** Text shown inside the pill. */
-  label: string;
-  /** Tailwind classes for the small status dot. */
-  dotClassName: string;
-  /** Tailwind classes for the label text. */
-  textClassName: string;
-  /** Tailwind classes for the pill background. */
-  bgClassName: string;
-  /** Tailwind classes for the pill border. */
-  borderClassName: string;
-}
-
-/** Maps every {@link BookingStatus} to the pill style it should render with. */
-const STATUS_STYLES: Record<BookingStatus, StatusStyle> = {
-  CONFIRMED: {
-    label: "CONFIRMED",
-    dotClassName: "bg-[#22c55e]",
-    textClassName: "text-[#22c55e]",
-    bgClassName: "bg-tertiary-fixed/20",
-    borderClassName: "border-tertiary/10",
-  },
-  PAID: {
-    label: "COMPLETED",
-    dotClassName: "bg-[#22c55e]",
-    textClassName: "text-[#22c55e]",
-    bgClassName: "bg-tertiary-fixed/20",
-    borderClassName: "border-tertiary/10",
-  },
-  CHECKED_IN: {
-    label: "CHECKED IN",
-    dotClassName: "bg-primary",
-    textClassName: "text-primary",
-    bgClassName: "bg-primary/10",
-    borderClassName: "border-primary/10",
-  },
-  WASHING: {
-    label: "IN PROGRESS",
-    dotClassName: "bg-primary",
-    textClassName: "text-primary",
-    bgClassName: "bg-primary/10",
-    borderClassName: "border-primary/10",
-  },
-  CANCELLED: {
-    label: "CANCELLED",
-    dotClassName: "bg-error",
-    textClassName: "text-error",
-    bgClassName: "bg-error-container",
-    borderClassName: "border-error/10",
-  },
-  NO_SHOW: {
-    label: "NO SHOW",
-    dotClassName: "bg-error",
-    textClassName: "text-error",
-    bgClassName: "bg-error-container",
-    borderClassName: "border-error/10",
-  },
-};
-
-/**
- * Formats a backend `yyyy-MM-dd` date string into the long display form
- * used on the card, e.g. `"2023-10-18"` -> `"October 18, 2023"`.
- */
-function formatAppointmentDate(isoDate: string): string {
-  const date = new Date(`${isoDate}T00:00:00`);
-  return date.toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric" });
-}
-
-/**
- * Formats a backend `HH:mm:ss` time string into a 12-hour clock time,
- * e.g. `"09:30:00"` -> `"09:30 AM"`.
- */
-function formatTime(time: string): string {
-  const [hours, minutes] = time.split(":");
-  const date = new Date();
-  date.setHours(Number(hours), Number(minutes), 0, 0);
-  return date.toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit" });
-}
-
-/**
- * Formats a backend start/end time pair into the display range used on the
- * card, e.g. `"09:30:00"`/`"09:45:00"` -> `"09:30 AM - 09:45 AM"`.
- */
-function formatTimeRange(startTime: string, endTime: string): string {
-  return `${formatTime(startTime)} - ${formatTime(endTime)}`;
-}
-
 /** Renders a single booking as a card, matching the Figma "Active Booking Card" layout. */
 function BookingCardItem({ booking }: { booking: BookingCard }) {
+  const navigate = useNavigate();
   const statusStyle = STATUS_STYLES[booking.status];
 
   return (
@@ -185,7 +94,10 @@ function BookingCardItem({ booking }: { booking: BookingCard }) {
               </button>
             )}
             {booking.allowedActions.includes("VIEW_DETAILS") && (
-              <button className="flex items-center gap-2 text-sm font-bold tracking-[0.14px] text-primary">
+              <button
+                onClick={() => navigate(`/booking/history/${booking.bookingId}`)}
+                className="flex items-center gap-2 text-sm font-bold tracking-[0.14px] text-primary"
+              >
                 VIEW DETAILS
                 <ChevronRight className="size-3" />
               </button>
@@ -194,75 +106,6 @@ function BookingCardItem({ booking }: { booking: BookingCard }) {
         </div>
       )}
     </div>
-  );
-}
-
-function BookingHistoryHeader() {
-  return (
-    <header className="border-b border-outline-variant/30 bg-white">
-      <div className="mx-auto flex max-w-[1440px] items-center justify-between px-12 py-4">
-        <span className="font-heading text-2xl font-bold tracking-[-0.6px] text-on-surface">
-          HydroLux
-        </span>
-        <nav className="flex items-center gap-6">
-          {["Service", "How It Works", "Family", "Review"].map((link) => (
-            <a
-              key={link}
-              href="#"
-              className="text-sm font-medium tracking-[0.14px] text-on-surface-variant hover:text-on-surface"
-            >
-              {link}
-            </a>
-          ))}
-        </nav>
-        <div className="flex items-center gap-4">
-          <button aria-label="Notifications" className="text-on-surface-variant hover:text-on-surface">
-            <Bell className="size-5" />
-          </button>
-          <button aria-label="Profile" className="text-on-surface-variant hover:text-on-surface">
-            <CircleUserRound className="size-6" />
-          </button>
-
-        </div>
-      </div>
-    </header>
-  );
-}
-
-function BookingHistoryFooter() {
-  return (
-    <footer className="border-t border-outline-variant/30 bg-white pt-px">
-      <div className="mx-auto flex max-w-[1440px] items-start justify-between px-12 py-8">
-        <div className="flex max-w-[320px] flex-col gap-4">
-          <span className="font-heading text-xl font-bold text-on-surface">GLOSS &amp; GEAR</span>
-          <p className="text-sm text-on-surface-variant">
-            Hydro-Industrial grade automotive detailing and protection for the discerning
-            enthusiast.
-          </p>
-        </div>
-        <div className="grid grid-cols-2 gap-8">
-          {Object.entries(FOOTER_LINKS).map(([heading, links]) => (
-            <div key={heading} className="flex flex-col gap-2">
-              <h5 className="text-sm font-bold tracking-[0.14px] text-on-surface">{heading}</h5>
-              {links.map((link) => (
-                <a key={link} href="#" className="text-xs font-semibold text-on-surface-variant">
-                  {link}
-                </a>
-              ))}
-            </div>
-          ))}
-        </div>
-      </div>
-      <div className="mx-auto flex max-w-[1440px] items-center justify-between border-t border-outline-variant/10 px-12 py-6">
-        <span className="text-xs font-semibold text-on-surface-variant">
-          © 2024 HydroLux Automotive. All rights reserved.
-        </span>
-        <div className="flex items-center gap-6">
-          <Globe className="size-5 text-on-surface-variant" />
-          <Share2 className="size-[18px] text-on-surface-variant" />
-        </div>
-      </div>
-    </footer>
   );
 }
 
@@ -301,7 +144,7 @@ export default function BookingHistory() {
 
   return (
     <div className="min-h-screen bg-white">
-      <BookingHistoryHeader />
+      <BookingPageHeader />
 
       <main className="mx-auto flex max-w-[1440px] flex-col gap-8 px-12 py-8">
         <div className="flex items-end justify-between">
@@ -372,7 +215,7 @@ export default function BookingHistory() {
         )}
       </main>
 
-      <BookingHistoryFooter />
+      <BookingPageFooter />
     </div>
   );
 }

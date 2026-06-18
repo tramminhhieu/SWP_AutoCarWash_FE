@@ -6,6 +6,7 @@ import Register from "../features/auth/pages/Register";
 import SelectStation from "../features/booking/pages/SelectStation";
 import BookingCreate from "../features/booking/pages/BookingCreate";
 import BookingHistory from "../features/booking/pages/BookingHistory";
+import BookingDetail from "../features/booking/pages/BookingDetail";
 
 export default function AppRouter() {
   return (
@@ -19,8 +20,9 @@ export default function AppRouter() {
         {/* Bước 2: chọn dịch vụ/slot/addon/submit (đang là placeholder, làm chi tiết ở task khác) */}
         <Route path="/booking/details" element={<BookingCreate />} />
       </Route>
-      {/* BookingHistory đã có header/footer riêng nên để route đứng ngoài CustomerLayout, tránh lặp header */}
+      {/* BookingHistory và BookingDetail đã có header/footer riêng nên để route đứng ngoài CustomerLayout, tránh lặp header */}
       <Route path="/booking/history" element={<BookingHistory />} />
+      <Route path="/booking/history/:bookingId" element={<BookingDetail />} />
     </Routes>
   );
 }

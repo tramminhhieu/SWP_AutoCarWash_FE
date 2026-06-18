@@ -8,5 +8,7 @@ export const API = {
     UPCOMING: "/bookings/upcoming",
     /** `GET` — list of a customer's past bookings (PAID/CANCELLED/NO_SHOW). */
     PAST: "/bookings/past",
+    /** `GET` — full detail of a single booking. */
+    DETAIL: (bookingId: number | string) => `/bookings/${bookingId}`,
   },
 };

@@ -1,16 +1,11 @@
 import { useContext } from "react";
-import { AuthContext } from "../context/AuthContext";
+import { AuthContext } from "../context/AuthContextObject";
 
-/**
- * Hook lấy AuthContext ra dùng ở bất kỳ component nào.
- * Throw lỗi rõ ràng nếu dùng ngoài AuthProvider, giúp dễ debug.
- */
-export function useAuth() {
+// Hook lấy AuthContext ra dùng ở bất kỳ component nào
+export const useAuth = () => {
   const context = useContext(AuthContext);
-
-  if (context === undefined) {
-    throw new Error("useAuth phải được dùng bên trong AuthProvider");
+  if (!context) {
+    throw new Error("useAuth phải được dùng trong AuthProvider");
   }
-
   return context;
-}
+};

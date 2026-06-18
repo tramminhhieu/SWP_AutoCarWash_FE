@@ -1,9 +1,12 @@
+import { useEffect, useState } from "react";
 import {
   Infinity as InfinityIcon,
   CheckCircle2,
   PiggyBank,
+  X,
 } from "lucide-react";
-import { Link } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
+import { useAuth } from "../../../hooks/useAuth";
 
 // === ẢNH các section khác: tự import file ảnh thật vào đây khi có ===
 import heroImg from "../../../assets/hero.jpg";
@@ -27,8 +30,67 @@ import unlimitedSubscriptionImg from "../../../assets/unlimitedSubscription.jpg"
  * đọc của chữ. Không còn khung ảnh bo góc bên cạnh text như layout ban đầu.
  */
 const Home = () => {
+  const location = useLocation();
+  const navigate = useNavigate();
+  const { isAuthenticated } = useAuth();
+
+  // Bấm "Booking Now" -> nếu chưa đăng nhập thì chuyển sang /login luôn (kèm "from"
+  // để Login biết quay lại đúng trang đặt lịch sau khi đăng nhập thành công),
+  // tránh việc cho qua /booking/location rồi mới bị PrivateRoute đá ngược lại
+  const handleBookingNowClick = () => {
+    if (isAuthenticated) {
+      navigate("/booking/location");
+    } else {
+      navigate("/login", { state: { from: "/booking/location" } });
+    }
+  };
+
+  // Đọc message thành công ngay lúc render lần đầu bằng lazy initializer của useState -
+  // KHÔNG setState trong effect để tránh lỗi "set-state-in-effect" (cascading render)
+  const [toastMessage, setToastMessage] = useState<string | null>(() => {
+    const state = location.state as {
+      loginSuccessMessage?: string;
+      bookingSuccessMessage?: string;
+    } | null;
+    return state?.bookingSuccessMessage ?? state?.loginSuccessMessage ?? null;
+  });
+
+  // Effect này chỉ tương tác với router (external system) để dọn state khỏi history,
+  // không gọi setState nên không vi phạm rule - chỉ chạy 1 lần lúc mount
+  useEffect(() => {
+    if (location.state) {
+      navigate(location.pathname, { replace: true, state: {} });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // Tự ẩn toast sau 4 giây
+  useEffect(() => {
+    if (!toastMessage) return;
+    const timer = setTimeout(() => setToastMessage(null), 4000);
+    return () => clearTimeout(timer);
+  }, [toastMessage]);
+
   return (
     <div className="w-full bg-surface">
+      {/* Toast thông báo thành công - cố định góc trên phải, dùng Lime Green
+          (tertiary) theo DESIGN.md vì đây là "Success state" */}
+      {toastMessage && (
+        <div className="fixed right-6 top-6 z-50 flex items-start gap-3 rounded-lg border-l-4 border-tertiary-fixed-dim bg-surface-container-lowest px-4 py-3 shadow-[0_10px_25px_-5px_rgba(29,78,216,0.15)]">
+          <CheckCircle2
+            size={20}
+            className="mt-0.5 shrink-0 text-tertiary-fixed-dim"
+          />
+          <p className="text-body-md text-on-surface">{toastMessage}</p>
+          <button
+            type="button"
+            onClick={() => setToastMessage(null)}
+            className="ml-2 shrink-0 text-on-surface-variant hover:text-on-surface"
+          >
+            <X size={16} />
+          </button>
+        </div>
+      )}
       {/* ========================================================== */}
       {/* SECTION 1: HERO - Precision Care for Every Drive            */}
       {/* Ảnh nền phủ toàn section, làm mờ bằng overlay trắng để giữ  */}
@@ -58,13 +120,14 @@ const Home = () => {
               and dependable detailing experience — so you can get back on the
               road with confidence.
             </p>
-            {/* Bấm vào sẽ chuyển sang trang chọn Location (bước 1 flow đặt lịch) */}
-            <Link
-              to="/booking/location"
+            {/* Bấm vào sẽ check đăng nhập trước khi chuyển sang trang chọn Location */}
+            <button
+              type="button"
+              onClick={handleBookingNowClick}
               className="mt-7 inline-block px-6 py-3 rounded-lg bg-primary text-on-primary font-body font-semibold text-sm"
             >
               Booking Now
-            </Link>
+            </button>
           </div>
         </div>
       </section>
@@ -120,11 +183,6 @@ const Home = () => {
               alt="Single session wash tunnel"
               className="w-full h-full object-cover"
             />
-            <img
-              src=""
-              alt="Single session wash tunnel"
-              className="w-full h-full object-cover bg-surface-container-high"
-            />
           </div>
         </div>
       </section>
@@ -140,11 +198,6 @@ const Home = () => {
               src={unlimitedSubscriptionImg}
               alt="Unlimited access neon wash tunnel"
               className="w-full h-full object-cover"
-            />
-            <img
-              src=""
-              alt="Unlimited access neon wash tunnel"
-              className="w-full h-full object-cover bg-inverse-surface"
             />
           </div>
 
@@ -241,11 +294,6 @@ const Home = () => {
           {/* Cột phải: ảnh tunnel hoàng hôn tím */}
           <div className="rounded-lg overflow-hidden w-full aspect-[4/3] shadow-soft">
             {/* TODO: thay bằng <img src={familyPlanImg} alt="Family plan sunset wash tunnel" className="w-full h-full object-cover" /> */}
-            <img
-              src=""
-              alt="Family plan sunset wash tunnel"
-              className="w-full h-full object-cover bg-surface-container-high"
-            />
           </div>
         </div>
       </section>

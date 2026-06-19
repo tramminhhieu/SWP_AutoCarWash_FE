@@ -17,7 +17,8 @@ export default function CustomerLayout() {
         user={
           user
             ? {
-                firstName: user.firstName,
+                // firstName: user.firstName,
+                email: user.email,
                 role: user.role,
               }
             : undefined

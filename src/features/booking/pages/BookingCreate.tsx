@@ -718,10 +718,6 @@ const BookingCreate = () => {
             >
               {isBookingSubmitting ? "Đang xử lý..." : "Confirm Booking →"}
             </button>
-
-            <p className="mt-4 text-center text-label-sm text-on-surface-variant">
-              Secure Checkout • 256-bit Encryption
-            </p>
           </aside>
         </div>
       </div>
@@ -837,6 +833,9 @@ const AddonOption = ({
     </span>
     <div className="flex-1">
       <p className="text-body-lg font-semibold text-on-surface">{addon.name}</p>
+      <p className="text-body-md text-on-surface-variant">
+        +{addon.durationMinutes} min
+      </p>
       <p className="text-body-md font-medium text-primary">
         +{formatCurrency(addon.price)}
       </p>
@@ -879,7 +878,7 @@ const VoucherOption = ({
       className={`mt-3 w-full rounded-lg px-3 py-2 text-label-md font-semibold transition-colors
         ${
           isApplied
-            ? "bg-tertiary-fixed/20 text-tertiary-fixed-dim"
+            ? "bg-tertiary-fixed/30 text-tertiary-fixed-dim"
             : "bg-primary-container/15 text-primary hover:bg-primary-container/25"
         }`}
     >

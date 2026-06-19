@@ -95,7 +95,7 @@ const Login = () => {
         {/* Logo + tên brand - cùng nền trắng với form, không tách rời */}
         <div className="flex flex-col items-center pb-8">
           <img
-            src="/favicon.png"
+            src="/favicon-512x512.png"
             alt="HydroLux"
             className="h-20 w-20 object-contain"
           />

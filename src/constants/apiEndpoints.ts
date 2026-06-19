@@ -1,4 +1,7 @@
-// Object chứa toàn bộ URL endpoint, nhóm theo module (theo đúng API.txt)
+/**
+ * Centralised REST endpoint paths for the AutoCarWash backend.
+ * Paths are relative to `axiosClient`'s `baseURL` (`/api`).
+ */
 export const API = {
   AUTH: {
     LOGIN: "/api/v1/auth/login",
@@ -14,6 +17,14 @@ export const API = {
     // API-01-03: GET STATIONS BY COMMUNE
     STATIONS_BY_COMMUNE: (communeId: number | string) =>
       `/api/communes/${communeId}/stations`,
+  },
+  BOOKINGS: {
+    /** `GET` — list of a customer's upcoming bookings (CONFIRMED/CHECKED_IN/WASHING). */
+    UPCOMING: "/bookings/upcoming",
+    /** `GET` — list of a customer's past bookings (PAID/CANCELLED/NO_SHOW). */
+    PAST: "/bookings/past",
+    /** `GET` — full detail of a single booking. */
+    DETAIL: (bookingId: number | string) => `/bookings/${bookingId}`,
   },
   BOOKING: {
     // API-02-01: GET BOOKING CONTEXT

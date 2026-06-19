@@ -177,7 +177,7 @@ const Home = () => {
           </div>
 
           {/* Cột phải: ảnh tunnel rửa xe kiểu vòm */}
-          <div className="rounded-lg overflow-hidden w-full aspect-[4/3] shadow-soft">
+          <div className="rounded-lg overflow-hidden w-full aspect-[4/3] shadow-[0_20px_50px_-8px_rgba(0,0,0,0.35)]">
             <img
               src={servicePackageImg}
               alt="Single session wash tunnel"
@@ -193,7 +193,7 @@ const Home = () => {
       <section className="max-w-page mx-auto px-margin-mobile md:px-margin-desktop py-20">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-10 items-center">
           {/* Cột trái: ảnh tunnel neon (đảo vị trí ảnh sang trái theo mockup) */}
-          <div className="rounded-lg overflow-hidden w-full aspect-[4/3] shadow-soft">
+          <div className="rounded-lg overflow-hidden w-full aspect-[4/3] shadow-[0_20px_50px_-8px_rgba(0,0,0,0.35)]">
             <img
               src={unlimitedSubscriptionImg}
               alt="Unlimited access neon wash tunnel"
@@ -292,7 +292,7 @@ const Home = () => {
           </div>
 
           {/* Cột phải: ảnh tunnel hoàng hôn tím */}
-          <div className="rounded-lg overflow-hidden w-full aspect-[4/3] shadow-soft">
+          <div className="rounded-lg overflow-hidden w-full aspect-[4/3] shadow-[0_20px_50px_-8px_rgba(0,0,0,0.35)]">
             <img
               src={familySubscriptionImg}
               alt="Family subscription wash tunnel"

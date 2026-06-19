@@ -91,3 +91,78 @@ export interface PreviewPriceResponse {
   breakdown: PreviewPriceBreakdown;
   appliedVoucher?: PreviewPriceAppliedVoucher;
 }
+/**
+ * Lifecycle status of a booking, as returned by the backend's
+ * `BookingCardResponse.status` field.
+ *
+ * - `CONFIRMED` / `CHECKED_IN` / `WASHING` — appear in the "upcoming" list.
+ * - `PAID` / `CANCELLED` / `NO_SHOW` — appear in the "past" list.
+ */
+export type BookingStatus =
+  | "PENDING"
+  | "CONFIRMED"
+  | "CHECKED_IN"
+  | "WASHING"
+  | "PAID"
+  | "CANCELLED"
+  | "NO_SHOW";
+
+/**
+ * Action a customer is allowed to take on a given booking, as returned by
+ * the backend's `BookingCardResponse.allowedActions` field. The list of
+ * buttons shown on a booking card must be filtered to only this set.
+ */
+export type BookingAction = "CANCEL" | "WRITE_REVIEW" | "VIEW_DETAILS";
+
+/**
+ * Mirrors the backend's `BookingCardResponse` DTO
+ * (`com.swp.autocarwash.booking.dto.response.BookingCardResponse`), as
+ * returned by `GET /api/bookings/upcoming` and `GET /api/bookings/past`.
+ */
+export interface BookingCard {
+  bookingId: number;
+  serviceName: string;
+  licensePlate: string;
+  brandName: string;
+  color: string;
+  status: BookingStatus;
+  appointmentDate: string;
+  startTime: string;
+  endTime: string;
+  allowedActions: BookingAction[];
+}
+
+export interface BookingAddon {
+  addonName: string;
+  addonPrice: number;
+}
+
+/**
+ * Mirrors the backend's `BookingDetailResponse` DTO
+ * (`com.swp.autocarwash.booking.dto.response.BookingDetailResponse`), as
+ * returned by `GET /api/bookings/{bookingId}`.
+ */
+export interface BookingDetail {
+  bookingId: number;
+  status: BookingStatus;
+  serviceName: string;
+  addons: BookingAddon[];
+  licensePlate: string;
+  brandName: string;
+  color: string;
+  stationName: string | null;
+  stationAddress: string | null;
+  appointmentDate: string;
+  startTime: string | null;
+  endTime: string | null;
+  technicianName: string | null;
+  servicePrice: number;
+  addonTotal: number;
+  voucherCode: string | null;
+  voucherDiscountPercent: number | null;
+  voucherDiscountAmount: number;
+  totalAmount: number;
+  isDepositPaid: boolean;
+  depositAmount: number | null;
+  remainingAmount: number;
+}

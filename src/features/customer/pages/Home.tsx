@@ -12,7 +12,7 @@ import { useAuth } from "../../../hooks/useAuth";
 import heroImg from "../../../assets/hero.jpg";
 import servicePackageImg from "../../../assets/servicePackage.jpg";
 import unlimitedSubscriptionImg from "../../../assets/unlimitedSubscription.jpg";
-// import familyPlanImg from "../../../assets/home/family-plan-sunset.jpg";
+import familySubscriptionImg from "../../../assets/familySubscription.jpg";
 
 /**
  * Trang Home (Customer) - "Gloss & Gear"
@@ -293,7 +293,11 @@ const Home = () => {
 
           {/* Cột phải: ảnh tunnel hoàng hôn tím */}
           <div className="rounded-lg overflow-hidden w-full aspect-[4/3] shadow-soft">
-            {/* TODO: thay bằng <img src={familyPlanImg} alt="Family plan sunset wash tunnel" className="w-full h-full object-cover" /> */}
+            <img
+              src={familySubscriptionImg}
+              alt="Family subscription wash tunnel"
+              className="w-full h-full object-cover"
+            />
           </div>
         </div>
       </section>

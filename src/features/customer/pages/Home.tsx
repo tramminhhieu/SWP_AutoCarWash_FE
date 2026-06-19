@@ -5,8 +5,8 @@ import {
   PiggyBank,
   X,
 } from "lucide-react";
-import { useLocation, useNavigate } from "react-router-dom";
-import { useAuth } from "../../../hooks/useAuth";
+import { useLocation, useNavigate, Link } from "react-router-dom";
+// import { useAuth } from "../../../hooks/useAuth";
 
 // === ẢNH các section khác: tự import file ảnh thật vào đây khi có ===
 import heroImg from "../../../assets/hero.jpg";
@@ -32,18 +32,19 @@ import familySubscriptionImg from "../../../assets/familySubscription.jpg";
 const Home = () => {
   const location = useLocation();
   const navigate = useNavigate();
-  const { isAuthenticated } = useAuth();
+  // const { isAuthenticated } = useAuth();
 
   // Bấm "Booking Now" -> nếu chưa đăng nhập thì chuyển sang /login luôn (kèm "from"
   // để Login biết quay lại đúng trang đặt lịch sau khi đăng nhập thành công),
   // tránh việc cho qua /booking/location rồi mới bị PrivateRoute đá ngược lại
-  const handleBookingNowClick = () => {
-    if (isAuthenticated) {
-      navigate("/booking/location");
-    } else {
-      navigate("/login", { state: { from: "/booking/location" } });
-    }
-  };
+  // const handleBookingNowClick = () => {
+  //   if (isAuthenticated) {
+  //     navigate("/booking/location");
+  //   } else {
+  //     navigate("/login", { state: { from: "/booking/location" } });
+  //   }
+  // };
+  // Xóa button cũ, thay bằng:
 
   // Đọc message thành công ngay lúc render lần đầu bằng lazy initializer của useState -
   // KHÔNG setState trong effect để tránh lỗi "set-state-in-effect" (cascading render)
@@ -121,13 +122,19 @@ const Home = () => {
               road with confidence.
             </p>
             {/* Bấm vào sẽ check đăng nhập trước khi chuyển sang trang chọn Location */}
-            <button
+            {/* <button
               type="button"
               onClick={handleBookingNowClick}
               className="mt-7 inline-block px-6 py-3 rounded-lg bg-primary text-on-primary font-body font-semibold text-sm"
             >
               Booking Now
-            </button>
+            </button> */}
+            <Link
+              to="/booking/location"
+              className="mt-7 inline-block px-6 py-3 rounded-lg bg-primary text-on-primary font-body font-semibold text-sm"
+            >
+              Booking Now
+            </Link>
           </div>
         </div>
       </section>

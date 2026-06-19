@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { useAuth } from "../../../hooks/useAuth";
 import {
   Calendar,
   CalendarPlus,
@@ -11,7 +12,10 @@ import {
 import { getPastBookings, getUpcomingBookings } from "../api/bookingApi";
 import type { BookingCard } from "../types/booking";
 import { STATUS_STYLES } from "../constants/statusStyles";
-import { formatAppointmentDate, formatTimeRange } from "../utils/bookingFormatters";
+import {
+  formatAppointmentDate,
+  formatTimeRange,
+} from "../utils/bookingFormatters";
 
 /**
  * Temporary hard-coded customer id used to query the backend.
@@ -21,7 +25,6 @@ import { formatAppointmentDate, formatTimeRange } from "../utils/bookingFormatte
  * this with the authenticated customer's id once auth is implemented.
  */
 const CUSTOMER_ID = 1;
-
 /** Renders a single booking as a card, matching the Figma "Active Booking Card" layout. */
 function BookingCardItem({ booking }: { booking: BookingCard }) {
   const navigate = useNavigate();
@@ -50,7 +53,9 @@ function BookingCardItem({ booking }: { booking: BookingCard }) {
           <div
             className={`flex shrink-0 items-center gap-2 rounded-md border px-[17px] py-[7px] ${statusStyle.bgClassName} ${statusStyle.borderClassName}`}
           >
-            <span className={`size-2 rounded-full ${statusStyle.dotClassName}`} />
+            <span
+              className={`size-2 rounded-full ${statusStyle.dotClassName}`}
+            />
             <span
               className={`text-xs font-bold uppercase tracking-[0.6px] ${statusStyle.textClassName}`}
             >
@@ -83,7 +88,9 @@ function BookingCardItem({ booking }: { booking: BookingCard }) {
         <div className="flex items-center justify-end rounded-b-[8px] border-t border-outline-variant/20 bg-surface-container-low/30 px-6 py-4">
           <div className="flex items-center gap-8">
             {booking.allowedActions.includes("CANCEL") && (
-              <button className="text-sm font-medium tracking-[0.14px] text-error">CANCEL</button>
+              <button className="text-sm font-medium tracking-[0.14px] text-error">
+                CANCEL
+              </button>
             )}
             {booking.allowedActions.includes("WRITE_REVIEW") && (
               <button className="flex items-center gap-2 text-sm font-bold tracking-[0.14px] text-primary">
@@ -93,7 +100,9 @@ function BookingCardItem({ booking }: { booking: BookingCard }) {
             )}
             {booking.allowedActions.includes("VIEW_DETAILS") && (
               <button
-                onClick={() => navigate(`/booking/history/${booking.bookingId}`)}
+                onClick={() =>
+                  navigate(`/booking/history/${booking.bookingId}`)
+                }
                 className="flex items-center gap-2 text-sm font-bold tracking-[0.14px] text-primary"
               >
                 VIEW DETAILS
@@ -108,6 +117,7 @@ function BookingCardItem({ booking }: { booking: BookingCard }) {
 }
 
 export default function BookingHistory() {
+  const { user } = useAuth();
   const [activeTab, setActiveTab] = useState<"upcoming" | "past">("upcoming");
   const [bookings, setBookings] = useState<BookingCard[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -115,14 +125,16 @@ export default function BookingHistory() {
 
   useEffect(() => {
     let isMounted = true;
-    const fetchBookings = activeTab === "upcoming" ? getUpcomingBookings : getPastBookings;
+    const fetchBookings =
+      activeTab === "upcoming" ? getUpcomingBookings : getPastBookings;
 
     fetchBookings(CUSTOMER_ID)
       .then((data) => {
         if (isMounted) setBookings(data);
       })
       .catch(() => {
-        if (isMounted) setError("Không thể tải danh sách lịch đặt. Vui lòng thử lại sau.");
+        if (isMounted)
+          setError("Không thể tải danh sách lịch đặt. Vui lòng thử lại sau.");
       })
       .finally(() => {
         if (isMounted) setIsLoading(false);
@@ -147,7 +159,9 @@ export default function BookingHistory() {
           <div className="flex items-center gap-1">
             <span className="text-xs font-semibold text-outline">Profile</span>
             <ChevronRight className="size-3 text-outline" />
-            <span className="text-xs font-semibold text-on-surface-variant">My Booking</span>
+            <span className="text-xs font-semibold text-on-surface-variant">
+              My Booking
+            </span>
           </div>
           <h1 className="font-heading text-headline-xl font-bold tracking-[-1.2px] text-on-surface">
             Service History &amp; Bookings
@@ -185,14 +199,18 @@ export default function BookingHistory() {
       </div>
 
       {error ? (
-        <div className="flex h-48 items-center justify-center text-base text-error">{error}</div>
+        <div className="flex h-48 items-center justify-center text-base text-error">
+          {error}
+        </div>
       ) : isLoading ? (
         <div className="flex h-48 items-center justify-center text-base text-outline">
           Đang tải...
         </div>
       ) : bookings.length === 0 ? (
         <div className="flex h-48 items-center justify-center text-base text-outline">
-          {activeTab === "upcoming" ? "Không có lịch hẹn sắp tới." : "Chưa có lịch sử dịch vụ nào."}
+          {activeTab === "upcoming"
+            ? "Không có lịch hẹn sắp tới."
+            : "Chưa có lịch sử dịch vụ nào."}
         </div>
       ) : (
         <div className="flex flex-col gap-6">
@@ -203,7 +221,9 @@ export default function BookingHistory() {
           {activeTab === "upcoming" && (
             <div className="flex h-48 flex-col items-center justify-center gap-3 rounded-[8px] border border-dashed border-outline-variant bg-surface-container-low">
               <CirclePlus className="size-10 text-outline" />
-              <span className="text-base text-outline">Schedule another maintenance session</span>
+              <span className="text-base text-outline">
+                Schedule another maintenance session
+              </span>
             </div>
           )}
         </div>

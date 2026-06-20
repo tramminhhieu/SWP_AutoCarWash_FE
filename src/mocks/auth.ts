@@ -11,9 +11,17 @@ const MOCK_TOKEN =
   "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxIiwiaWF0IjoxNzgxNzczOTUwLCJleHAiOjE3ODIzNzg3NTAsInJvbGVzIjoiQ3VzdG9tZXIiLCJlbWFpbCI6ImFkbWluQGdtYWlsLmNvbSIsImZpcnN0TmFtZSI6IlBob25nIn0.LZn5MCi8AuPhcQFshXQV2fvchxznvFUPXDvzvN-ckbI";
 
 // Tài khoản mock duy nhất dùng để test (đúng theo yêu cầu: 1 user mẫu)
+// TK CỦA ADMIN
+// const MOCK_ACCOUNT = {
+//   identity: "admin@gmail.com",
+//   password: "123456",
+// };
+
+// Tài khoản mock duy nhất dùng để test (đúng theo yêu cầu: 1 user mẫu)
+//TK CỦA CUSTOMER
 const MOCK_ACCOUNT = {
-  identity: "admin@gmail.com",
-  password: "123456",
+    identity: "customer1@gmail.com",
+    password: "123456",
 };
 
 // Giả lập độ trễ mạng để UI loading hiển thị thật hơn

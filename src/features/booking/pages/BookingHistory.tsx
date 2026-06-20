@@ -116,10 +116,7 @@ export default function BookingHistory() {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    if (!user?.userId) {
-      setIsLoading(false);
-      return;
-    }
+    if (!user?.userId) return;
 
     let isMounted = true;
     const fetchBookings =

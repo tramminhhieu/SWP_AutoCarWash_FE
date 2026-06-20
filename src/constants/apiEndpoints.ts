@@ -20,11 +20,11 @@ export const API = {
   },
   BOOKINGS: {
     /** `GET` — list of a customer's upcoming bookings (CONFIRMED/CHECKED_IN/WASHING). */
-    UPCOMING: "/bookings/upcoming",
+    UPCOMING: "api/bookings/upcoming",
     /** `GET` — list of a customer's past bookings (PAID/CANCELLED/NO_SHOW). */
-    PAST: "/bookings/past",
+    PAST: "/api/bookings/past",
     /** `GET` — full detail of a single booking. */
-    DETAIL: (bookingId: number | string) => `/bookings/${bookingId}`,
+    DETAIL: (bookingId: number | string) => `/api/bookings/${bookingId}`,
   },
   BOOKING: {
     // API-02-01: GET BOOKING CONTEXT

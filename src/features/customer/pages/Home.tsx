@@ -5,8 +5,8 @@ import {
   PiggyBank,
   X,
 } from "lucide-react";
-import { useLocation, useNavigate, Link } from "react-router-dom";
-// import { useAuth } from "../../../hooks/useAuth";
+import { useLocation, useNavigate } from "react-router-dom";
+import { useAuth } from "../../../hooks/useAuth";
 
 // === ẢNH các section khác: tự import file ảnh thật vào đây khi có ===
 import heroImg from "../../../assets/hero.jpg";
@@ -14,37 +14,22 @@ import servicePackageImg from "../../../assets/servicePackage.jpg";
 import unlimitedSubscriptionImg from "../../../assets/unlimitedSubscription.jpg";
 import familySubscriptionImg from "../../../assets/familySubscription.jpg";
 
-/**
- * Trang Home (Customer) - "Gloss & Gear"
- * Bám sát mockup Membership_Showcase__Immersive_Journey_v2.png
- * Header/Layout đã có sẵn ở CustomerLayout, page này chỉ render phần nội dung.
- *
- * Toàn bộ màu/font/spacing dùng class Tailwind được sinh từ token khai báo
- * trong index.css (@theme), theo đúng Tailwind CSS v4 - không dùng
- * tailwind.config.js.
- *
- * Nền trang: màu trắng đơn (bg-surface), không dùng gradient.
- *
- * Section Hero riêng: dùng heroImg làm ảnh nền phủ toàn section (absolute,
- * object-cover), phủ thêm lớp overlay trắng mờ (bg-surface/80) để giữ độ
- * đọc của chữ. Không còn khung ảnh bo góc bên cạnh text như layout ban đầu.
- */
+
 const Home = () => {
   const location = useLocation();
   const navigate = useNavigate();
-  // const { isAuthenticated } = useAuth();
+  const { isAuthenticated } = useAuth();
 
   // Bấm "Booking Now" -> nếu chưa đăng nhập thì chuyển sang /login luôn (kèm "from"
   // để Login biết quay lại đúng trang đặt lịch sau khi đăng nhập thành công),
   // tránh việc cho qua /booking/location rồi mới bị PrivateRoute đá ngược lại
-  // const handleBookingNowClick = () => {
-  //   if (isAuthenticated) {
-  //     navigate("/booking/location");
-  //   } else {
-  //     navigate("/login", { state: { from: "/booking/location" } });
-  //   }
-  // };
-  // Xóa button cũ, thay bằng:
+  const handleBookingNowClick = () => {
+    if (isAuthenticated) {
+      navigate("/booking/location");
+    } else {
+      navigate("/login", { state: { from: "/booking/location" } });
+    }
+  };
 
   // Đọc message thành công ngay lúc render lần đầu bằng lazy initializer của useState -
   // KHÔNG setState trong effect để tránh lỗi "set-state-in-effect" (cascading render)
@@ -122,19 +107,13 @@ const Home = () => {
               road with confidence.
             </p>
             {/* Bấm vào sẽ check đăng nhập trước khi chuyển sang trang chọn Location */}
-            {/* <button
+            <button
               type="button"
               onClick={handleBookingNowClick}
               className="mt-7 inline-block px-6 py-3 rounded-lg bg-primary text-on-primary font-body font-semibold text-sm"
             >
               Booking Now
-            </button> */}
-            <Link
-              to="/booking/location"
-              className="mt-7 inline-block px-6 py-3 rounded-lg bg-primary text-on-primary font-body font-semibold text-sm"
-            >
-              Booking Now
-            </Link>
+            </button>
           </div>
         </div>
       </section>

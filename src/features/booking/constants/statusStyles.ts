@@ -16,6 +16,13 @@ export interface StatusStyle {
 
 /** Maps every {@link BookingStatus} to the pill style it should render with. */
 export const STATUS_STYLES: Record<BookingStatus, StatusStyle> = {
+  PENDING: {
+    label: "PENDING",
+    dotClassName: "bg-secondary",
+    textClassName: "text-secondary",
+    bgClassName: "bg-secondary-fixed/20",
+    borderClassName: "border-secondary/10",
+  },
   CONFIRMED: {
     label: "CONFIRMED",
     dotClassName: "bg-[#22c55e]",

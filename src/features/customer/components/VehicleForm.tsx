@@ -86,7 +86,7 @@ const VehicleForm = ({ onSuccess, onCancel }: VehicleFormProps) => {
     setIsSubmitting(true);
     try {
       const result = await addVehicle({
-        customerId: user.userId,
+        userId: user.userId,
         licensePlate: licensePlate.trim().toUpperCase(),
         brandName: brand.trim(),
         color: color.trim(),

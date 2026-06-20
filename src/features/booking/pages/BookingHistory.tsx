@@ -17,14 +17,6 @@ import {
   formatTimeRange,
 } from "../utils/bookingFormatters";
 
-/**
- * Temporary hard-coded customer id used to query the backend.
- *
- * The project does not have a working login/auth flow yet (`AuthContext` is
- * still a stub), so there is no logged-in user to read an id from. Replace
- * this with the authenticated customer's id once auth is implemented.
- */
-const CUSTOMER_ID = 1;
 /** Renders a single booking as a card, matching the Figma "Active Booking Card" layout. */
 function BookingCardItem({ booking }: { booking: BookingCard }) {
   const navigate = useNavigate();
@@ -124,11 +116,16 @@ export default function BookingHistory() {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
+    if (!user?.userId) {
+      setIsLoading(false);
+      return;
+    }
+
     let isMounted = true;
     const fetchBookings =
       activeTab === "upcoming" ? getUpcomingBookings : getPastBookings;
 
-    fetchBookings(CUSTOMER_ID)
+    fetchBookings(user.userId)
       .then((data) => {
         if (isMounted) setBookings(data);
       })
@@ -143,7 +140,7 @@ export default function BookingHistory() {
     return () => {
       isMounted = false;
     };
-  }, [activeTab]);
+  }, [activeTab, user?.userId]);
 
   /** Switches tab and resets list state so the new tab shows its own loading spinner. */
   function handleTabChange(tab: "upcoming" | "past") {

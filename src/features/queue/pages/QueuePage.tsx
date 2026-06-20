@@ -1,8 +1,10 @@
-/*@author: Bảo Ngọc 
- @version 1.0
-*/
+/*
+ * @author: Bảo Ngọc
+ * @version 2.0
+ */
 import { useNavigate } from "react-router-dom";
 import { useState } from "react";
+import { Search, X, ChevronRight } from "lucide-react";
 
 interface Vehicle {
   id: number;
@@ -35,59 +37,67 @@ interface BookingItem {
   vehicleModel: string;
   licensePlate: string;
   washType: string;
-  time: string;
+  scheduledTime: string;
   totalAmount: number;
   color: string;
   service: string;
+  addOns: { id: number; name: string; price: number }[];
 }
 
-interface CustomerBooking {
-  licensePlate: string;
-  customerName: string;
-  phone: string;
-  tier: "PLATINUM" | "GOLD" | "SILVER" | "Member" | "Guest";
-  bookings: BookingItem[];
+interface CustomerResult {
+  type: "booked" | "no-booking" | "not-found";
+  customerId?: number;
+  customerName?: string;
+  phone?: string;
+  tier?: "PLATINUM" | "GOLD" | "SILVER" | "Member" | "Guest";
+  bookings?: BookingItem[];
 }
 
-const allBookings: CustomerBooking[] = [
-  {
-    licensePlate: "ABC-1234",
+// Mock data
+const mockCustomerDB: Record<string, CustomerResult> = {
+  "ABC-1234": {
+    type: "booked",
+    customerId: 1,
     customerName: "Robert Pattinson",
     phone: "+1 (555) 000-1234",
     tier: "PLATINUM",
     bookings: [
-      { id: 401, vehicleModel: "Tesla Model S", licensePlate: "ABC-1234", washType: "Deluxe Wash", time: "10:30 AM", totalAmount: 80, color: "Black", service: "Deluxe Wash" },
-      { id: 402, vehicleModel: "BMW X5", licensePlate: "ABC-5678", washType: "Interior Detail", time: "1:45 PM", totalAmount: 120, color: "White", service: "Interior Detail" },
+      {
+        id: 401,
+        vehicleModel: "Tesla Model S",
+        licensePlate: "ABC-1234",
+        washType: "Deluxe Wash",
+        scheduledTime: "10:30 AM",
+        totalAmount: 80,
+        color: "Black",
+        service: "Deluxe Wash",
+        addOns: [
+          { id: 1, name: "Interior Vacuum", price: 15 },
+          { id: 2, name: "Tire Shine", price: 10 },
+        ],
+      },
+      {
+        id: 402,
+        vehicleModel: "BMW X5",
+        licensePlate: "ABC-5678",
+        washType: "Interior Detail",
+        scheduledTime: "1:45 PM",
+        totalAmount: 120,
+        color: "White",
+        service: "Interior Detail",
+        addOns: [],
+      },
     ],
   },
-  {
-    licensePlate: "LMN-4455",
-    customerName: "Jordan Davis",
-    phone: "+1 (555) 111-2222",
-    tier: "GOLD",
-    bookings: [
-      { id: 403, vehicleModel: "Audi Q7", licensePlate: "LMN-4455", washType: "Premium Wash", time: "11:00 AM", totalAmount: 110, color: "Metallic Grey", service: "Premium Wash" },
-    ],
-  },
-  {
-    licensePlate: "JKT-3388",
-    customerName: "Sarah Connor",
-    phone: "+1 (555) 333-4444",
-    tier: "SILVER",
-    bookings: [
-      { id: 404, vehicleModel: "Toyota Corolla", licensePlate: "JKT-3388", washType: "Platinum Care", time: "2:00 PM", totalAmount: 65, color: "Red", service: "Platinum Care" },
-    ],
-  },
-  {
-    licensePlate: "MSu-2299",
-    customerName: "Emily Brown",
-    phone: "+1 (555) 555-6666",
+  "XYZ-9999": {
+    type: "no-booking",
+    customerId: 2,
+    customerName: "Jane Smith",
+    phone: "+1 (555) 999-8888",
     tier: "Member",
-    bookings: [
-      { id: 405, vehicleModel: "Mazda CX-5", licensePlate: "MSu-2299", washType: "Express Clean", time: "3:00 PM", totalAmount: 45, color: "Soul Red", service: "Express Clean" },
-    ],
+    bookings: [],
   },
-];
+};
 
 const initialWaitingPool: Vehicle[] = [
   { id: 1, bookingId: 101, licensePlate: "LMN-4455", model: "Audi Q7", color: "Metallic Grey", service: "Premium Wash", tier: "PLATINUM", finishedAt: "", totalAmount: 110 },
@@ -109,11 +119,11 @@ const initialCompleted: Vehicle[] = [
 ];
 
 const tierColors: Record<string, string> = {
-  PLATINUM: "bg-purple-100 text-purple-700",
-  GOLD: "bg-yellow-100 text-yellow-700",
-  SILVER: "bg-gray-100 text-gray-600",
-  Member: "bg-blue-100 text-blue-700",
-  Guest: "bg-slate-100 text-slate-500",
+  PLATINUM: "bg-[#dce1ff] text-[#001551]",
+  GOLD: "bg-[#c9e6ff] text-[#001e2f]",
+  SILVER: "bg-[#dce2f7] text-[#434655]",
+  Member: "bg-[#e9edff] text-[#0037b0]",
+  Guest: "bg-[#f1f3ff] text-[#434655]",
 };
 
 export default function QueuePage() {
@@ -122,11 +132,12 @@ export default function QueuePage() {
   const [waitingPool, setWaitingPool] = useState<Vehicle[]>(initialWaitingPool);
   const [completed, setCompleted] = useState<Vehicle[]>(initialCompleted);
 
+  // Check-in modal
   const [showCheckin, setShowCheckin] = useState(false);
   const [searchPlate, setSearchPlate] = useState("");
-  const [filteredBookings, setFilteredBookings] = useState<CustomerBooking[]>(allBookings);
-  const [selectedBookingId, setSelectedBookingId] = useState<number | null>(null);
-  const [notFound, setNotFound] = useState(false);
+  const [searchResult, setSearchResult] = useState<CustomerResult | null>(null);
+  const [selectedBooking, setSelectedBooking] = useState<BookingItem | null>(null);
+  const [isSearched, setIsSearched] = useState(false);
 
   const now = new Date();
   const timeStr = `${now.getHours()}:${String(now.getMinutes()).padStart(2, "0")}`;
@@ -134,45 +145,40 @@ export default function QueuePage() {
   const closeModal = () => {
     setShowCheckin(false);
     setSearchPlate("");
-    setFilteredBookings(allBookings);
-    setSelectedBookingId(null);
-    setNotFound(false);
+    setSearchResult(null);
+    setSelectedBooking(null);
+    setIsSearched(false);
   };
 
-  const handleSearch = (value: string) => {
-    setSearchPlate(value);
-    setSelectedBookingId(null);
-    if (value.trim() === "") {
-      setFilteredBookings(allBookings);
-      setNotFound(false);
+  const handleSearch = () => {
+    if (!searchPlate.trim()) return;
+    setIsSearched(true);
+    setSelectedBooking(null);
+
+    const found = Object.entries(mockCustomerDB).find(([plate]) =>
+      plate.toLowerCase().includes(searchPlate.toLowerCase())
+    );
+
+    if (found) {
+      setSearchResult(found[1]);
     } else {
-      const filtered = allBookings.filter(
-        (b) =>
-          b.licensePlate.toLowerCase().includes(value.toLowerCase()) ||
-          b.customerName.toLowerCase().includes(value.toLowerCase()) ||
-          b.phone.includes(value)
-      );
-      setFilteredBookings(filtered);
-      setNotFound(filtered.length === 0);
+      setSearchResult({ type: "not-found" });
     }
   };
 
-  const handleAddToQueue = () => {
-    if (!selectedBookingId) return;
-    const customer = allBookings.find((c) => c.bookings.some((b) => b.id === selectedBookingId));
-    const booking = customer?.bookings.find((b) => b.id === selectedBookingId);
-    if (!booking || !customer) return;
+  const handleConfirmCheckIn = () => {
+    if (!selectedBooking || !searchResult) return;
 
     const newVehicle: Vehicle = {
       id: Date.now(),
-      bookingId: booking.id,
-      licensePlate: booking.licensePlate,
-      model: booking.vehicleModel,
-      color: booking.color,
-      service: booking.service,
-      tier: customer.tier,
+      bookingId: selectedBooking.id,
+      licensePlate: selectedBooking.licensePlate,
+      model: selectedBooking.vehicleModel,
+      color: selectedBooking.color,
+      service: selectedBooking.service,
+      tier: searchResult.tier ?? "Guest",
       finishedAt: "",
-      totalAmount: booking.totalAmount,
+      totalAmount: selectedBooking.totalAmount,
     };
     setWaitingPool((prev) => [...prev, newVehicle]);
     closeModal();
@@ -240,16 +246,21 @@ export default function QueuePage() {
   };
 
   return (
-    <div className="min-h-screen">
+    <div className="min-h-screen" style={{ background: "#f9f9ff" }}>
       {/* Header */}
       <div className="flex items-center justify-between mb-6">
         <div>
-          <h1 className="text-2xl font-bold text-[#1e293b]">Live Queue Management</h1>
-          <p className="text-sm text-slate-500 mt-1">Real-time status of active wash lanes and waiting vehicles.</p>
+          <h1 className="text-2xl font-bold" style={{ color: "#141b2b", fontFamily: "Montserrat, sans-serif" }}>
+            Live Queue Management
+          </h1>
+          <p className="text-sm mt-1" style={{ color: "#434655" }}>
+            Real-time status of active wash lanes and waiting vehicles.
+          </p>
         </div>
         <button
           onClick={() => setShowCheckin(true)}
-          className="bg-[#0037b0] text-white px-4 py-2 rounded-xl text-sm font-semibold hover:bg-blue-800 transition"
+          className="px-4 py-2 rounded-xl text-sm font-semibold transition"
+          style={{ background: "#0037b0", color: "#ffffff" }}
         >
           + Check-in
         </button>
@@ -257,36 +268,49 @@ export default function QueuePage() {
 
       <div className="flex gap-4">
         {/* Active Lanes */}
-        <div className="flex-1">
-          <p className="text-xs font-semibold text-slate-400 uppercase mb-3">Active Lanes</p>
+        <div className="w-96 shrink-0">
+          <p className="text-xs font-semibold uppercase mb-3" style={{ color: "#747686" }}>Active Lanes</p>
           <div className="flex flex-col gap-3">
             {lanes.map((lane, index) => (
-              <div key={lane.lane} className="bg-white rounded-2xl p-4 flex items-center gap-4 shadow-sm">
-                <div className="w-14 h-14 rounded-xl bg-[#0037b0] flex flex-col items-center justify-center text-white shrink-0">
+              <div
+                key={lane.lane}
+                className="rounded-2xl p-4 flex items-center gap-4"
+                style={{ background: "#ffffff", boxShadow: "0 1px 4px rgba(0,0,0,0.08)" }}
+              >
+                <div
+                  className="w-14 h-14 rounded-xl flex flex-col items-center justify-center shrink-0"
+                  style={{ background: "#0037b0", color: "#ffffff" }}
+                >
                   <span className="text-xs font-medium">LANE</span>
                   <span className="text-lg font-bold">{lane.lane}</span>
                 </div>
                 {lane.status === "Empty" ? (
                   <div className="flex-1">
-                    <p className="text-sm text-slate-400 italic">No vehicle assigned</p>
+                    <p className="text-sm italic" style={{ color: "#747686" }}>No vehicle assigned</p>
                   </div>
                 ) : (
                   <div className="flex-1">
                     <div className="flex items-center gap-2 mb-1">
-                      <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${lane.status === "Washing" ? "bg-yellow-100 text-yellow-700" : "bg-green-100 text-green-700"}`}>
+                      <span
+                        className="text-xs px-2 py-0.5 rounded-full font-medium"
+                        style={lane.status === "Washing"
+                          ? { background: "#c9e6ff", color: "#004c6e" }
+                          : { background: "#4ae176", color: "#002109" }}
+                      >
                         {lane.status}
                       </span>
-                      <span className="text-xs text-slate-400">{lane.model} • {lane.color}</span>
+                      <span className="text-xs" style={{ color: "#747686" }}>{lane.model} • {lane.color}</span>
                     </div>
-                    <p className="text-lg font-bold text-[#1e293b]">{lane.plate}</p>
-                    <p className="text-xs text-[#0037b0] font-medium">{lane.service}</p>
-                    <p className="text-xs text-slate-400">Est: {lane.est}</p>
+                    <p className="text-lg font-bold" style={{ color: "#141b2b" }}>{lane.plate}</p>
+                    <p className="text-xs font-medium" style={{ color: "#0037b0" }}>{lane.service}</p>
+                    <p className="text-xs" style={{ color: "#747686" }}>Est: {lane.est}</p>
                   </div>
                 )}
                 {lane.status !== "Empty" && (
                   <button
                     onClick={() => handleCompleted(index)}
-                    className="bg-green-500 text-white px-4 py-2 rounded-xl text-sm font-semibold hover:bg-green-600 transition shrink-0"
+                    className="px-4 py-2 rounded-xl text-sm font-semibold transition shrink-0"
+                    style={{ background: "#006b2d", color: "#ffffff" }}
                   >
                     Completed
                   </button>
@@ -297,31 +321,32 @@ export default function QueuePage() {
         </div>
 
         {/* Waiting Pool */}
-        <div className="w-56 shrink-0">
-          <div className="bg-[#0037b0] rounded-2xl p-4">
+        <div className="flex-1">
+          <div className="rounded-2xl p-4 h-full" style={{ background: "#0037b0" }}>
             <div className="flex items-center justify-between mb-3">
               <div>
-                <p className="text-white font-bold text-sm">Waiting Pool</p>
-                <p className="text-blue-200 text-xs">{waitingPool.length} VEHICLES IN QUEUE</p>
+                <p className="font-bold text-sm" style={{ color: "#ffffff" }}>Waiting Pool</p>
+                <p className="text-xs" style={{ color: "#b7c4ff" }}>{waitingPool.length} VEHICLES IN QUEUE</p>
               </div>
               <button
                 onClick={() => setShowCheckin(true)}
-                className="w-6 h-6 rounded-full bg-white/20 text-white text-sm flex items-center justify-center hover:bg-white/30"
+                className="w-6 h-6 rounded-full flex items-center justify-center text-sm"
+                style={{ background: "rgba(255,255,255,0.2)", color: "#ffffff" }}
               >+</button>
             </div>
             <div className="flex flex-col gap-2">
               {waitingPool.length === 0 && (
-                <p className="text-blue-200 text-xs text-center py-4">No vehicles waiting</p>
+                <p className="text-xs text-center py-4" style={{ color: "#b7c4ff" }}>No vehicles waiting</p>
               )}
               {waitingPool.map((v) => (
-                <div key={v.id} className="bg-white rounded-xl p-3">
+                <div key={v.id} className="rounded-xl p-3" style={{ background: "#ffffff" }}>
                   <div className="flex items-center justify-between mb-1">
-                    <span className="font-bold text-xs text-[#1e293b]">{v.licensePlate}</span>
+                    <span className="font-bold text-xs" style={{ color: "#141b2b" }}>{v.licensePlate}</span>
                     <span className={`text-xs px-1.5 py-0.5 rounded-full font-medium ${tierColors[v.tier]}`}>{v.tier}</span>
                   </div>
-                  <p className="text-xs text-slate-500">{v.model} • {v.color}</p>
-                  <p className="text-xs text-[#0037b0]">{v.service}</p>
-                  <div className="mt-2 w-full bg-[#0037b0] text-white text-xs py-1 rounded-lg font-medium text-center">
+                  <p className="text-xs" style={{ color: "#434655" }}>{v.model} • {v.color}</p>
+                  <p className="text-xs font-medium" style={{ color: "#0037b0" }}>{v.service}</p>
+                  <div className="mt-2 w-full text-xs py-1 rounded-lg font-medium text-center" style={{ background: "#0037b0", color: "#ffffff" }}>
                     Checked In
                   </div>
                 </div>
@@ -331,12 +356,12 @@ export default function QueuePage() {
         </div>
 
         {/* Completed */}
-        <div className="w-56 shrink-0">
-          <div className="bg-[#14532d] rounded-2xl p-4">
+        <div className="flex-1">
+          <div className="rounded-2xl p-4 h-full" style={{ background: "#006b2d" }}>
             <div className="flex items-center justify-between mb-3">
               <div>
-                <p className="text-white font-bold text-sm">Completed</p>
-                <p className="text-green-300 text-xs">AWAITING PAYMENT</p>
+                <p className="font-bold text-sm" style={{ color: "#ffffff" }}>Completed</p>
+                <p className="text-xs" style={{ color: "#5cf083" }}>AWAITING PAYMENT</p>
               </div>
             </div>
             <div className="flex flex-col gap-2">
@@ -344,17 +369,20 @@ export default function QueuePage() {
                 <div
                   key={v.id}
                   onClick={() => handleSelectCompleted(v)}
-                  className="bg-white rounded-xl p-3 cursor-pointer hover:shadow-md transition"
+                  className="rounded-xl p-3 cursor-pointer transition hover:opacity-90"
+                  style={{ background: "#ffffff" }}
                 >
                   <div className="flex items-center justify-between mb-1">
-                    <span className="font-bold text-xs text-[#1e293b]">{v.licensePlate}</span>
+                    <span className="font-bold text-xs" style={{ color: "#141b2b" }}>{v.licensePlate}</span>
                     <span className={`text-xs px-1.5 py-0.5 rounded-full font-medium ${tierColors[v.tier]}`}>{v.tier}</span>
                   </div>
-                  <p className="text-xs text-slate-500">{v.model} • {v.color}</p>
-                  <p className="text-xs text-[#0037b0]">{v.service}</p>
+                  <p className="text-xs" style={{ color: "#434655" }}>{v.model} • {v.color}</p>
+                  <p className="text-xs font-medium" style={{ color: "#0037b0" }}>{v.service}</p>
                   <div className="flex items-center justify-between mt-2">
-                    <span className="text-xs text-slate-400">⏱ {v.finishedAt}</span>
-                    <span className="text-xs bg-green-100 text-green-700 px-2 py-0.5 rounded-full">Completed</span>
+                    <span className="text-xs" style={{ color: "#747686" }}>⏱ {v.finishedAt}</span>
+                    <span className="text-xs px-2 py-0.5 rounded-full font-medium" style={{ background: "#4ae176", color: "#002109" }}>
+                      Completed
+                    </span>
                   </div>
                 </div>
               ))}
@@ -366,109 +394,205 @@ export default function QueuePage() {
       {/* Check-in Modal */}
       {showCheckin && (
         <div
-          className="fixed inset-0 bg-black/40 flex items-center justify-center z-50"
+          className="fixed inset-0 flex items-center justify-center z-50"
+          style={{ background: "rgba(20,27,43,0.5)" }}
           onClick={closeModal}
         >
           <div
-            className="bg-white rounded-2xl shadow-xl w-full max-w-md mx-4 p-6"
+            className="rounded-2xl shadow-xl w-full max-w-lg mx-4"
+            style={{ background: "#ffffff" }}
             onClick={(e) => e.stopPropagation()}
           >
             {/* Modal Header */}
-            <div className="flex items-center justify-between mb-4">
-              <h2 className="text-base font-bold text-[#1e293b]">Check-in</h2>
-              <button
-                onClick={closeModal}
-                className="w-8 h-8 flex items-center justify-center rounded-full hover:bg-slate-100 transition text-slate-400 text-lg"
-              >
-                ✕
+            <div className="flex items-center justify-between px-6 pt-6 pb-4" style={{ borderBottom: "1px solid #dce2f7" }}>
+              <h2 className="text-base font-bold" style={{ color: "#141b2b", fontFamily: "Montserrat, sans-serif" }}>
+                Vehicle Check-in
+              </h2>
+              <button onClick={closeModal} className="rounded-full p-1 hover:bg-slate-100 transition">
+                <X className="w-5 h-5" style={{ color: "#747686" }} />
               </button>
             </div>
 
-            {/* Search */}
-            <div className="flex items-center gap-2 border border-slate-200 rounded-xl px-3 py-2 mb-4">
-              <span className="text-slate-400">🔍</span>
-              <input
-                type="text"
-                value={searchPlate}
-                onChange={(e) => handleSearch(e.target.value)}
-                placeholder="Search by License or Phone"
-                className="flex-1 text-sm outline-none"
-                autoFocus
-              />
-              {searchPlate && (
+            <div className="px-6 py-4">
+              {/* Search bar */}
+              <div className="flex gap-2 mb-4">
+                <div
+                  className="flex items-center gap-2 flex-1 rounded-xl px-3 py-2"
+                  style={{ border: "1px solid #c4c5d7" }}
+                >
+                  <Search className="w-4 h-4 shrink-0" style={{ color: "#747686" }} />
+                  <input
+                    type="text"
+                    value={searchPlate}
+                    onChange={(e) => setSearchPlate(e.target.value)}
+                    onKeyDown={(e) => e.key === "Enter" && handleSearch()}
+                    placeholder="Enter license plate or phone..."
+                    className="flex-1 text-sm outline-none"
+                    style={{ color: "#141b2b" }}
+                    autoFocus
+                  />
+                  {searchPlate && (
+                    <button onClick={() => { setSearchPlate(""); setSearchResult(null); setIsSearched(false); }}>
+                      <X className="w-4 h-4" style={{ color: "#747686" }} />
+                    </button>
+                  )}
+                </div>
                 <button
-                  onClick={() => handleSearch("")}
-                  className="text-slate-400 hover:text-slate-600 text-sm"
-                >✕</button>
-              )}
-            </div>
-
-            {/* Not found */}
-            {notFound && (
-              <div className="text-center py-4">
-                <p className="text-slate-500 text-sm mb-3">No booking found for "{searchPlate}"</p>
-                <button className="bg-[#0037b0] text-white px-4 py-2 rounded-xl text-sm font-semibold w-full">
-                  + Create Walk-in
+                  onClick={handleSearch}
+                  className="px-4 py-2 rounded-xl text-sm font-semibold transition"
+                  style={{ background: "#0037b0", color: "#ffffff" }}
+                >
+                  Search
                 </button>
               </div>
-            )}
 
-            {/* Booking list */}
-            {!notFound && (
-              <div className="flex flex-col gap-3 max-h-96 overflow-y-auto pr-1">
-                {filteredBookings.map((customer) => (
-                  <div key={customer.licensePlate} className="bg-slate-50 rounded-xl p-3">
-                    <div className="flex items-center justify-between mb-2">
+              {/* Default — chưa search */}
+              {!isSearched && (
+                <div className="text-center py-8">
+                  <div className="w-12 h-12 rounded-full flex items-center justify-center mx-auto mb-3" style={{ background: "#e9edff" }}>
+                    <Search className="w-6 h-6" style={{ color: "#0037b0" }} />
+                  </div>
+                  <p className="text-sm font-medium" style={{ color: "#141b2b" }}>Search for a customer</p>
+                  <p className="text-xs mt-1" style={{ color: "#747686" }}>Enter license plate or phone number to find booking</p>
+                </div>
+              )}
+
+              {/* TH1 — Không tìm thấy (khách vãng lai) */}
+              {isSearched && searchResult?.type === "not-found" && (
+                <div className="py-4">
+                  <div
+                    className="rounded-xl p-4 mb-4 flex items-start gap-3"
+                    style={{ background: "#ffdad6", border: "1px solid #ba1a1a" }}
+                  >
+                    <div>
+                      <p className="text-sm font-semibold" style={{ color: "#93000a" }}>
+                        No customer found
+                      </p>
+                      <p className="text-xs mt-1" style={{ color: "#93000a" }}>
+                        No account found for "{searchPlate}". This customer will be treated as a walk-in guest.
+                      </p>
+                    </div>
+                  </div>
+                  <button
+                    className="w-full py-3 rounded-xl text-sm font-semibold transition"
+                    style={{ background: "#0037b0", color: "#ffffff" }}
+                  >
+                    + Create Walk-in
+                  </button>
+                </div>
+              )}
+
+              {/* TH2 — Có khách nhưng chưa booking */}
+              {isSearched && searchResult?.type === "no-booking" && (
+                <div className="py-2">
+                  {/* Customer info */}
+                  <div className="rounded-xl p-4 mb-4" style={{ background: "#f1f3ff" }}>
+                    <div className="flex items-center justify-between">
                       <div>
-                        <p className="font-bold text-sm text-[#1e293b]">{customer.customerName}</p>
-                        <p className="text-xs text-slate-400">{customer.phone}</p>
+                        <p className="font-bold text-sm" style={{ color: "#141b2b" }}>{searchResult.customerName}</p>
+                        <p className="text-xs" style={{ color: "#747686" }}>{searchResult.phone}</p>
                       </div>
-                      <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${tierColors[customer.tier]}`}>
-                        {customer.tier}
+                      <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${tierColors[searchResult.tier ?? "Guest"]}`}>
+                        {searchResult.tier}
                       </span>
                     </div>
-                    {customer.bookings.map((b) => (
+                  </div>
+                  <div
+                    className="rounded-xl p-4 mb-4"
+                    style={{ background: "#c9e6ff", border: "1px solid #006591" }}
+                  >
+                    <p className="text-sm font-semibold" style={{ color: "#001e2f" }}>No upcoming bookings</p>
+                    <p className="text-xs mt-1" style={{ color: "#004c6e" }}>
+                      This customer has no scheduled appointment today. You can create a walk-in service for them.
+                    </p>
+                  </div>
+                  <button
+                    className="w-full py-3 rounded-xl text-sm font-semibold transition"
+                    style={{ background: "#0037b0", color: "#ffffff" }}
+                  >
+                    + Create Walk-in for {searchResult.customerName}
+                  </button>
+                </div>
+              )}
+
+              {/* TH3 — Có booking */}
+              {isSearched && searchResult?.type === "booked" && (
+                <div className="py-2">
+                  {/* Customer info */}
+                  <div className="rounded-xl p-3 mb-3" style={{ background: "#f1f3ff" }}>
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <p className="font-bold text-sm" style={{ color: "#141b2b" }}>{searchResult.customerName}</p>
+                        <p className="text-xs" style={{ color: "#747686" }}>{searchResult.phone}</p>
+                      </div>
+                      <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${tierColors[searchResult.tier ?? "Guest"]}`}>
+                        {searchResult.tier}
+                      </span>
+                    </div>
+                  </div>
+
+                  <p className="text-xs font-semibold uppercase mb-2" style={{ color: "#747686" }}>
+                    Select Booking Slot
+                  </p>
+
+                  <div className="flex flex-col gap-2 max-h-64 overflow-y-auto mb-4">
+                    {searchResult.bookings?.map((b) => (
                       <div
                         key={b.id}
-                        onClick={() => setSelectedBookingId(b.id)}
-                        className={`rounded-xl p-3 border-2 cursor-pointer transition mb-1 bg-white ${
-                          selectedBookingId === b.id
-                            ? "border-[#0037b0] bg-blue-50"
-                            : "border-slate-100 hover:border-slate-300"
-                        }`}
+                        onClick={() => setSelectedBooking(b)}
+                        className="rounded-xl p-3 cursor-pointer transition"
+                        style={{
+                          background: selectedBooking?.id === b.id ? "#dce1ff" : "#ffffff",
+                          border: selectedBooking?.id === b.id ? "2px solid #0037b0" : "2px solid #dce2f7",
+                        }}
                       >
-                        <div className="flex items-center gap-2 mb-2">
+                        <div className="flex items-center justify-between">
                           <div>
-                            <p className="text-sm font-semibold text-[#1e293b]">{b.vehicleModel}</p>
-                            <p className="text-xs text-slate-400">{b.licensePlate}</p>
-                          </div>
-                        </div>
-                        <div className="flex justify-between text-xs">
-                          <div>
-                            <p className="text-slate-400">Wash Type</p>
-                            <p className="font-semibold text-[#0037b0]">{b.washType}</p>
+                            <p className="text-sm font-semibold" style={{ color: "#141b2b" }}>{b.vehicleModel}</p>
+                            <p className="text-xs" style={{ color: "#747686" }}>{b.licensePlate} • {b.color}</p>
+                            <p className="text-xs font-medium mt-1" style={{ color: "#0037b0" }}>{b.washType}</p>
                           </div>
                           <div className="text-right">
-                            <p className="text-slate-400">Time</p>
-                            <p className="font-semibold text-[#1e293b]">{b.time}</p>
+                            <p className="text-xs" style={{ color: "#747686" }}>Scheduled</p>
+                            <p className="text-sm font-bold" style={{ color: "#141b2b" }}>{b.scheduledTime}</p>
+                            <p className="text-xs font-semibold mt-1" style={{ color: "#0037b0" }}>${b.totalAmount}</p>
                           </div>
                         </div>
+                        {b.addOns.length > 0 && (
+                          <div className="mt-2 flex flex-wrap gap-1">
+                            {b.addOns.map((a) => (
+                              <span key={a.id} className="text-xs px-2 py-0.5 rounded-full" style={{ background: "#e9edff", color: "#0037b0" }}>
+                                {a.name} +${a.price}
+                              </span>
+                            ))}
+                          </div>
+                        )}
+                        {selectedBooking?.id === b.id && (
+                          <div className="flex items-center gap-1 mt-2" style={{ color: "#0037b0" }}>
+                            <ChevronRight className="w-3 h-3" />
+                            <span className="text-xs font-medium">Selected</span>
+                          </div>
+                        )}
                       </div>
                     ))}
                   </div>
-                ))}
-              </div>
-            )}
 
-            {/* Add to Queue button */}
-            {selectedBookingId && (
-              <button
-                onClick={handleAddToQueue}
-                className="w-full bg-[#0037b0] text-white py-3 rounded-xl font-semibold text-sm transition mt-4 hover:bg-blue-800"
-              >
-                Add to Queue
-              </button>
-            )}
+                  <button
+                    onClick={handleConfirmCheckIn}
+                    disabled={!selectedBooking}
+                    className="w-full py-3 rounded-xl text-sm font-semibold transition"
+                    style={{
+                      background: "#0037b0",
+                      color: "#ffffff",
+                      opacity: !selectedBooking ? 0.5 : 1,
+                      cursor: !selectedBooking ? "not-allowed" : "pointer",
+                    }}
+                  >
+                    Confirm Check-in
+                  </button>
+                </div>
+              )}
+            </div>
           </div>
         </div>
       )}

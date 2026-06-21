@@ -16,9 +16,8 @@ import NotificationBell from "../features/crm/components/NotificationBell";
  * Chưa có avatar trong DB nên header luôn dùng icon user mặc định.
  */
 export interface HeaderUser {
-  // firstName?: string;
+  name?: string;
   email?: string;
-  role?: string; // VD: "Manager", "Customer"
 }
 
 interface CustomerHeaderProps {
@@ -113,14 +112,10 @@ export default function CustomerHeader({
 
                   <span className="hidden flex-col items-start leading-tight sm:flex">
                     <span className="font-body text-sm font-semibold text-on-surface">
-                      {/* {user ? (user.firstName ?? "Account") : "Account"} */}
-                      {user ? (user.email ?? "Account") : "Account"}
+                      {user
+                        ? (user.name ?? user.email ?? "Account")
+                        : "Account"}
                     </span>
-                    {user?.role && (
-                      <span className="font-body text-xs text-outline">
-                        {user.role}
-                      </span>
-                    )}
                   </span>
 
                   <ChevronDown

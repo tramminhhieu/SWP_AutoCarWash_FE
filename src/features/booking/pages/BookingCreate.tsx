@@ -225,12 +225,17 @@ const BookingCreate = () => {
   };
 
   // Bấm Apply voucher -> gọi preview-price để BE tính discount chính xác
-  const handleApplyVoucher = async (voucher: BookingVoucher) => {
-    if (!selectedServiceId) {
-      setVoucherError("Vui lòng chọn gói dịch vụ trước khi áp dụng voucher.");
+  const handleToggleVoucher = async (voucher: BookingVoucher) => {
+    if (appliedVoucherCode === voucher.voucherCode) {
+      setAppliedVoucherCode(null);
+      setPreviewTotal(null);
+      setVoucherDiscount(null);
       return;
     }
-
+    if (!selectedServiceId) {
+      setVoucherError("Vui lòng chọn gói dịch vụ trước khi chọn voucher.");
+      return;
+    }
     setApplyingVoucherCode(voucher.voucherCode);
     setVoucherError(null);
     try {
@@ -241,11 +246,10 @@ const BookingCreate = () => {
         voucherCode: voucher.voucherCode,
       });
       setPreviewTotal(result.breakdown.finalTotal);
-      setAppliedVoucherCode(voucher.voucherCode);
       setVoucherDiscount(result.breakdown.voucherDiscount);
-    } catch (error) {
-      console.error("Lỗi khi gọi previewPrice:", error);
-      setVoucherError("Không thể áp dụng voucher này. Vui lòng thử lại.");
+      setAppliedVoucherCode(voucher.voucherCode);
+    } catch {
+      setVoucherError("Đơn của bạn không đủ điều kiện để áp dụng voucher này.");
     } finally {
       setApplyingVoucherCode(null);
     }
@@ -593,7 +597,7 @@ const BookingCreate = () => {
                       voucher={voucher}
                       isApplied={appliedVoucherCode === voucher.voucherCode}
                       isApplying={applyingVoucherCode === voucher.voucherCode}
-                      onApply={() => handleApplyVoucher(voucher)}
+                      onToggle={() => handleToggleVoucher(voucher)}
                     />
                   ))}
                 </div>
@@ -854,14 +858,24 @@ const VoucherOption = ({
   voucher,
   isApplied,
   isApplying,
-  onApply,
+  onToggle,
 }: {
   voucher: BookingVoucher;
   isApplied: boolean;
   isApplying: boolean;
-  onApply: () => void;
+  onToggle: () => void;
 }) => (
-  <div className="rounded-xl border border-outline-variant bg-surface-container-lowest p-4">
+  <button
+    type="button"
+    onClick={onToggle}
+    disabled={isApplying}
+    className={`w-full rounded-xl p-4 text-left transition-colors
+      ${
+        isApplied
+          ? "border-2 border-primary bg-primary-container/10"
+          : "border border-outline-variant bg-surface-container-lowest hover:border-primary/40"
+      }`}
+  >
     <span className="flex h-10 w-10 items-center justify-center rounded-lg bg-secondary-fixed text-secondary">
       <Ticket size={18} />
     </span>
@@ -871,20 +885,16 @@ const VoucherOption = ({
     <p className="text-body-md text-on-surface-variant">
       Đơn tối thiểu {formatCurrency(voucher.minOrderValue)}
     </p>
-    <button
-      type="button"
-      disabled={isApplying || isApplied}
-      onClick={onApply}
-      className={`mt-3 w-full rounded-lg px-3 py-2 text-label-md font-semibold transition-colors
-        ${
-          isApplied
-            ? "bg-tertiary-fixed/30 text-tertiary-fixed-dim"
-            : "bg-primary-container/15 text-primary hover:bg-primary-container/25"
-        }`}
+    <p
+      className={`mt-2 text-label-md font-semibold ${isApplied ? "text-primary" : "text-on-surface-variant"}`}
     >
-      {isApplied ? "Applied ✓" : isApplying ? "Applying..." : "Apply"}
-    </button>
-  </div>
+      {isApplying
+        ? "Đang áp dụng..."
+        : isApplied
+          ? "Đã chọn ✓"
+          : "Click để chọn"}
+    </p>
+  </button>
 );
 
 export default BookingCreate;

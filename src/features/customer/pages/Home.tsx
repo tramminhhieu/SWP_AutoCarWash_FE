@@ -3,7 +3,6 @@ import {
   Infinity as InfinityIcon,
   CheckCircle2,
   PiggyBank,
-  X,
 } from "lucide-react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "../../../hooks/useAuth";
@@ -13,7 +12,6 @@ import heroImg from "../../../assets/hero.jpg";
 import servicePackageImg from "../../../assets/servicePackage.jpg";
 import unlimitedSubscriptionImg from "../../../assets/unlimitedSubscription.jpg";
 import familySubscriptionImg from "../../../assets/familySubscription.jpg";
-
 
 const Home = () => {
   const location = useLocation();
@@ -50,33 +48,38 @@ const Home = () => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // Tự ẩn toast sau 4 giây
+  // Tự ẩn toast sau 3 giây
   useEffect(() => {
     if (!toastMessage) return;
-    const timer = setTimeout(() => setToastMessage(null), 4000);
+    const timer = setTimeout(() => setToastMessage(null), 3000);
     return () => clearTimeout(timer);
   }, [toastMessage]);
 
   return (
     <div className="w-full bg-surface">
-      {/* Toast thông báo thành công - cố định góc trên phải, dùng Lime Green
+      {/* Toast thông báo thành công - cố định ở giữa màn hình, dùng Lime Green
           (tertiary) theo DESIGN.md vì đây là "Success state" */}
       {toastMessage && (
-        <div className="fixed right-6 top-6 z-50 flex items-start gap-3 rounded-lg border-l-4 border-tertiary-fixed-dim bg-surface-container-lowest px-4 py-3 shadow-[0_10px_25px_-5px_rgba(29,78,216,0.15)]">
-          <CheckCircle2
-            size={20}
-            className="mt-0.5 shrink-0 text-tertiary-fixed-dim"
-          />
-          <p className="text-body-md text-on-surface">{toastMessage}</p>
-          <button
-            type="button"
-            onClick={() => setToastMessage(null)}
-            className="ml-2 shrink-0 text-on-surface-variant hover:text-on-surface"
-          >
-            <X size={16} />
-          </button>
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
+          <div className="flex flex-col items-center gap-4 rounded-2xl bg-surface-container-lowest px-8 py-8 shadow-xl max-w-sm w-full mx-4 text-center">
+            <CheckCircle2 size={48} className="text-tertiary-fixed-dim" />
+            <p className="text-headline-md font-semibold text-on-surface">
+              Thành công!
+            </p>
+            <p className="text-body-md text-on-surface-variant">
+              {toastMessage}
+            </p>
+            <button
+              type="button"
+              onClick={() => setToastMessage(null)}
+              className="mt-2 w-full rounded-lg bg-primary px-6 py-3 text-body-md font-semibold text-on-primary hover:opacity-90"
+            >
+              Tiếp tục
+            </button>
+          </div>
         </div>
       )}
+
       {/* ========================================================== */}
       {/* SECTION 1: HERO - Precision Care for Every Drive            */}
       {/* Ảnh nền phủ toàn section, làm mờ bằng overlay trắng để giữ  */}

@@ -17,8 +17,7 @@ const decodeUserFromToken = (token: string): AuthUser | null => {
     return {
       userId: Number(payload.sub),
       email: payload.email,
-      role: payload.roles,
-      firstName: payload.firstName,
+      name: payload.name,
     };
   } catch {
     return null;
@@ -48,10 +47,14 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [user, setUser] = useState<AuthUser | null>(getInitialUser);
 
   // Gọi sau khi login API trả về token thành công
-  const loginWithToken = (token: string) => {
+  const loginWithToken = (token: string, name?: string) => {
     setToken(token);
     const decodedUser = decodeUserFromToken(token);
-    setUser(decodedUser);
+    if (decodedUser && name) {
+      setUser({ ...decodedUser, name });
+    } else {
+      setUser(decodedUser);
+    }
   };
 
   const logout = () => {

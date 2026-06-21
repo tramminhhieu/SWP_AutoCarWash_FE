@@ -66,7 +66,7 @@ const Login = () => {
     setIsSubmitting(true);
     try {
       const result = await login({ identity: identity.trim(), password });
-      loginWithToken(result.token);
+      loginWithToken(result.token, result.name);
 
       // AC-01: chuyển hướng về trang chủ kèm thông báo chào mừng (toast),
       // truyền qua route state để Home đọc và hiện toast rồi tự xóa

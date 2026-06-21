@@ -1,6 +1,6 @@
 /*
  * @author: Bảo Ngọc
- * @version 2.0
+ * @version 2.1
  */
 import { useNavigate } from "react-router-dom";
 import { useState } from "react";
@@ -53,7 +53,6 @@ interface CustomerResult {
   bookings?: BookingItem[];
 }
 
-// Mock data
 const mockCustomerDB: Record<string, CustomerResult> = {
   "ABC-1234": {
     type: "booked",
@@ -139,10 +138,14 @@ export default function QueuePage() {
   const [selectedBooking, setSelectedBooking] = useState<BookingItem | null>(null);
   const [isSearched, setIsSearched] = useState(false);
 
+  // Cancel modal
+  const [cancelVehicle, setCancelVehicle] = useState<Vehicle | null>(null);
+
   const now = new Date();
   const timeStr = `${now.getHours()}:${String(now.getMinutes()).padStart(2, "0")}`;
 
-  const closeModal = () => {
+  // ── Check-in handlers ──────────────────────────────────────────────────
+  const closeCheckinModal = () => {
     setShowCheckin(false);
     setSearchPlate("");
     setSearchResult(null);
@@ -154,21 +157,14 @@ export default function QueuePage() {
     if (!searchPlate.trim()) return;
     setIsSearched(true);
     setSelectedBooking(null);
-
     const found = Object.entries(mockCustomerDB).find(([plate]) =>
       plate.toLowerCase().includes(searchPlate.toLowerCase())
     );
-
-    if (found) {
-      setSearchResult(found[1]);
-    } else {
-      setSearchResult({ type: "not-found" });
-    }
+    setSearchResult(found ? found[1] : { type: "not-found" });
   };
 
   const handleConfirmCheckIn = () => {
     if (!selectedBooking || !searchResult) return;
-
     const newVehicle: Vehicle = {
       id: Date.now(),
       bookingId: selectedBooking.id,
@@ -181,9 +177,23 @@ export default function QueuePage() {
       totalAmount: selectedBooking.totalAmount,
     };
     setWaitingPool((prev) => [...prev, newVehicle]);
-    closeModal();
+    closeCheckinModal();
   };
 
+  // ── Cancel handlers ────────────────────────────────────────────────────
+  const handleCancelVehicle = (vehicleId: number) => {
+    const vehicle = waitingPool.find((v) => v.id === vehicleId);
+    if (!vehicle) return;
+    setCancelVehicle(vehicle);
+  };
+
+  const confirmCancel = () => {
+    if (!cancelVehicle) return;
+    setWaitingPool((prev) => prev.filter((v) => v.id !== cancelVehicle.id));
+    setCancelVehicle(null);
+  };
+
+  // ── Lane completed handler ─────────────────────────────────────────────
   const handleCompleted = (index: number) => {
     const lane = lanes[index];
     const newCompleted: Vehicle = {
@@ -277,10 +287,7 @@ export default function QueuePage() {
                 className="rounded-2xl p-4 flex items-center gap-4"
                 style={{ background: "#ffffff", boxShadow: "0 1px 4px rgba(0,0,0,0.08)" }}
               >
-                <div
-                  className="w-14 h-14 rounded-xl flex flex-col items-center justify-center shrink-0"
-                  style={{ background: "#0037b0", color: "#ffffff" }}
-                >
+                <div className="w-14 h-14 rounded-xl flex flex-col items-center justify-center shrink-0" style={{ background: "#0037b0", color: "#ffffff" }}>
                   <span className="text-xs font-medium">LANE</span>
                   <span className="text-lg font-bold">{lane.lane}</span>
                 </div>
@@ -322,7 +329,7 @@ export default function QueuePage() {
 
         {/* Waiting Pool */}
         <div className="flex-1">
-          <div className="rounded-2xl p-4 h-full" style={{ background: "#0037b0" }}>
+          <div className="rounded-2xl p-4" style={{ background: "#0037b0" }}>
             <div className="flex items-center justify-between mb-3">
               <div>
                 <p className="font-bold text-sm" style={{ color: "#ffffff" }}>Waiting Pool</p>
@@ -346,9 +353,13 @@ export default function QueuePage() {
                   </div>
                   <p className="text-xs" style={{ color: "#434655" }}>{v.model} • {v.color}</p>
                   <p className="text-xs font-medium" style={{ color: "#0037b0" }}>{v.service}</p>
-                  <div className="mt-2 w-full text-xs py-1 rounded-lg font-medium text-center" style={{ background: "#0037b0", color: "#ffffff" }}>
-                    Checked In
-                  </div>
+                  <button
+                    onClick={(e) => { e.stopPropagation(); handleCancelVehicle(v.id); }}
+                    className="mt-2 w-full text-xs py-1.5 rounded-lg font-medium text-center transition"
+                    style={{ background: "#ffdad6", color: "#93000a", border: "1px solid #ba1a1a" }}
+                  >
+                    Cancel
+                  </button>
                 </div>
               ))}
             </div>
@@ -357,7 +368,7 @@ export default function QueuePage() {
 
         {/* Completed */}
         <div className="flex-1">
-          <div className="rounded-2xl p-4 h-full" style={{ background: "#006b2d" }}>
+          <div className="rounded-2xl p-4" style={{ background: "#006b2d" }}>
             <div className="flex items-center justify-between mb-3">
               <div>
                 <p className="font-bold text-sm" style={{ color: "#ffffff" }}>Completed</p>
@@ -396,19 +407,18 @@ export default function QueuePage() {
         <div
           className="fixed inset-0 flex items-center justify-center z-50"
           style={{ background: "rgba(20,27,43,0.5)" }}
-          onClick={closeModal}
+          onClick={closeCheckinModal}
         >
           <div
             className="rounded-2xl shadow-xl w-full max-w-lg mx-4"
             style={{ background: "#ffffff" }}
             onClick={(e) => e.stopPropagation()}
           >
-            {/* Modal Header */}
             <div className="flex items-center justify-between px-6 pt-6 pb-4" style={{ borderBottom: "1px solid #dce2f7" }}>
               <h2 className="text-base font-bold" style={{ color: "#141b2b", fontFamily: "Montserrat, sans-serif" }}>
                 Vehicle Check-in
               </h2>
-              <button onClick={closeModal} className="rounded-full p-1 hover:bg-slate-100 transition">
+              <button onClick={closeCheckinModal} className="rounded-full p-1 hover:bg-slate-100 transition">
                 <X className="w-5 h-5" style={{ color: "#747686" }} />
               </button>
             </div>
@@ -416,10 +426,7 @@ export default function QueuePage() {
             <div className="px-6 py-4">
               {/* Search bar */}
               <div className="flex gap-2 mb-4">
-                <div
-                  className="flex items-center gap-2 flex-1 rounded-xl px-3 py-2"
-                  style={{ border: "1px solid #c4c5d7" }}
-                >
+                <div className="flex items-center gap-2 flex-1 rounded-xl px-3 py-2" style={{ border: "1px solid #c4c5d7" }}>
                   <Search className="w-4 h-4 shrink-0" style={{ color: "#747686" }} />
                   <input
                     type="text"
@@ -446,7 +453,7 @@ export default function QueuePage() {
                 </button>
               </div>
 
-              {/* Default — chưa search */}
+              {/* Default */}
               {!isSearched && (
                 <div className="text-center py-8">
                   <div className="w-12 h-12 rounded-full flex items-center justify-center mx-auto mb-3" style={{ background: "#e9edff" }}>
@@ -457,21 +464,14 @@ export default function QueuePage() {
                 </div>
               )}
 
-              {/* TH1 — Không tìm thấy (khách vãng lai) */}
+              {/* TH1 — Không tìm thấy */}
               {isSearched && searchResult?.type === "not-found" && (
                 <div className="py-4">
-                  <div
-                    className="rounded-xl p-4 mb-4 flex items-start gap-3"
-                    style={{ background: "#ffdad6", border: "1px solid #ba1a1a" }}
-                  >
-                    <div>
-                      <p className="text-sm font-semibold" style={{ color: "#93000a" }}>
-                        No customer found
-                      </p>
-                      <p className="text-xs mt-1" style={{ color: "#93000a" }}>
-                        No account found for "{searchPlate}". This customer will be treated as a walk-in guest.
-                      </p>
-                    </div>
+                  <div className="rounded-xl p-4 mb-4" style={{ background: "#ffdad6", border: "1px solid #ba1a1a" }}>
+                    <p className="text-sm font-semibold" style={{ color: "#93000a" }}>No customer found</p>
+                    <p className="text-xs mt-1" style={{ color: "#93000a" }}>
+                      No account found for "{searchPlate}". This customer will be treated as a walk-in guest.
+                    </p>
                   </div>
                   <button
                     className="w-full py-3 rounded-xl text-sm font-semibold transition"
@@ -482,10 +482,9 @@ export default function QueuePage() {
                 </div>
               )}
 
-              {/* TH2 — Có khách nhưng chưa booking */}
+              {/* TH2 — Có khách chưa booking */}
               {isSearched && searchResult?.type === "no-booking" && (
                 <div className="py-2">
-                  {/* Customer info */}
                   <div className="rounded-xl p-4 mb-4" style={{ background: "#f1f3ff" }}>
                     <div className="flex items-center justify-between">
                       <div>
@@ -497,10 +496,7 @@ export default function QueuePage() {
                       </span>
                     </div>
                   </div>
-                  <div
-                    className="rounded-xl p-4 mb-4"
-                    style={{ background: "#c9e6ff", border: "1px solid #006591" }}
-                  >
+                  <div className="rounded-xl p-4 mb-4" style={{ background: "#c9e6ff", border: "1px solid #006591" }}>
                     <p className="text-sm font-semibold" style={{ color: "#001e2f" }}>No upcoming bookings</p>
                     <p className="text-xs mt-1" style={{ color: "#004c6e" }}>
                       This customer has no scheduled appointment today. You can create a walk-in service for them.
@@ -518,7 +514,6 @@ export default function QueuePage() {
               {/* TH3 — Có booking */}
               {isSearched && searchResult?.type === "booked" && (
                 <div className="py-2">
-                  {/* Customer info */}
                   <div className="rounded-xl p-3 mb-3" style={{ background: "#f1f3ff" }}>
                     <div className="flex items-center justify-between">
                       <div>
@@ -531,9 +526,7 @@ export default function QueuePage() {
                     </div>
                   </div>
 
-                  <p className="text-xs font-semibold uppercase mb-2" style={{ color: "#747686" }}>
-                    Select Booking Slot
-                  </p>
+                  <p className="text-xs font-semibold uppercase mb-2" style={{ color: "#747686" }}>Select Booking Slot</p>
 
                   <div className="flex flex-col gap-2 max-h-64 overflow-y-auto mb-4">
                     {searchResult.bookings?.map((b) => (
@@ -592,6 +585,88 @@ export default function QueuePage() {
                   </button>
                 </div>
               )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Cancel Confirmation Modal */}
+      {cancelVehicle && (
+        <div
+          className="fixed inset-0 flex items-center justify-center z-50"
+          style={{ background: "rgba(20,27,43,0.5)" }}
+          onClick={() => setCancelVehicle(null)}
+        >
+          <div
+            className="rounded-2xl shadow-xl w-full max-w-md mx-4 p-6"
+            style={{ background: "#ffffff" }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-base font-bold" style={{ color: "#141b2b", fontFamily: "Montserrat, sans-serif" }}>
+                Cancel Booking
+              </h2>
+              <button onClick={() => setCancelVehicle(null)} className="rounded-full p-1 hover:bg-slate-100 transition">
+                <X className="w-5 h-5" style={{ color: "#747686" }} />
+              </button>
+            </div>
+
+            {/* Vehicle info */}
+            <div className="rounded-xl p-4 mb-4" style={{ background: "#f1f3ff" }}>
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="font-bold text-sm" style={{ color: "#141b2b" }}>{cancelVehicle.licensePlate}</p>
+                  <p className="text-xs" style={{ color: "#747686" }}>{cancelVehicle.model} • {cancelVehicle.color}</p>
+                  <p className="text-xs font-medium mt-1" style={{ color: "#0037b0" }}>{cancelVehicle.service}</p>
+                </div>
+                <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${tierColors[cancelVehicle.tier]}`}>
+                  {cancelVehicle.tier}
+                </span>
+              </div>
+            </div>
+
+            {/* Warning theo loại */}
+            {cancelVehicle.tier === "Guest" ? (
+              <div className="rounded-xl p-4 mb-4" style={{ background: "#ffdad6", border: "1px solid #ba1a1a" }}>
+                <p className="text-sm font-semibold mb-1" style={{ color: "#93000a" }}>Walk-in Cancellation</p>
+                <p className="text-xs" style={{ color: "#93000a" }}>
+                  1 violation point will be added to license plate <strong>{cancelVehicle.licensePlate}</strong>.
+                  If violations exceed 3 in 30 days, a 20,000 VND deposit will be required on next visit.
+                </p>
+              </div>
+            ) : cancelVehicle.tier === "Member" ? (
+              <div className="rounded-xl p-4 mb-4" style={{ background: "#c9e6ff", border: "1px solid #006591" }}>
+                <p className="text-sm font-semibold mb-1" style={{ color: "#001e2f" }}>Unlimited / Family Package</p>
+                <p className="text-xs" style={{ color: "#004c6e" }}>
+                  No deposit collected. 1 violation point will be added to customer account.
+                  If violations exceed 3 in 30 days, booking will be disabled for 14 days.
+                </p>
+              </div>
+            ) : (
+              <div className="rounded-xl p-4 mb-4" style={{ background: "#ffdad6", border: "1px solid #ba1a1a" }}>
+                <p className="text-sm font-semibold mb-1" style={{ color: "#93000a" }}>Single Package — Deposit Required</p>
+                <p className="text-xs" style={{ color: "#93000a" }}>
+                  100% of the deposit amount will be collected from this customer upon cancellation.
+                </p>
+              </div>
+            )}
+
+            {/* Buttons */}
+            <div className="flex gap-3">
+              <button
+                onClick={() => setCancelVehicle(null)}
+                className="flex-1 py-2.5 rounded-xl text-sm font-semibold transition"
+                style={{ border: "1px solid #c4c5d7", color: "#434655", background: "#ffffff" }}
+              >
+                Keep Booking
+              </button>
+              <button
+                onClick={confirmCancel}
+                className="flex-1 py-2.5 rounded-xl text-sm font-semibold transition"
+                style={{ background: "#ba1a1a", color: "#ffffff" }}
+              >
+                Confirm Cancel
+              </button>
             </div>
           </div>
         </div>

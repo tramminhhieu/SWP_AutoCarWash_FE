@@ -17,12 +17,11 @@ export default function AppRouter() {
         <Route path="/" element={<Home />} />
         <Route path="/login" element={<Login />} />
         <Route path="/register" element={<Register />} />
-
+        <Route path="/booking/location" element={<SelectStation />} />
+        <Route path="/booking/details" element={<BookingCreate />} />
         {/* Toàn bộ flow đặt lịch yêu cầu đăng nhập - bọc trong PrivateRoute,
             chưa login bấm vào sẽ bị redirect về /login (xử lý trong PrivateRoute.tsx) */}
         <Route element={<PrivateRoute />}>
-          <Route path="/booking/location" element={<SelectStation />} />
-          <Route path="/booking/details" element={<BookingCreate />} />
           <Route path="/booking/history" element={<BookingHistory />} />
           <Route
             path="/booking/history/:bookingId"

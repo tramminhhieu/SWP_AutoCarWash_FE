@@ -1,32 +1,19 @@
-// import type { LoginRequest, LoginResponse } from "../types/auth";
-// import { mockLogin } from "../../../mocks/auth";
-// import axiosClient from "../../../lib/axiosClient";
-// import type { RegisterRequest } from "../types/auth";
-// import { API } from "../../../constants/apiEndpoints";
-
-// // MOCK: dùng tạm để test login khi chưa muốn gọi BE thật.
-// // Tài khoản test: admin@gmail.com / 123456
-// export const login = async (payload: LoginRequest): Promise<LoginResponse> => {
-//   console.log(payload);
-//   return mockLogin(payload);
-// };
-
-// export const register = async (
-//   payload: RegisterRequest,
-// ): Promise<{ message: string }> => {
-//   const response = await axiosClient.post(API.AUTH.REGISTER, payload);
-//   return response.data;
-// };
-
-// ====== CODE GỐC (gọi BE thật qua axiosClient) - bỏ comment khi cần gọi BE thật ======
 import type { LoginRequest, LoginResponse } from "../types/auth";
 import axiosClient from "../../../lib/axiosClient";
 import { API } from "../../../constants/apiEndpoints";
 import type { RegisterRequest } from "../types/auth";
 
 export const login = async (payload: LoginRequest): Promise<LoginResponse> => {
-  const res = await axiosClient.post<LoginResponse>(API.AUTH.LOGIN, payload);
-  return res.data;
+  const res = await axiosClient.post<{
+    success: boolean;
+    message: string;
+    data: { token: string; email: string; name: string };
+  }>(API.AUTH.LOGIN, payload);
+  return {
+    token: res.data.data.token,
+    message: res.data.message,
+    name: res.data.data.name,
+  };
 };
 
 export const register = async (
@@ -35,5 +22,3 @@ export const register = async (
   const response = await axiosClient.post(API.AUTH.REGISTER, payload);
   return response.data; // { success, message }
 };
-
-//=========================================================================================

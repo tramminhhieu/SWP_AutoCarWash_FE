@@ -1,10 +1,6 @@
-/*
- * @author: Bảo Ngọc
- * @version 2.1
- */
 import { useNavigate } from "react-router-dom";
 import { useState } from "react";
-import { Search, X, ChevronRight } from "lucide-react";
+import { Search, X, ChevronRight, ChevronUp, ChevronDown, Droplets, Check, CreditCard } from "lucide-react";
 
 interface Vehicle {
   id: number;
@@ -108,7 +104,7 @@ const initialWaitingPool: Vehicle[] = [
 
 const initialLanes: Lane[] = [
   { lane: "01", plate: "ABC-1234", model: "Tesla Model 3", color: "Blue", service: "Deluxe Ceramic Wash", status: "Washing", est: "4 mins left", bookingId: 301, totalAmount: 60 },
-  { lane: "02", plate: "WASH-888", model: "BMW X5", color: "Alpine White", service: "Full Detail Package", status: "Washing", est: "12 mins left", bookingId: 302, totalAmount: 90 },
+  { lane: "02", plate: "WASH-888", model: "BMW X5", color: "Alpine White", service: "Full Detail Package", status: "Completed", est: "12 mins left", bookingId: 302, totalAmount: 90 },
   { lane: "03", plate: "ABC-1234", model: "Tesla Model 3", color: "Blue", service: "Deluxe Ceramic Wash", status: "Washing", est: "4 mins left", bookingId: 303, totalAmount: 60 },
 ];
 
@@ -117,12 +113,12 @@ const initialCompleted: Vehicle[] = [
   { id: 7, bookingId: 202, licensePlate: "KLR-8822", model: "Lexus RX", color: "Silver", service: "Full Detail Package", tier: "SILVER", finishedAt: "14:35", totalAmount: 75 },
 ];
 
-const tierColors: Record<string, string> = {
-  PLATINUM: "bg-[#dce1ff] text-[#001551]",
-  GOLD: "bg-[#c9e6ff] text-[#001e2f]",
-  SILVER: "bg-[#dce2f7] text-[#434655]",
-  Member: "bg-[#e9edff] text-[#0037b0]",
-  Guest: "bg-[#f1f3ff] text-[#434655]",
+const tierBadge: Record<string, string> = {
+  PLATINUM: "bg-primary-fixed text-on-primary-fixed",
+  GOLD: "bg-secondary-fixed text-on-secondary-fixed",
+  SILVER: "bg-surface-variant text-on-surface-variant",
+  Member: "bg-surface-container text-primary",
+  Guest: "bg-surface-container-low text-on-surface-variant",
 };
 
 export default function QueuePage() {
@@ -130,21 +126,17 @@ export default function QueuePage() {
   const [lanes, setLanes] = useState<Lane[]>(initialLanes);
   const [waitingPool, setWaitingPool] = useState<Vehicle[]>(initialWaitingPool);
   const [completed, setCompleted] = useState<Vehicle[]>(initialCompleted);
-
-  // Check-in modal
+  const [cancelVehicle, setCancelVehicle] = useState<Vehicle | null>(null);
   const [showCheckin, setShowCheckin] = useState(false);
   const [searchPlate, setSearchPlate] = useState("");
   const [searchResult, setSearchResult] = useState<CustomerResult | null>(null);
   const [selectedBooking, setSelectedBooking] = useState<BookingItem | null>(null);
   const [isSearched, setIsSearched] = useState(false);
 
-  // Cancel modal
-  const [cancelVehicle, setCancelVehicle] = useState<Vehicle | null>(null);
-
   const now = new Date();
   const timeStr = `${now.getHours()}:${String(now.getMinutes()).padStart(2, "0")}`;
+  const hasEmptyLane = lanes.some((l) => l.status === "Empty");
 
-  // ── Check-in handlers ──────────────────────────────────────────────────
   const closeCheckinModal = () => {
     setShowCheckin(false);
     setSearchPlate("");
@@ -180,20 +172,31 @@ export default function QueuePage() {
     closeCheckinModal();
   };
 
-  // ── Cancel handlers ────────────────────────────────────────────────────
-  const handleCancelVehicle = (vehicleId: number) => {
-    const vehicle = waitingPool.find((v) => v.id === vehicleId);
-    if (!vehicle) return;
-    setCancelVehicle(vehicle);
+  const moveVehicle = (index: number, dir: -1 | 1) => {
+    setWaitingPool((prev) => {
+      const target = index + dir;
+      if (target < 0 || target >= prev.length) return prev;
+      const next = [...prev];
+      [next[index], next[target]] = [next[target], next[index]];
+      return next;
+    });
   };
 
-  const confirmCancel = () => {
-    if (!cancelVehicle) return;
-    setWaitingPool((prev) => prev.filter((v) => v.id !== cancelVehicle.id));
-    setCancelVehicle(null);
+  const handleAddToLane = () => {
+    if (waitingPool.length === 0) return;
+    const emptyIndex = lanes.findIndex((l) => l.status === "Empty");
+    if (emptyIndex === -1) return;
+    const next = waitingPool[0];
+    setLanes((prev) =>
+      prev.map((l, i) =>
+        i === emptyIndex
+          ? { ...l, plate: next.licensePlate, model: next.model, color: next.color, service: next.service, status: "Washing", est: "20 mins left", bookingId: next.bookingId, totalAmount: next.totalAmount }
+          : l
+      )
+    );
+    setWaitingPool((prev) => prev.slice(1));
   };
 
-  // ── Lane completed handler ─────────────────────────────────────────────
   const handleCompleted = (index: number) => {
     const lane = lanes[index];
     const newCompleted: Vehicle = {
@@ -208,117 +211,66 @@ export default function QueuePage() {
       totalAmount: lane.totalAmount,
     };
     setCompleted((prev) => [...prev, newCompleted]);
-
     const updatedLanes = [...lanes];
     if (waitingPool.length > 0) {
       const next = waitingPool[0];
-      updatedLanes[index] = {
-        ...updatedLanes[index],
-        plate: next.licensePlate,
-        model: next.model,
-        color: next.color,
-        service: next.service,
-        status: "Washing",
-        est: "20 mins left",
-        bookingId: next.bookingId,
-        totalAmount: next.totalAmount,
-      };
+      updatedLanes[index] = { ...updatedLanes[index], plate: next.licensePlate, model: next.model, color: next.color, service: next.service, status: "Washing", est: "20 mins left", bookingId: next.bookingId, totalAmount: next.totalAmount };
       setWaitingPool((prev) => prev.slice(1));
     } else {
-      updatedLanes[index] = {
-        ...updatedLanes[index],
-        plate: "—",
-        model: "",
-        color: "",
-        service: "",
-        status: "Empty",
-        est: "",
-        bookingId: 0,
-        totalAmount: 0,
-      };
+      updatedLanes[index] = { ...updatedLanes[index], plate: "—", model: "", color: "", service: "", status: "Empty", est: "", bookingId: 0, totalAmount: 0 };
     }
     setLanes(updatedLanes);
   };
 
   const handleSelectCompleted = (v: Vehicle) => {
     navigate(`/staff/payment/${v.bookingId}`, {
-      state: {
-        bookingId: v.bookingId,
-        licensePlate: v.licensePlate,
-        model: v.model,
-        color: v.color,
-        service: v.service,
-        totalAmount: v.totalAmount,
-        voucherDiscount: v.voucherDiscount,
-        pointDiscount: v.pointDiscount,
-      },
+      state: { bookingId: v.bookingId, licensePlate: v.licensePlate, model: v.model, color: v.color, service: v.service, totalAmount: v.totalAmount, voucherDiscount: v.voucherDiscount, pointDiscount: v.pointDiscount },
     });
   };
 
   return (
-    <div className="min-h-screen" style={{ background: "#f9f9ff" }}>
+    <div className="min-h-screen bg-background">
       {/* Header */}
       <div className="flex items-center justify-between mb-6">
         <div>
-          <h1 className="text-2xl font-bold" style={{ color: "#141b2b", fontFamily: "Montserrat, sans-serif" }}>
-            Live Queue Management
-          </h1>
-          <p className="text-sm mt-1" style={{ color: "#434655" }}>
-            Real-time status of active wash lanes and waiting vehicles.
-          </p>
+          <h1 className="text-2xl font-bold font-heading text-on-background">Live Queue Management</h1>
+          <p className="text-sm mt-1 text-on-surface-variant">Real-time status of active wash lanes and waiting vehicles.</p>
         </div>
-        <button
-          onClick={() => setShowCheckin(true)}
-          className="px-4 py-2 rounded-xl text-sm font-semibold transition"
-          style={{ background: "#0037b0", color: "#ffffff" }}
-        >
+        <button onClick={() => setShowCheckin(true)} className="px-4 py-2 rounded-xl text-sm font-semibold transition bg-primary text-on-primary hover:opacity-90">
           + Check-in
         </button>
       </div>
 
       <div className="flex gap-4">
         {/* Active Lanes */}
-        <div className="w-96 shrink-0">
-          <p className="text-xs font-semibold uppercase mb-3" style={{ color: "#747686" }}>Active Lanes</p>
+        <div className="w-90 shrink-0">
+          <p className="text-xs font-semibold uppercase mb-3 text-outline">Active Lanes</p>
           <div className="flex flex-col gap-3">
             {lanes.map((lane, index) => (
-              <div
-                key={lane.lane}
-                className="rounded-2xl p-4 flex items-center gap-4"
-                style={{ background: "#ffffff", boxShadow: "0 1px 4px rgba(0,0,0,0.08)" }}
-              >
-                <div className="w-14 h-14 rounded-xl flex flex-col items-center justify-center shrink-0" style={{ background: "#0037b0", color: "#ffffff" }}>
-                  <span className="text-xs font-medium">LANE</span>
-                  <span className="text-lg font-bold">{lane.lane}</span>
+              <div key={lane.lane} className="rounded-2xl p-3 flex items-center gap-3 bg-white shadow-sm border border-outline-variant/30">
+                <div className="w-12 h-12 rounded-xl flex flex-col items-center justify-center shrink-0 bg-primary text-on-primary">
+                  <span className="text-[10px] font-medium leading-none">LANE</span>
+                  <span className="text-base font-bold leading-tight">{lane.lane}</span>
                 </div>
                 {lane.status === "Empty" ? (
                   <div className="flex-1">
-                    <p className="text-sm italic" style={{ color: "#747686" }}>No vehicle assigned</p>
+                    <p className="text-xs italic text-outline">No vehicle assigned</p>
                   </div>
                 ) : (
-                  <div className="flex-1">
-                    <div className="flex items-center gap-2 mb-1">
-                      <span
-                        className="text-xs px-2 py-0.5 rounded-full font-medium"
-                        style={lane.status === "Washing"
-                          ? { background: "#c9e6ff", color: "#004c6e" }
-                          : { background: "#4ae176", color: "#002109" }}
-                      >
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-1.5 mb-0.5">
+                      <span className={`text-[11px] px-1.5 py-0.5 rounded-full font-medium flex items-center gap-0.5 ${lane.status === "Washing" ? "bg-amber-100 text-amber-700" : "bg-green-100 text-green-700"}`}>
+                        {lane.status === "Washing" ? <Droplets className="w-2.5 h-2.5" /> : <Check className="w-2.5 h-2.5" />}
                         {lane.status}
                       </span>
-                      <span className="text-xs" style={{ color: "#747686" }}>{lane.model} • {lane.color}</span>
+                     <span className="text-[11px] text-outline truncate">{lane.model.split(" ")[0]} • {lane.color}</span>
                     </div>
-                    <p className="text-lg font-bold" style={{ color: "#141b2b" }}>{lane.plate}</p>
-                    <p className="text-xs font-medium" style={{ color: "#0037b0" }}>{lane.service}</p>
-                    <p className="text-xs" style={{ color: "#747686" }}>Est: {lane.est}</p>
+                    <p className="text-base font-bold text-on-surface tracking-wide">{lane.plate}</p>
+                    <p className="text-[11px] font-medium text-primary truncate">{lane.service}</p>
                   </div>
                 )}
                 {lane.status !== "Empty" && (
-                  <button
-                    onClick={() => handleCompleted(index)}
-                    className="px-4 py-2 rounded-xl text-sm font-semibold transition shrink-0"
-                    style={{ background: "#006b2d", color: "#ffffff" }}
-                  >
+                  <button onClick={() => handleCompleted(index)} className="px-3 py-1.5 rounded-xl text-xs font-semibold transition shrink-0 bg-primary text-on-primary hover:opacity-90">
                     Completed
                   </button>
                 )}
@@ -329,239 +281,191 @@ export default function QueuePage() {
 
         {/* Waiting Pool */}
         <div className="flex-1">
-          <div className="rounded-2xl p-4" style={{ background: "#0037b0" }}>
-            <div className="flex items-center justify-between mb-3">
-              <div>
-                <p className="font-bold text-sm" style={{ color: "#ffffff" }}>Waiting Pool</p>
-                <p className="text-xs" style={{ color: "#b7c4ff" }}>{waitingPool.length} VEHICLES IN QUEUE</p>
-              </div>
-              <button
-                onClick={() => setShowCheckin(true)}
-                className="w-6 h-6 rounded-full flex items-center justify-center text-sm"
-                style={{ background: "rgba(255,255,255,0.2)", color: "#ffffff" }}
-              >+</button>
+          <div className="rounded-t-2xl px-4 py-3 flex items-center justify-between bg-primary">
+            <div>
+              <p className="font-bold text-sm text-white">Waiting Pool</p>
+              <p className="text-xs text-white/70">{waitingPool.length} VEHICLES IN QUEUE</p>
             </div>
-            <div className="flex flex-col gap-2">
-              {waitingPool.length === 0 && (
-                <p className="text-xs text-center py-4" style={{ color: "#b7c4ff" }}>No vehicles waiting</p>
-              )}
-              {waitingPool.map((v) => (
-                <div key={v.id} className="rounded-xl p-3" style={{ background: "#ffffff" }}>
-                  <div className="flex items-center justify-between mb-1">
-                    <span className="font-bold text-xs" style={{ color: "#141b2b" }}>{v.licensePlate}</span>
-                    <span className={`text-xs px-1.5 py-0.5 rounded-full font-medium ${tierColors[v.tier]}`}>{v.tier}</span>
-                  </div>
-                  <p className="text-xs" style={{ color: "#434655" }}>{v.model} • {v.color}</p>
-                  <p className="text-xs font-medium" style={{ color: "#0037b0" }}>{v.service}</p>
-                  <button
-                    onClick={(e) => { e.stopPropagation(); handleCancelVehicle(v.id); }}
-                    className="mt-2 w-full text-xs py-1.5 rounded-lg font-medium text-center transition"
-                    style={{ background: "#ffdad6", color: "#93000a", border: "1px solid #ba1a1a" }}
-                  >
-                    Cancel
+            <button
+              onClick={handleAddToLane}
+              disabled={!hasEmptyLane || waitingPool.length === 0}
+              title={waitingPool.length === 0 ? "No vehicle waiting" : hasEmptyLane ? "Assign next vehicle to an open lane" : "All lanes are busy"}
+              className="w-6 h-6 rounded-full flex items-center justify-center text-sm bg-white/20 text-white transition hover:bg-white/30 disabled:opacity-40 disabled:cursor-not-allowed"
+            >+</button>
+          </div>
+          <div className="rounded-b-2xl p-2.5 flex flex-col gap-2 bg-surface-container-lowest shadow-sm">
+            {waitingPool.length === 0 && (
+              <p className="text-xs text-center py-4 text-outline">No vehicles waiting</p>
+            )}
+            {waitingPool.map((v, idx) => (
+              <div key={v.id} className="rounded-xl px-3 py-2.5 flex items-center gap-2 bg-white border border-outline-variant/20">
+                <div className="flex flex-col justify-center gap-0.5 shrink-0">
+                  <button onClick={() => moveVehicle(idx, -1)} disabled={idx === 0} className="text-outline transition hover:text-primary disabled:opacity-30">
+                    <ChevronUp className="w-3 h-3" />
+                  </button>
+                  <button onClick={() => moveVehicle(idx, 1)} disabled={idx === waitingPool.length - 1} className="text-outline transition hover:text-primary disabled:opacity-30">
+                    <ChevronDown className="w-3 h-3" />
                   </button>
                 </div>
-              ))}
-            </div>
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-1.5 mb-0.5">
+                    <span className="text-xs font-bold text-on-surface">{v.licensePlate}</span>
+                    <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-medium ${tierBadge[v.tier]}`}>{v.tier}</span>
+                  </div>
+                  <p className="text-[11px] text-on-surface-variant truncate">{v.model.split(" ")[0]} • {v.color}</p>
+                  <p className="text-[11px] font-medium text-primary flex items-center gap-0.5">
+                    <Droplets className="w-2.5 h-2.5 shrink-0" /> {v.service}
+                  </p>
+                </div>
+                <button
+                  onClick={(e) => { e.stopPropagation(); setCancelVehicle(v); }}
+                  className="text-xs px-4 py-1.5 rounded-full font-medium whitespace-nowrap bg-error-container text-on-error-container shrink-0"
+                >
+                  Cancel
+                </button>
+              </div>
+            ))}
           </div>
         </div>
 
         {/* Completed */}
         <div className="flex-1">
-          <div className="rounded-2xl p-4" style={{ background: "#006b2d" }}>
-            <div className="flex items-center justify-between mb-3">
-              <div>
-                <p className="font-bold text-sm" style={{ color: "#ffffff" }}>Completed</p>
-                <p className="text-xs" style={{ color: "#5cf083" }}>AWAITING PAYMENT</p>
-              </div>
+          <div className="rounded-t-2xl px-4 py-3 flex items-center justify-between bg-tertiary-container">
+            <div>
+              <p className="font-bold text-sm text-white">Completed</p>
+              <p className="text-xs text-white/70">AWAITING PAYMENT</p>
             </div>
-            <div className="flex flex-col gap-2">
-              {completed.map((v) => (
-                <div
-                  key={v.id}
-                  onClick={() => handleSelectCompleted(v)}
-                  className="rounded-xl p-3 cursor-pointer transition hover:opacity-90"
-                  style={{ background: "#ffffff" }}
-                >
-                  <div className="flex items-center justify-between mb-1">
-                    <span className="font-bold text-xs" style={{ color: "#141b2b" }}>{v.licensePlate}</span>
-                    <span className={`text-xs px-1.5 py-0.5 rounded-full font-medium ${tierColors[v.tier]}`}>{v.tier}</span>
-                  </div>
-                  <p className="text-xs" style={{ color: "#434655" }}>{v.model} • {v.color}</p>
-                  <p className="text-xs font-medium" style={{ color: "#0037b0" }}>{v.service}</p>
-                  <div className="flex items-center justify-between mt-2">
-                    <span className="text-xs" style={{ color: "#747686" }}>⏱ {v.finishedAt}</span>
-                    <span className="text-xs px-2 py-0.5 rounded-full font-medium" style={{ background: "#4ae176", color: "#002109" }}>
-                      Completed
-                    </span>
-                  </div>
+            <CreditCard className="w-4 h-4 text-white/80" />
+          </div>
+          <div className="rounded-b-2xl p-2.5 flex flex-col gap-2 bg-surface-container-lowest shadow-sm">
+            {completed.map((v) => (
+              <div key={v.id} onClick={() => handleSelectCompleted(v)} className="rounded-xl px-3 py-2.5 cursor-pointer transition hover:bg-surface-container-low bg-white border border-outline-variant/20">
+                <div className="flex items-center justify-between mb-0.5">
+                  <span className="text-xs font-bold text-on-surface">{v.licensePlate}</span>
+                  <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-medium ${tierBadge[v.tier]}`}>{v.tier}</span>
                 </div>
-              ))}
-            </div>
+                <p className="text-[11px] text-on-surface-variant">{v.model.split(" ")[0]} • {v.color}</p>
+                <p className="text-[11px] font-medium text-primary">{v.service}</p>
+                <div className="flex justify-end mt-1.5">
+                  <span className="text-[10px] px-2 py-0.5 rounded-full font-medium bg-green-100 text-green-700">Completed</span>
+                </div>
+              </div>
+            ))}
           </div>
         </div>
       </div>
 
       {/* Check-in Modal */}
       {showCheckin && (
-        <div
-          className="fixed inset-0 flex items-center justify-center z-50"
-          style={{ background: "rgba(20,27,43,0.5)" }}
-          onClick={closeCheckinModal}
-        >
-          <div
-            className="rounded-2xl shadow-xl w-full max-w-lg mx-4"
-            style={{ background: "#ffffff" }}
-            onClick={(e) => e.stopPropagation()}
-          >
-            <div className="flex items-center justify-between px-6 pt-6 pb-4" style={{ borderBottom: "1px solid #dce2f7" }}>
-              <h2 className="text-base font-bold" style={{ color: "#141b2b", fontFamily: "Montserrat, sans-serif" }}>
-                Vehicle Check-in
-              </h2>
-              <button onClick={closeCheckinModal} className="rounded-full p-1 hover:bg-slate-100 transition">
-                <X className="w-5 h-5" style={{ color: "#747686" }} />
+        <div className="fixed inset-0 flex items-center justify-center z-50 bg-inverse-surface/50" onClick={closeCheckinModal}>
+          <div className="rounded-2xl shadow-xl w-full max-w-lg mx-4 bg-surface-container-lowest" onClick={(e) => e.stopPropagation()}>
+            <div className="flex items-center justify-between px-6 pt-6 pb-4 border-b border-outline-variant">
+              <h2 className="text-base font-bold font-heading text-on-surface">Vehicle Check-in</h2>
+              <button onClick={closeCheckinModal} className="rounded-full p-1 hover:bg-surface-container transition">
+                <X className="w-5 h-5 text-outline" />
               </button>
             </div>
-
             <div className="px-6 py-4">
-              {/* Search bar */}
               <div className="flex gap-2 mb-4">
-                <div className="flex items-center gap-2 flex-1 rounded-xl px-3 py-2" style={{ border: "1px solid #c4c5d7" }}>
-                  <Search className="w-4 h-4 shrink-0" style={{ color: "#747686" }} />
+                <div className="flex items-center gap-2 flex-1 rounded-xl px-3 py-2 border border-outline-variant">
+                  <Search className="w-4 h-4 shrink-0 text-outline" />
                   <input
                     type="text"
                     value={searchPlate}
                     onChange={(e) => setSearchPlate(e.target.value)}
                     onKeyDown={(e) => e.key === "Enter" && handleSearch()}
                     placeholder="Enter license plate or phone..."
-                    className="flex-1 text-sm outline-none"
-                    style={{ color: "#141b2b" }}
+                    className="flex-1 text-sm outline-none bg-transparent text-on-surface"
                     autoFocus
                   />
                   {searchPlate && (
                     <button onClick={() => { setSearchPlate(""); setSearchResult(null); setIsSearched(false); }}>
-                      <X className="w-4 h-4" style={{ color: "#747686" }} />
+                      <X className="w-4 h-4 text-outline" />
                     </button>
                   )}
                 </div>
-                <button
-                  onClick={handleSearch}
-                  className="px-4 py-2 rounded-xl text-sm font-semibold transition"
-                  style={{ background: "#0037b0", color: "#ffffff" }}
-                >
-                  Search
-                </button>
+                <button onClick={handleSearch} className="px-4 py-2 rounded-xl text-sm font-semibold transition bg-primary text-on-primary">Search</button>
               </div>
 
-              {/* Default */}
               {!isSearched && (
                 <div className="text-center py-8">
-                  <div className="w-12 h-12 rounded-full flex items-center justify-center mx-auto mb-3" style={{ background: "#e9edff" }}>
-                    <Search className="w-6 h-6" style={{ color: "#0037b0" }} />
+                  <div className="w-12 h-12 rounded-full flex items-center justify-center mx-auto mb-3 bg-surface-container">
+                    <Search className="w-6 h-6 text-primary" />
                   </div>
-                  <p className="text-sm font-medium" style={{ color: "#141b2b" }}>Search for a customer</p>
-                  <p className="text-xs mt-1" style={{ color: "#747686" }}>Enter license plate or phone number to find booking</p>
+                  <p className="text-sm font-medium text-on-surface">Search for a customer</p>
+                  <p className="text-xs mt-1 text-outline">Enter license plate or phone number to find booking</p>
                 </div>
               )}
 
-              {/* TH1 — Không tìm thấy */}
               {isSearched && searchResult?.type === "not-found" && (
                 <div className="py-4">
-                  <div className="rounded-xl p-4 mb-4" style={{ background: "#ffdad6", border: "1px solid #ba1a1a" }}>
-                    <p className="text-sm font-semibold" style={{ color: "#93000a" }}>No customer found</p>
-                    <p className="text-xs mt-1" style={{ color: "#93000a" }}>
-                      No account found for "{searchPlate}". This customer will be treated as a walk-in guest.
-                    </p>
+                  <div className="rounded-xl p-4 mb-4 bg-error-container border border-error">
+                    <p className="text-sm font-semibold text-on-error-container">No customer found</p>
+                    <p className="text-xs mt-1 text-on-error-container">No account found for "{searchPlate}". This customer will be treated as a walk-in guest.</p>
                   </div>
-                  <button
-                    className="w-full py-3 rounded-xl text-sm font-semibold transition"
-                    style={{ background: "#0037b0", color: "#ffffff" }}
-                  >
-                    + Create Walk-in
-                  </button>
+                  <button className="w-full py-3 rounded-xl text-sm font-semibold bg-primary text-on-primary">+ Create Walk-in</button>
                 </div>
               )}
 
-              {/* TH2 — Có khách chưa booking */}
               {isSearched && searchResult?.type === "no-booking" && (
                 <div className="py-2">
-                  <div className="rounded-xl p-4 mb-4" style={{ background: "#f1f3ff" }}>
+                  <div className="rounded-xl p-4 mb-4 bg-surface-container-low">
                     <div className="flex items-center justify-between">
                       <div>
-                        <p className="font-bold text-sm" style={{ color: "#141b2b" }}>{searchResult.customerName}</p>
-                        <p className="text-xs" style={{ color: "#747686" }}>{searchResult.phone}</p>
+                        <p className="font-bold text-sm text-on-surface">{searchResult.customerName}</p>
+                        <p className="text-xs text-outline">{searchResult.phone}</p>
                       </div>
-                      <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${tierColors[searchResult.tier ?? "Guest"]}`}>
-                        {searchResult.tier}
-                      </span>
+                      <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${tierBadge[searchResult.tier ?? "Guest"]}`}>{searchResult.tier}</span>
                     </div>
                   </div>
-                  <div className="rounded-xl p-4 mb-4" style={{ background: "#c9e6ff", border: "1px solid #006591" }}>
-                    <p className="text-sm font-semibold" style={{ color: "#001e2f" }}>No upcoming bookings</p>
-                    <p className="text-xs mt-1" style={{ color: "#004c6e" }}>
-                      This customer has no scheduled appointment today. You can create a walk-in service for them.
-                    </p>
+                  <div className="rounded-xl p-4 mb-4 bg-secondary-fixed border border-secondary">
+                    <p className="text-sm font-semibold text-on-secondary-fixed">No upcoming bookings</p>
+                    <p className="text-xs mt-1 text-on-secondary-fixed-variant">This customer has no scheduled appointment today.</p>
                   </div>
-                  <button
-                    className="w-full py-3 rounded-xl text-sm font-semibold transition"
-                    style={{ background: "#0037b0", color: "#ffffff" }}
-                  >
-                    + Create Walk-in for {searchResult.customerName}
-                  </button>
+                  <button className="w-full py-3 rounded-xl text-sm font-semibold bg-primary text-on-primary">+ Create Walk-in for {searchResult.customerName}</button>
                 </div>
               )}
 
-              {/* TH3 — Có booking */}
               {isSearched && searchResult?.type === "booked" && (
                 <div className="py-2">
-                  <div className="rounded-xl p-3 mb-3" style={{ background: "#f1f3ff" }}>
+                  <div className="rounded-xl p-3 mb-3 bg-surface-container-low">
                     <div className="flex items-center justify-between">
                       <div>
-                        <p className="font-bold text-sm" style={{ color: "#141b2b" }}>{searchResult.customerName}</p>
-                        <p className="text-xs" style={{ color: "#747686" }}>{searchResult.phone}</p>
+                        <p className="font-bold text-sm text-on-surface">{searchResult.customerName}</p>
+                        <p className="text-xs text-outline">{searchResult.phone}</p>
                       </div>
-                      <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${tierColors[searchResult.tier ?? "Guest"]}`}>
-                        {searchResult.tier}
-                      </span>
+                      <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${tierBadge[searchResult.tier ?? "Guest"]}`}>{searchResult.tier}</span>
                     </div>
                   </div>
-
-                  <p className="text-xs font-semibold uppercase mb-2" style={{ color: "#747686" }}>Select Booking Slot</p>
-
+                  <p className="text-xs font-semibold uppercase mb-2 text-outline">Select Booking Slot</p>
                   <div className="flex flex-col gap-2 max-h-64 overflow-y-auto mb-4">
                     {searchResult.bookings?.map((b) => (
                       <div
                         key={b.id}
                         onClick={() => setSelectedBooking(b)}
-                        className="rounded-xl p-3 cursor-pointer transition"
-                        style={{
-                          background: selectedBooking?.id === b.id ? "#dce1ff" : "#ffffff",
-                          border: selectedBooking?.id === b.id ? "2px solid #0037b0" : "2px solid #dce2f7",
-                        }}
+                        className={`rounded-xl p-3 cursor-pointer transition border-2 ${selectedBooking?.id === b.id ? "border-primary bg-primary-fixed" : "border-outline-variant bg-surface-container-lowest"}`}
                       >
                         <div className="flex items-center justify-between">
                           <div>
-                            <p className="text-sm font-semibold" style={{ color: "#141b2b" }}>{b.vehicleModel}</p>
-                            <p className="text-xs" style={{ color: "#747686" }}>{b.licensePlate} • {b.color}</p>
-                            <p className="text-xs font-medium mt-1" style={{ color: "#0037b0" }}>{b.washType}</p>
+                            <p className="text-sm font-semibold text-on-surface">{b.vehicleModel}</p>
+                            <p className="text-xs text-outline">{b.licensePlate} • {b.color}</p>
+                            <p className="text-xs font-medium mt-1 text-primary">{b.washType}</p>
                           </div>
                           <div className="text-right">
-                            <p className="text-xs" style={{ color: "#747686" }}>Scheduled</p>
-                            <p className="text-sm font-bold" style={{ color: "#141b2b" }}>{b.scheduledTime}</p>
-                            <p className="text-xs font-semibold mt-1" style={{ color: "#0037b0" }}>${b.totalAmount}</p>
+                            <p className="text-xs text-outline">Scheduled</p>
+                            <p className="text-sm font-bold text-on-surface">{b.scheduledTime}</p>
+                            <p className="text-xs font-semibold mt-1 text-primary">${b.totalAmount}</p>
                           </div>
                         </div>
                         {b.addOns.length > 0 && (
                           <div className="mt-2 flex flex-wrap gap-1">
                             {b.addOns.map((a) => (
-                              <span key={a.id} className="text-xs px-2 py-0.5 rounded-full" style={{ background: "#e9edff", color: "#0037b0" }}>
-                                {a.name} +${a.price}
-                              </span>
+                              <span key={a.id} className="text-xs px-2 py-0.5 rounded-full bg-surface-container text-primary">{a.name} +${a.price}</span>
                             ))}
                           </div>
                         )}
                         {selectedBooking?.id === b.id && (
-                          <div className="flex items-center gap-1 mt-2" style={{ color: "#0037b0" }}>
+                          <div className="flex items-center gap-1 mt-2 text-primary">
                             <ChevronRight className="w-3 h-3" />
                             <span className="text-xs font-medium">Selected</span>
                           </div>
@@ -569,17 +473,11 @@ export default function QueuePage() {
                       </div>
                     ))}
                   </div>
-
                   <button
                     onClick={handleConfirmCheckIn}
                     disabled={!selectedBooking}
-                    className="w-full py-3 rounded-xl text-sm font-semibold transition"
-                    style={{
-                      background: "#0037b0",
-                      color: "#ffffff",
-                      opacity: !selectedBooking ? 0.5 : 1,
-                      cursor: !selectedBooking ? "not-allowed" : "pointer",
-                    }}
+                    className="w-full py-3 rounded-xl text-sm font-semibold transition bg-primary text-on-primary"
+                    style={{ opacity: !selectedBooking ? 0.5 : 1, cursor: !selectedBooking ? "not-allowed" : "pointer" }}
                   >
                     Confirm Check-in
                   </button>
@@ -590,80 +488,69 @@ export default function QueuePage() {
         </div>
       )}
 
-      {/* Cancel Confirmation Modal */}
+      {/* Cancel Modal */}
       {cancelVehicle && (
-        <div
-          className="fixed inset-0 flex items-center justify-center z-50"
-          style={{ background: "rgba(20,27,43,0.5)" }}
-          onClick={() => setCancelVehicle(null)}
-        >
-          <div
-            className="rounded-2xl shadow-xl w-full max-w-md mx-4 p-6"
-            style={{ background: "#ffffff" }}
-            onClick={(e) => e.stopPropagation()}
-          >
+        <div className="fixed inset-0 flex items-center justify-center z-50 bg-inverse-surface/50" onClick={() => setCancelVehicle(null)}>
+          <div className="rounded-2xl shadow-xl w-full max-w-md mx-4 p-6 bg-surface-container-lowest" onClick={(e) => e.stopPropagation()}>
             <div className="flex items-center justify-between mb-4">
-              <h2 className="text-base font-bold" style={{ color: "#141b2b", fontFamily: "Montserrat, sans-serif" }}>
-                Cancel Booking
-              </h2>
-              <button onClick={() => setCancelVehicle(null)} className="rounded-full p-1 hover:bg-slate-100 transition">
-                <X className="w-5 h-5" style={{ color: "#747686" }} />
+              <h2 className="text-base font-bold font-heading text-on-surface">Cancel Booking</h2>
+              <button onClick={() => setCancelVehicle(null)} className="rounded-full p-1 hover:bg-surface-container transition">
+                <X className="w-5 h-5 text-outline" />
               </button>
             </div>
 
-            {/* Vehicle info */}
-            <div className="rounded-xl p-4 mb-4" style={{ background: "#f1f3ff" }}>
-              <div className="flex items-center justify-between">
+            {/* Thông tin khách hàng — to hơn, nổi bật hơn */}
+            <div className="rounded-2xl p-5 mb-4 bg-surface-container-low border border-outline-variant">
+              <div className="flex items-start justify-between gap-3">
                 <div>
-                  <p className="font-bold text-sm" style={{ color: "#141b2b" }}>{cancelVehicle.licensePlate}</p>
-                  <p className="text-xs" style={{ color: "#747686" }}>{cancelVehicle.model} • {cancelVehicle.color}</p>
-                  <p className="text-xs font-medium mt-1" style={{ color: "#0037b0" }}>{cancelVehicle.service}</p>
+                  <p className="text-xl font-bold text-on-surface tracking-wide">{cancelVehicle.licensePlate}</p>
+                  <p className="text-sm text-on-surface mt-0.5">{cancelVehicle.model} • {cancelVehicle.color}</p>
+                  <p className="text-sm font-semibold text-primary mt-1">{cancelVehicle.service}</p>
+                  <p className="text-sm font-bold text-on-surface mt-1">${cancelVehicle.totalAmount}.00</p>
                 </div>
-                <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${tierColors[cancelVehicle.tier]}`}>
+                <span className={`text-xs px-3 py-1 rounded-full font-semibold shrink-0 ${tierBadge[cancelVehicle.tier]}`}>
                   {cancelVehicle.tier}
                 </span>
               </div>
             </div>
 
-            {/* Warning theo loại */}
+            {/* Cảnh báo — nhỏ hơn, phụ */}
             {cancelVehicle.tier === "Guest" ? (
-              <div className="rounded-xl p-4 mb-4" style={{ background: "#ffdad6", border: "1px solid #ba1a1a" }}>
-                <p className="text-sm font-semibold mb-1" style={{ color: "#93000a" }}>Walk-in Cancellation</p>
-                <p className="text-xs" style={{ color: "#93000a" }}>
-                  1 violation point will be added to license plate <strong>{cancelVehicle.licensePlate}</strong>.
-                  If violations exceed 3 in 30 days, a 20,000 VND deposit will be required on next visit.
+              <div className="rounded-xl px-4 py-3 mb-4 bg-error-container border border-error">
+                <p className="text-xs font-semibold mb-0.5 text-on-error-container">Walk-in Cancellation</p>
+                <p className="text-xs text-on-error-container">
+                  1 violation point will be added to <strong>{cancelVehicle.licensePlate}</strong>. Exceeding 3 in 30 days requires a 20,000 VND deposit on next visit.
                 </p>
               </div>
             ) : cancelVehicle.tier === "Member" ? (
-              <div className="rounded-xl p-4 mb-4" style={{ background: "#c9e6ff", border: "1px solid #006591" }}>
-                <p className="text-sm font-semibold mb-1" style={{ color: "#001e2f" }}>Unlimited / Family Package</p>
-                <p className="text-xs" style={{ color: "#004c6e" }}>
-                  No deposit collected. 1 violation point will be added to customer account.
-                  If violations exceed 3 in 30 days, booking will be disabled for 14 days.
+              <div className="rounded-xl px-4 py-3 mb-4 bg-secondary-fixed border border-secondary">
+                <p className="text-xs font-semibold mb-0.5 text-on-secondary-fixed">Unlimited / Family Package</p>
+                <p className="text-xs text-on-secondary-fixed-variant">
+                  No deposit collected. 1 violation point added. Exceeding 3 in 30 days disables booking for 14 days.
                 </p>
               </div>
             ) : (
-              <div className="rounded-xl p-4 mb-4" style={{ background: "#ffdad6", border: "1px solid #ba1a1a" }}>
-                <p className="text-sm font-semibold mb-1" style={{ color: "#93000a" }}>Single Package — Deposit Required</p>
-                <p className="text-xs" style={{ color: "#93000a" }}>
+              <div className="rounded-xl px-4 py-3 mb-4 bg-error-container border border-error">
+                <p className="text-xs font-semibold mb-0.5 text-on-error-container">Single Package — Deposit Required</p>
+                <p className="text-xs text-on-error-container">
                   100% of the deposit amount will be collected from this customer upon cancellation.
                 </p>
               </div>
             )}
 
-            {/* Buttons */}
             <div className="flex gap-3">
               <button
                 onClick={() => setCancelVehicle(null)}
-                className="flex-1 py-2.5 rounded-xl text-sm font-semibold transition"
-                style={{ border: "1px solid #c4c5d7", color: "#434655", background: "#ffffff" }}
+                className="flex-1 py-2.5 rounded-xl text-sm font-semibold border border-outline-variant text-on-surface-variant bg-surface-container-lowest"
               >
                 Keep Booking
               </button>
               <button
-                onClick={confirmCancel}
-                className="flex-1 py-2.5 rounded-xl text-sm font-semibold transition"
-                style={{ background: "#ba1a1a", color: "#ffffff" }}
+                onClick={() => {
+                  setWaitingPool((prev) => prev.filter((v) => v.id !== cancelVehicle.id));
+                  setCancelVehicle(null);
+                }}
+                className="flex-1 py-2.5 rounded-xl text-sm font-semibold bg-error text-on-error"
               >
                 Confirm Cancel
               </button>

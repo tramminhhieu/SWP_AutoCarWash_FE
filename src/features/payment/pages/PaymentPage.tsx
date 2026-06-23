@@ -187,8 +187,7 @@ export default function PaymentPage() {
               {addOns.map((addon) => (
                 <div
                   key={addon.id}
-                  onClick={() => toggleAddOn(addon.id)}
-                  className="rounded-xl p-3 flex items-center justify-between cursor-pointer transition"
+                  className="rounded-xl p-3 flex items-center justify-between"
                   style={{
                     background: addon.selected ? "#e9edff" : "#f9f9ff",
                     border: addon.selected ? "2px solid #0037b0" : "2px solid #dce2f7",
@@ -208,11 +207,11 @@ export default function PaymentPage() {
                   </div>
                   <div className="flex items-center gap-2">
                     <span className="text-sm font-semibold" style={{ color: "#0037b0" }}>${addon.price}.00</span>
-                    {addon.selected ? (
+                    {/* {addon.selected ? (
                       <Minus className="w-4 h-4" style={{ color: "#0037b0" }} />
                     ) : (
                       <Plus className="w-4 h-4" style={{ color: "#747686" }} />
-                    )}
+                    )} */}
                   </div>
                 </div>
               ))}
@@ -245,61 +244,53 @@ export default function PaymentPage() {
               {/* Tab: Order Summary */}
               {activeTab === "detail" && (
                 <div>
-                  <div className="flex justify-between mb-2">
+                  {/* Service */}
+                  <div className="flex justify-between mb-1">
                     <div>
-                      <p className="text-sm font-semibold" style={{ color: "#141b2b" }}>{booking.service}</p>
-                      <p className="text-xs" style={{ color: "#747686" }}>{booking.model} • {booking.licensePlate}</p>
+                      <p className="text-sm font-bold text-on-surface">{booking.service}</p>
+                      <p className="text-xs text-on-surface-variant">{booking.model} • {booking.licensePlate}</p>
+                      <p className="text-xs font-semibold text-on-surface mt-0.5">HydroLux Station</p>
+                      <p className="text-xs text-primary mt-0.5">123 Le Loi</p>
                     </div>
-                    <p className="text-sm font-bold" style={{ color: "#141b2b" }}>${baseAmount}.00</p>
+                    <p className="text-sm font-bold text-on-surface whitespace-nowrap">{baseAmount.toLocaleString("vi-VN")} VND</p>
                   </div>
 
-                  {addOns.filter((a) => a.selected).map((a) => (
-                    <div key={a.id} className="flex justify-between mb-2">
-                      <p className="text-sm" style={{ color: "#434655" }}>{a.name}</p>
-                      <p className="text-sm font-semibold" style={{ color: "#141b2b" }}>${a.price}.00</p>
+                  {/* Date */}
+                  <div className="flex items-center gap-2 rounded-xl px-3 py-2 my-3 bg-surface-container-low">
+                    <span className="text-xs text-on-surface-variant">📅 Jun 24, 2026 • 08:15 – 08:45</span>
+                  </div>
+
+                  {/* Divider */}
+                  <div className="border-t border-outline-variant my-3" />
+
+                  {/* Subtotal */}
+                  <div className="flex justify-between mb-2">
+                    <span className="text-sm text-on-surface-variant">Subtotal</span>
+                    <span className="text-sm font-semibold text-on-surface">{baseAmount.toLocaleString("vi-VN")} VND</span>
+                  </div>
+
+                  {/* Discount */}
+                  {voucher > 0 && (
+                    <div className="flex justify-between mb-2">
+                      <span className="text-sm text-on-surface-variant">Discount (WELCOME10)</span>
+                      <span className="text-sm font-semibold text-error">-{voucher.toLocaleString("vi-VN")} VND</span>
                     </div>
-                  ))}
+                  )}
 
-                  <div className="flex items-center gap-2 rounded-xl px-3 py-2 my-3" style={{ background: "#f1f3ff" }}>
-                    <span className="text-xs" style={{ color: "#434655" }}>📅 Oct 18, 2023 • 09:30 AM</span>
-                  </div>
+                  {/* Divider */}
+                  <div className="border-t border-outline-variant my-3" />
 
-                  <div className="flex justify-between text-xs mb-4" style={{ color: "#747686" }}>
-                    <span>Duration</span>
-                    <span>45 min (3 slots)</span>
-                  </div>
-
-                  <div className="border-t pt-3 mb-4" style={{ borderColor: "#dce2f7" }}>
-                    <div className="flex justify-between">
-                      <span className="text-sm" style={{ color: "#434655" }}>Subtotal</span>
-                      <span className="text-sm font-semibold" style={{ color: "#141b2b" }}>${subtotal}.00</span>
-                    </div>
-                    {addOnTotal > 0 && (
-                      <div className="flex justify-between mt-1">
-                        <span className="text-sm" style={{ color: "#434655" }}>Add-ons</span>
-                        <span className="text-sm font-semibold" style={{ color: "#0037b0" }}>+${addOnTotal}.00</span>
-                      </div>
-                    )}
-                  </div>
-
-                  <div className="flex justify-between items-center mb-4">
-                    <span className="text-base font-semibold" style={{ color: "#141b2b" }}>Total</span>
-                    <span className="text-2xl font-bold" style={{ color: "#0037b0" }}>${total}.00</span>
+                  {/* Total */}
+                  <div className="flex justify-between items-center mb-5">
+                    <span className="text-base font-bold text-on-surface">Total</span>
+                    <span className="text-2xl font-bold text-primary">{total.toLocaleString("vi-VN")} VND</span>
                   </div>
 
                   <button
                     onClick={() => setActiveTab("payment")}
-                    className="w-full py-3 rounded-xl font-semibold text-sm transition"
-                    style={{ background: "#0037b0", color: "#ffffff" }}
+                    className="w-full py-3 rounded-xl font-semibold text-sm transition bg-primary text-on-primary"
                   >
                     Proceed to Payment →
-                  </button>
-                  <button
-                    onClick={() => navigate("/staff/queue")}
-                    className="w-full py-2 text-sm mt-2 transition"
-                    style={{ color: "#747686" }}
-                  >
-                    Cancel Booking
                   </button>
                 </div>
               )}

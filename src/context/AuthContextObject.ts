@@ -4,7 +4,7 @@ import type { AuthUser } from "../features/auth/types/auth";
 export interface AuthContextValue {
   user: AuthUser | null;
   isAuthenticated: boolean;
-  loginWithToken: (token: string) => void;
+  loginWithToken: (token: string, name?: string) => void;
   logout: () => void;
 }
 

@@ -3,11 +3,11 @@ import { Car, Save } from "lucide-react";
 import { addVehicle } from "../api/vehicleApi";
 import { LICENSE_PLATE_ALREADY_EXISTS } from "../types/vehicle";
 import { getApiErrorInfo } from "../../../lib/axiosClient";
-import { useAuth } from "../../../hooks/useAuth";
 
 // Regex biển số VN: 2 số đầu (mã tỉnh) + 1-2 chữ (trừ I, O dễ nhầm số) + "-" + 4-5 số
 // Theo đúng AC đã chốt: ^[0-9]{2}[A-HJ-NP-Z]{1,2}-[0-9]{4,5}$
 const LICENSE_PLATE_REGEX = /^[0-9]{2}[A-HJ-NP-Z]{1,2}-[0-9]{4,5}$/;
+const TEXT_ONLY_REGEX = /^[a-zA-Z\s]+$/;
 const MAX_FIELD_LENGTH = 50;
 
 interface VehicleFormProps {
@@ -17,9 +17,6 @@ interface VehicleFormProps {
 }
 
 const VehicleForm = ({ onSuccess, onCancel }: VehicleFormProps) => {
-  // customerId lấy từ tài khoản đang đăng nhập, KHÔNG cho customer tự nhập
-  const { user } = useAuth();
-
   const [licensePlate, setLicensePlate] = useState("");
   const [color, setColor] = useState("");
   const [brand, setBrand] = useState("");
@@ -57,12 +54,21 @@ const VehicleForm = ({ onSuccess, onCancel }: VehicleFormProps) => {
     if (!brand.trim()) {
       setBrandError("Hãng xe không được để trống");
       isValid = false;
+    } else if (!TEXT_ONLY_REGEX.test(brand.trim())) {
+      setBrandError("Hãng xe chỉ được chứa chữ cái");
+      isValid = false;
     } else if (brand.trim().length > MAX_FIELD_LENGTH) {
       setBrandError(`Hãng xe không được vượt quá ${MAX_FIELD_LENGTH} ký tự`);
       isValid = false;
     }
 
-    if (color.trim().length > MAX_FIELD_LENGTH) {
+    if (!color.trim()) {
+      setColorError("Màu xe không được để trống");
+      isValid = false;
+    } else if (!TEXT_ONLY_REGEX.test(color.trim())) {
+      setColorError("Màu xe chỉ được chứa chữ cái");
+      isValid = false;
+    } else if (color.trim().length > MAX_FIELD_LENGTH) {
       setColorError(`Màu xe không được vượt quá ${MAX_FIELD_LENGTH} ký tự`);
       isValid = false;
     }
@@ -75,22 +81,14 @@ const VehicleForm = ({ onSuccess, onCancel }: VehicleFormProps) => {
     setFormError(null);
 
     if (!validate()) return;
-
-    if (!user?.userId) {
-      setFormError(
-        "Không xác định được tài khoản khách hàng. Vui lòng đăng nhập lại.",
-      );
-      return;
-    }
-
     setIsSubmitting(true);
     try {
       const result = await addVehicle({
-        userId: user.userId,
         licensePlate: licensePlate.trim().toUpperCase(),
         brandName: brand.trim(),
         color: color.trim(),
       });
+
       onSuccess(result.message);
     } catch (error) {
       const { errorCode, message } = getApiErrorInfo(error);

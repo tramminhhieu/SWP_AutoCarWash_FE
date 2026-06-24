@@ -7,6 +7,8 @@ import type {
   CreateBookingResponse,
   PreviewPriceRequest,
   PreviewPriceResponse,
+  BookingCard,
+  BookingDetail,
 } from "../types/booking";
 import type {
   BookingSlot,
@@ -57,8 +59,6 @@ export const previewPrice = async (
   );
   return res.data.data;
 };
-import type { BookingCard, BookingDetail } from "../types/booking";
-
 /**
  * Fetches a customer's upcoming bookings (status CONFIRMED/CHECKED_IN/WASHING).
  *

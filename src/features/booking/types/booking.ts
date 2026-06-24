@@ -4,6 +4,10 @@ export interface BookingVehicle {
   id: number;
   licensePlate: string;
   brandName: string;
+  activeSubscription?: {
+    type: "UNLIMITED" | "FAMILY";
+    servicePackageId: number;
+  } | null;
 }
 
 export interface BookingServicePackage {
@@ -32,8 +36,14 @@ export interface BookingWindow {
   maxDate: string; // "2026-06-24"
 }
 
-export interface BookingContext {
+export interface BookingStation {
   stationId: number;
+  stationName: string;
+  address: string;
+}
+
+export interface BookingContext {
+  station: BookingStation;
   bookingWindow: BookingWindow;
   vehicles: BookingVehicle[];
   servicePackages: BookingServicePackage[];
@@ -67,6 +77,7 @@ export interface CreateBookingResponse {
 
 export interface PreviewPriceRequest {
   stationId: number;
+  vehicleId: number;
   servicePackageId: number;
   addonServiceIds: number[];
   voucherCode?: string;

@@ -1,7 +1,6 @@
 // Thông tin 1 xe của khách hàng - khớp các field cần thiết từ bảng `vehicle` (DB.txt)
 export interface Vehicle {
   id: number;
-  userId: number;
   licensePlate: string;
   brandName: string;
   color: string | null;
@@ -9,7 +8,6 @@ export interface Vehicle {
 
 // Request thêm xe mới - khớp API-04-01: POST /api/vehicles
 export interface AddVehicleRequest {
-  userId: number;
   licensePlate: string;
   brandName: string;
   color: string;

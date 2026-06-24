@@ -160,7 +160,11 @@ const Home = () => {
               ))}
             </ul>
 
-            <button className="mt-7 px-6 py-3 rounded-lg bg-primary text-on-primary font-body font-semibold text-sm">
+            <button
+              type="button"
+              onClick={() => navigate("/servicePackages")}
+              className="mt-7 px-6 py-3 rounded-lg bg-primary text-on-primary font-body font-semibold text-sm"
+            >
               Get Started
             </button>
           </div>
@@ -235,7 +239,11 @@ const Home = () => {
               </div>
             </div>
 
-            <button className="mt-7 px-6 py-3 rounded-lg bg-on-surface text-on-primary font-body font-semibold text-sm">
+            <button
+              type="button"
+              onClick={() => navigate("/servicePackages")}
+              className="mt-7 px-6 py-3 rounded-lg bg-primary text-on-primary font-body font-semibold text-sm"
+            >
               Get Started
             </button>
           </div>
@@ -275,7 +283,11 @@ const Home = () => {
               )}
             </div>
 
-            <button className="mt-7 px-6 py-3 rounded-lg bg-primary text-on-primary font-body font-semibold text-sm">
+            <button
+              type="button"
+              onClick={() => navigate("/servicePackages")}
+              className="mt-7 px-6 py-3 rounded-lg bg-primary text-on-primary font-body font-semibold text-sm"
+            >
               Get Started
             </button>
           </div>

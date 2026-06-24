@@ -38,4 +38,7 @@ export const API = {
     // API-02-04: PREVIEW BOOKING PRICE
     PREVIEW_PRICE: "/api/bookings/preview-price",
   },
+  VEHICLE: {
+    ADD: "/api/vehicles",
+  },
 };

@@ -11,6 +11,7 @@ import {
   Ticket,
   Plus,
   Check,
+  MapPin,
 } from "lucide-react";
 import Loading from "../../../components/ui/Loading";
 import { getApiErrorInfo } from "../../../lib/axiosClient";
@@ -96,7 +97,7 @@ const BookingCreate = () => {
   const [previewTotal, setPreviewTotal] = useState<number | null>(null);
   const [voucherDiscount, setVoucherDiscount] = useState<number | null>(null);
 
-  const [contextRefresh, setContextRefresh] = useState(0);
+  const [contextRefresh] = useState(0);
 
   // --- State submit booking (gọi API tạo booking) ---
   const [isBookingSubmitting, setIsBookingSubmitting] = useState(false);
@@ -115,7 +116,6 @@ const BookingCreate = () => {
         const data = await getBookingContext(stationId);
         if (cancelled) return;
         setContext(data);
-        if (data.vehicles.length > 0) setSelectedVehicleId(data.vehicles[0].id);
         setWeekStart(new Date(data.bookingWindow.minDate));
       } catch (error) {
         if (cancelled) return;
@@ -177,12 +177,29 @@ const BookingCreate = () => {
     [context?.addonServices, selectedAddonIds],
   );
 
+  // Xe đã chọn nếu có activeSubscription (UNLIMITED/FAMILY) khớp đúng servicePackageId
+  // thì gói đó được tính 0đ (theo note FE trong API-02-01: so sánh ở FE, không gọi lại API)
+  const isServiceCoveredBySubscription = (
+    vehicle: BookingVehicle | null,
+    serviceId: number,
+  ) => vehicle?.activeSubscription?.servicePackageId === serviceId;
+
+  const isSelectedServiceFree = !!(
+    selectedService &&
+    isServiceCoveredBySubscription(selectedVehicle, selectedService.id)
+  );
+
   // Tổng tiền tự tính ở FE (basePrice + addon đã chọn), dùng làm fallback khi chưa apply voucher
+  // Giá gói = 0 nếu gói đang được subscription của xe cover
   const computedSubTotal = useMemo(() => {
-    const servicePrice = selectedService?.basePrice ?? 0;
+    const servicePrice = selectedService
+      ? isServiceCoveredBySubscription(selectedVehicle, selectedService.id)
+        ? 0
+        : selectedService.basePrice
+      : 0;
     const addonPrice = selectedAddons.reduce((sum, a) => sum + a.price, 0);
     return servicePrice + addonPrice;
-  }, [selectedService, selectedAddons]);
+  }, [selectedService, selectedAddons, selectedVehicle]);
 
   // Tổng hiển thị cuối: nếu đã có previewTotal (từ API sau khi apply voucher) thì dùng nó,
   // ngược lại dùng số tự tính ở FE
@@ -232,6 +249,10 @@ const BookingCreate = () => {
       setVoucherDiscount(null);
       return;
     }
+    if (!selectedVehicleId) {
+      setVoucherError("Vui lòng chọn xe trước khi chọn voucher.");
+      return;
+    }
     if (!selectedServiceId) {
       setVoucherError("Vui lòng chọn gói dịch vụ trước khi chọn voucher.");
       return;
@@ -241,6 +262,7 @@ const BookingCreate = () => {
     try {
       const result = await previewPrice({
         stationId,
+        vehicleId: selectedVehicleId,
         servicePackageId: selectedServiceId,
         addonServiceIds: selectedAddonIds,
         voucherCode: voucher.voucherCode,
@@ -410,9 +432,12 @@ const BookingCreate = () => {
                       key={vehicle.id}
                       vehicle={vehicle}
                       isSelected={vehicle.id === selectedVehicleId}
+                      subscriptionType={
+                        vehicle.activeSubscription?.type ?? null
+                      }
                       onSelect={() => {
                         setSelectedVehicleId(vehicle.id);
-                        setContextRefresh((r) => r + 1);
+                        setPreviewTotal(null);
 
                         if (selectedDate && selectedServiceId) {
                           loadSlots(
@@ -445,8 +470,11 @@ const BookingCreate = () => {
                     key={service.id}
                     service={service}
                     icon={SERVICE_ICONS[idx % SERVICE_ICONS.length]}
-                    isPopular={idx === context.servicePackages.length - 1}
                     isSelected={service.id === selectedServiceId}
+                    isCovered={isServiceCoveredBySubscription(
+                      selectedVehicle,
+                      service.id,
+                    )}
                     onSelect={() => handleSelectService(service.id)}
                   />
                 ))}
@@ -630,9 +658,30 @@ const BookingCreate = () => {
                       {selectedVehicle.licensePlate}
                     </p>
                   )}
+                  {/* Địa chỉ station đã chọn ở bước trước (API-02-01 trả thêm field address) */}
+                  {context.station && (
+                    <div className="text-body-sm font-semibold text-on-surface">
+                      <p className="text-on-surface">
+                        {context.station.stationName}
+                      </p>
+                      <div className="mt-0.5 flex items-center gap-1 text-primary font-medium">
+                        <MapPin size={14} className="shrink-0" />
+                        <span>{context.station.address}</span>
+                      </div>
+                    </div>
+                  )}
                 </div>
                 <span className="shrink-0 text-body-lg font-semibold text-on-surface">
-                  {formatCurrency(selectedService.basePrice)}
+                  {isSelectedServiceFree ? (
+                    <>
+                      <span className="mr-1.5 text-on-surface-variant line-through">
+                        {formatCurrency(selectedService.basePrice)}
+                      </span>
+                      <span className="text-tertiary">0 VND</span>
+                    </>
+                  ) : (
+                    formatCurrency(selectedService.basePrice)
+                  )}
                 </span>
               </div>
             ) : (
@@ -733,10 +782,12 @@ const BookingCreate = () => {
 const VehicleOption = ({
   vehicle,
   isSelected,
+  subscriptionType,
   onSelect,
 }: {
   vehicle: BookingVehicle;
   isSelected: boolean;
+  subscriptionType: "UNLIMITED" | "FAMILY" | null;
   onSelect: () => void;
 }) => (
   <button
@@ -753,9 +804,16 @@ const VehicleOption = ({
       <Car size={18} />
     </span>
     <div className="flex-1">
-      <p className="text-body-lg font-semibold text-on-surface">
-        {vehicle.brandName}
-      </p>
+      <div className="flex items-center gap-2">
+        <p className="text-body-lg font-semibold text-on-surface">
+          {vehicle.brandName}
+        </p>
+        {subscriptionType && (
+          <span className="rounded-full bg-tertiary-fixed/20 px-2 py-0.5 text-label-sm font-semibold text-tertiary-fixed-dim">
+            {subscriptionType}
+          </span>
+        )}
+      </div>
       <p className="text-body-md text-on-surface-variant">
         {vehicle.licensePlate}
       </p>
@@ -772,14 +830,14 @@ const VehicleOption = ({
 const ServiceOption = ({
   service,
   icon: Icon,
-  isPopular,
   isSelected,
+  isCovered,
   onSelect,
 }: {
   service: BookingServicePackage;
   icon: typeof Droplet;
-  isPopular: boolean;
   isSelected: boolean;
+  isCovered: boolean;
   onSelect: () => void;
 }) => (
   <button
@@ -792,11 +850,6 @@ const ServiceOption = ({
           : "border border-outline-variant bg-surface-container-lowest hover:border-primary/40"
       }`}
   >
-    {isPopular && (
-      <span className="absolute right-3 top-3 rounded-full bg-secondary-container px-2 py-0.5 text-label-sm font-semibold text-on-secondary-container">
-        POPULAR
-      </span>
-    )}
     <span className="flex h-10 w-10 items-center justify-center rounded-lg bg-secondary-fixed text-secondary">
       <Icon size={18} />
     </span>
@@ -807,8 +860,22 @@ const ServiceOption = ({
       {service.durationMinutes} min
     </p>
     <p className="mt-2 text-headline-md text-primary">
-      {formatCurrency(service.basePrice)}
+      {isCovered ? (
+        <>
+          <span className="mr-2 text-body-lg font-medium text-on-surface-variant line-through">
+            {formatCurrency(service.basePrice)}
+          </span>
+          <span className="text-tertiary">0 VND</span>
+        </>
+      ) : (
+        formatCurrency(service.basePrice)
+      )}
     </p>
+    {isCovered && (
+      <p className="mt-1 text-label-sm font-semibold text-tertiary">
+        Đã bao gồm trong gói của bạn
+      </p>
+    )}
   </button>
 );
 

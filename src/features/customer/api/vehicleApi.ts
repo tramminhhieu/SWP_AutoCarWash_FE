@@ -1,3 +1,4 @@
+import { API } from "../../../constants/apiEndpoints";
 import axiosClient from "../../../lib/axiosClient";
 import type { AddVehicleRequest, AddVehicleResponse } from "../types/vehicle";
 
@@ -7,7 +8,7 @@ export const addVehicle = async (
   data: AddVehicleRequest,
 ): Promise<AddVehicleResponse> => {
   const response = await axiosClient.post<AddVehicleResponse>(
-    "/api/vehicles",
+    API.VEHICLE.ADD,
     data,
   );
   return response.data;

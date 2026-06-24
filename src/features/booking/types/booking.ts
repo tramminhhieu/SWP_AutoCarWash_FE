@@ -37,7 +37,7 @@ export interface BookingWindow {
 }
 
 export interface BookingStation {
-  stationId: number;
+  id: number;
   stationName: string;
   address: string;
 }

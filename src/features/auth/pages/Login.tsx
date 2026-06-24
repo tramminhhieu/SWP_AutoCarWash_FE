@@ -1,14 +1,34 @@
+import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../../../hooks/useAuth";
 
 export default function Login() {
   const { login } = useAuth();
   const navigate = useNavigate();
+  // author: Ngọc — thêm state cho form login thật
+  const [identity, setIdentity] = useState("");
+  const [password, setPassword] = useState("");
+  const [error, setError] = useState("");
+  const [loading, setLoading] = useState(false);
 
   // TODO: thay bằng form thật (email/password) gọi authApi.login()
-  const handleMockLogin = () => {
-    login();
-    navigate("/profile");
+  // author: Ngọc — handleMockLogin đổi thành handleLogin gọi API thật
+  // const handleMockLogin = () => {
+  //   login();
+  //   navigate("/profile");
+  // };
+  const handleLogin = async () => {
+    if (!identity.trim() || !password.trim()) return;
+    setLoading(true);
+    setError("");
+    try {
+      await login(identity, password);
+      navigate("/staff/queue");
+    } catch {
+      setError("Email/SĐT hoặc mật khẩu không đúng.");
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -19,13 +39,34 @@ export default function Login() {
       <p className="mt-2 font-['Inter'] text-sm text-[#434655]">
         Form đăng nhập thật sẽ thêm sau. Tạm dùng nút bên dưới để test UI.
       </p>
-      <button
-        type="button"
-        onClick={handleMockLogin}
-        className="mt-6 w-full rounded-lg bg-[#1D4ED8] px-4 py-2 font-['Inter'] text-sm font-semibold text-white hover:bg-[#0037b0]"
-      >
-        Login (mock)
-      </button>
+
+      {/* author: Ngọc — thêm form login thật */}
+      <div className="mt-6 flex flex-col gap-3">
+        <input
+          type="text"
+          placeholder="Email hoặc số điện thoại"
+          value={identity}
+          onChange={(e) => setIdentity(e.target.value)}
+          className="w-full rounded-lg border border-gray-300 px-4 py-2 text-sm outline-none focus:border-blue-500"
+        />
+        <input
+          type="password"
+          placeholder="Mật khẩu"
+          value={password}
+          onChange={(e) => setPassword(e.target.value)}
+          onKeyDown={(e) => e.key === "Enter" && handleLogin()}
+          className="w-full rounded-lg border border-gray-300 px-4 py-2 text-sm outline-none focus:border-blue-500"
+        />
+        {error && <p className="text-xs text-red-500">{error}</p>}
+        <button
+          type="button"
+          onClick={handleLogin}
+          disabled={loading}
+          className="w-full rounded-lg bg-[#1D4ED8] px-4 py-2 font-['Inter'] text-sm font-semibold text-white hover:bg-[#0037b0] disabled:opacity-50"
+        >
+          {loading ? "Đang đăng nhập..." : "Đăng nhập"}
+        </button>
+      </div>
     </div>
   );
 }

@@ -1,6 +1,10 @@
+//author: Ngọc
+//version:2.0.1
 import { useNavigate } from "react-router-dom";
 import { useState } from "react";
 import { Search, X, ChevronRight, ChevronUp, ChevronDown, Droplets, Check, CreditCard } from "lucide-react";
+// author: Ngọc — import API thật
+import { scanVehicle, confirmCheckIn, type ScanVehicleResponse } from "../services/queueApi";
 
 interface Vehicle {
   id: number;
@@ -49,50 +53,8 @@ interface CustomerResult {
   bookings?: BookingItem[];
 }
 
-const mockCustomerDB: Record<string, CustomerResult> = {
-  "ABC-1234": {
-    type: "booked",
-    customerId: 1,
-    customerName: "Robert Pattinson",
-    phone: "+1 (555) 000-1234",
-    tier: "PLATINUM",
-    bookings: [
-      {
-        id: 401,
-        vehicleModel: "Tesla Model S",
-        licensePlate: "ABC-1234",
-        washType: "Deluxe Wash",
-        scheduledTime: "10:30 AM",
-        totalAmount: 80,
-        color: "Black",
-        service: "Deluxe Wash",
-        addOns: [
-          { id: 1, name: "Interior Vacuum", price: 15 },
-          { id: 2, name: "Tire Shine", price: 10 },
-        ],
-      },
-      {
-        id: 402,
-        vehicleModel: "BMW X5",
-        licensePlate: "ABC-5678",
-        washType: "Interior Detail",
-        scheduledTime: "1:45 PM",
-        totalAmount: 120,
-        color: "White",
-        service: "Interior Detail",
-        addOns: [],
-      },
-    ],
-  },
-  "XYZ-9999": {
-    type: "no-booking",
-    customerId: 2,
-    customerName: "Jane Smith",
-    phone: "+1 (555) 999-8888",
-    tier: "Member",
-    bookings: [],
-  },
-};
+// author: Ngọc — comment out mockCustomerDB vì dùng API thật
+// const mockCustomerDB: Record<string, CustomerResult> = { ... };
 
 const initialWaitingPool: Vehicle[] = [
   { id: 1, bookingId: 101, licensePlate: "LMN-4455", model: "Audi Q7", color: "Metallic Grey", service: "Premium Wash", tier: "PLATINUM", finishedAt: "", totalAmount: 110 },
@@ -132,6 +94,9 @@ export default function QueuePage() {
   const [searchResult, setSearchResult] = useState<CustomerResult | null>(null);
   const [selectedBooking, setSelectedBooking] = useState<BookingItem | null>(null);
   const [isSearched, setIsSearched] = useState(false);
+  // author: Ngọc — thêm state cho API thật
+  const [scanResult, setScanResult] = useState<ScanVehicleResponse | null>(null);
+  const [isLoading, setIsLoading] = useState(false);
 
   const now = new Date();
   const timeStr = `${now.getHours()}:${String(now.getMinutes()).padStart(2, "0")}`;
@@ -141,35 +106,87 @@ export default function QueuePage() {
     setShowCheckin(false);
     setSearchPlate("");
     setSearchResult(null);
+    // author: Ngọc — reset scanResult khi đóng modal
+    setScanResult(null);
     setSelectedBooking(null);
     setIsSearched(false);
   };
 
-  const handleSearch = () => {
+  // author: Ngọc — đổi từ mock sang gọi API thật
+  // const handleSearch = () => {
+  //   if (!searchPlate.trim()) return;
+  //   setIsSearched(true);
+  //   setSelectedBooking(null);
+  //   const found = Object.entries(mockCustomerDB).find(([plate]) =>
+  //     plate.toLowerCase().includes(searchPlate.toLowerCase())
+  //   );
+  //   setSearchResult(found ? found[1] : { type: "not-found" });
+  // };
+  const handleSearch = async () => {
     if (!searchPlate.trim()) return;
+    setIsLoading(true);
     setIsSearched(true);
     setSelectedBooking(null);
-    const found = Object.entries(mockCustomerDB).find(([plate]) =>
-      plate.toLowerCase().includes(searchPlate.toLowerCase())
-    );
-    setSearchResult(found ? found[1] : { type: "not-found" });
+    try {
+      const result = await scanVehicle(searchPlate);
+      setScanResult(result);
+      if (result.hasBooking) {
+        setSearchResult({
+          type: "booked",
+          customerName: result.customerName ?? "",
+          tier: "Guest",
+          bookings: [{
+            id: result.bookingId!,
+            vehicleModel: searchPlate,
+            licensePlate: searchPlate,
+            washType: "",
+            scheduledTime: `${result.slotStartTime} - ${result.slotEndTime}`,
+            totalAmount: 0,
+            color: "",
+            service: "",
+            addOns: [],
+          }],
+        });
+      } else {
+        setSearchResult({ type: "not-found" });
+      }
+    } catch {
+      setSearchResult({ type: "not-found" });
+    } finally {
+      setIsLoading(false);
+    }
   };
 
-  const handleConfirmCheckIn = () => {
-    if (!selectedBooking || !searchResult) return;
-    const newVehicle: Vehicle = {
-      id: Date.now(),
-      bookingId: selectedBooking.id,
-      licensePlate: selectedBooking.licensePlate,
-      model: selectedBooking.vehicleModel,
-      color: selectedBooking.color,
-      service: selectedBooking.service,
-      tier: searchResult.tier ?? "Guest",
-      finishedAt: "",
-      totalAmount: selectedBooking.totalAmount,
-    };
-    setWaitingPool((prev) => [...prev, newVehicle]);
-    closeCheckinModal();
+  // author: Ngọc — đổi từ mock sang gọi API confirm check-in thật
+  // const handleConfirmCheckIn = () => {
+  //   if (!selectedBooking || !searchResult) return;
+  //   const newVehicle: Vehicle = { ... };
+  //   setWaitingPool((prev) => [...prev, newVehicle]);
+  //   closeCheckinModal();
+  // };
+  const handleConfirmCheckIn = async () => {
+    if (!selectedBooking || !scanResult?.bookingId) return;
+    setIsLoading(true);
+    try {
+      await confirmCheckIn(scanResult.bookingId);
+      const newVehicle: Vehicle = {
+        id: Date.now(),
+        bookingId: selectedBooking.id,
+        licensePlate: selectedBooking.licensePlate,
+        model: selectedBooking.vehicleModel,
+        color: selectedBooking.color,
+        service: selectedBooking.service,
+        tier: searchResult?.tier ?? "Guest",
+        finishedAt: "",
+        totalAmount: selectedBooking.totalAmount,
+      };
+      setWaitingPool((prev) => [...prev, newVehicle]);
+      closeCheckinModal();
+    } catch {
+      alert("Check-in thất bại, thử lại.");
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const moveVehicle = (index: number, dir: -1 | 1) => {
@@ -263,7 +280,7 @@ export default function QueuePage() {
                         {lane.status === "Washing" ? <Droplets className="w-2.5 h-2.5" /> : <Check className="w-2.5 h-2.5" />}
                         {lane.status}
                       </span>
-                     <span className="text-[11px] text-outline truncate">{lane.model.split(" ")[0]} • {lane.color}</span>
+                      <span className="text-[11px] text-outline truncate">{lane.model.split(" ")[0]} • {lane.color}</span>
                     </div>
                     <p className="text-base font-bold text-on-surface tracking-wide">{lane.plate}</p>
                     <p className="text-[11px] font-medium text-primary truncate">{lane.service}</p>
@@ -289,7 +306,6 @@ export default function QueuePage() {
             <button
               onClick={handleAddToLane}
               disabled={!hasEmptyLane || waitingPool.length === 0}
-              title={waitingPool.length === 0 ? "No vehicle waiting" : hasEmptyLane ? "Assign next vehicle to an open lane" : "All lanes are busy"}
               className="w-6 h-6 rounded-full flex items-center justify-center text-sm bg-white/20 text-white transition hover:bg-white/30 disabled:opacity-40 disabled:cursor-not-allowed"
             >+</button>
           </div>
@@ -374,17 +390,19 @@ export default function QueuePage() {
                     value={searchPlate}
                     onChange={(e) => setSearchPlate(e.target.value)}
                     onKeyDown={(e) => e.key === "Enter" && handleSearch()}
-                    placeholder="Enter license plate or phone..."
+                    placeholder="Enter license plate..."
                     className="flex-1 text-sm outline-none bg-transparent text-on-surface"
                     autoFocus
                   />
                   {searchPlate && (
-                    <button onClick={() => { setSearchPlate(""); setSearchResult(null); setIsSearched(false); }}>
+                    <button onClick={() => { setSearchPlate(""); setSearchResult(null); setIsSearched(false); setScanResult(null); }}>
                       <X className="w-4 h-4 text-outline" />
                     </button>
                   )}
                 </div>
-                <button onClick={handleSearch} className="px-4 py-2 rounded-xl text-sm font-semibold transition bg-primary text-on-primary">Search</button>
+                <button onClick={handleSearch} disabled={isLoading} className="px-4 py-2 rounded-xl text-sm font-semibold transition bg-primary text-on-primary disabled:opacity-50">
+                  {isLoading ? "..." : "Search"}
+                </button>
               </div>
 
               {!isSearched && (
@@ -393,51 +411,31 @@ export default function QueuePage() {
                     <Search className="w-6 h-6 text-primary" />
                   </div>
                   <p className="text-sm font-medium text-on-surface">Search for a customer</p>
-                  <p className="text-xs mt-1 text-outline">Enter license plate or phone number to find booking</p>
+                  <p className="text-xs mt-1 text-outline">Enter license plate to find booking</p>
                 </div>
               )}
 
               {isSearched && searchResult?.type === "not-found" && (
                 <div className="py-4">
                   <div className="rounded-xl p-4 mb-4 bg-error-container border border-error">
-                    <p className="text-sm font-semibold text-on-error-container">No customer found</p>
-                    <p className="text-xs mt-1 text-on-error-container">No account found for "{searchPlate}". This customer will be treated as a walk-in guest.</p>
+                    <p className="text-sm font-semibold text-on-error-container">No booking found</p>
+                    <p className="text-xs mt-1 text-on-error-container">No booking found for "{searchPlate}" today.</p>
                   </div>
                   <button className="w-full py-3 rounded-xl text-sm font-semibold bg-primary text-on-primary">+ Create Walk-in</button>
-                </div>
-              )}
-
-              {isSearched && searchResult?.type === "no-booking" && (
-                <div className="py-2">
-                  <div className="rounded-xl p-4 mb-4 bg-surface-container-low">
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <p className="font-bold text-sm text-on-surface">{searchResult.customerName}</p>
-                        <p className="text-xs text-outline">{searchResult.phone}</p>
-                      </div>
-                      <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${tierBadge[searchResult.tier ?? "Guest"]}`}>{searchResult.tier}</span>
-                    </div>
-                  </div>
-                  <div className="rounded-xl p-4 mb-4 bg-secondary-fixed border border-secondary">
-                    <p className="text-sm font-semibold text-on-secondary-fixed">No upcoming bookings</p>
-                    <p className="text-xs mt-1 text-on-secondary-fixed-variant">This customer has no scheduled appointment today.</p>
-                  </div>
-                  <button className="w-full py-3 rounded-xl text-sm font-semibold bg-primary text-on-primary">+ Create Walk-in for {searchResult.customerName}</button>
                 </div>
               )}
 
               {isSearched && searchResult?.type === "booked" && (
                 <div className="py-2">
                   <div className="rounded-xl p-3 mb-3 bg-surface-container-low">
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <p className="font-bold text-sm text-on-surface">{searchResult.customerName}</p>
-                        <p className="text-xs text-outline">{searchResult.phone}</p>
-                      </div>
-                      <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${tierBadge[searchResult.tier ?? "Guest"]}`}>{searchResult.tier}</span>
-                    </div>
+                    <p className="font-bold text-sm text-on-surface">{searchResult.customerName}</p>
+                    {scanResult && (
+                      <p className="text-xs text-outline mt-0.5">
+                        Slot: {scanResult.slotStartTime} - {scanResult.slotEndTime}
+                      </p>
+                    )}
                   </div>
-                  <p className="text-xs font-semibold uppercase mb-2 text-outline">Select Booking Slot</p>
+                  <p className="text-xs font-semibold uppercase mb-2 text-outline">Select Booking</p>
                   <div className="flex flex-col gap-2 max-h-64 overflow-y-auto mb-4">
                     {searchResult.bookings?.map((b) => (
                       <div
@@ -447,23 +445,11 @@ export default function QueuePage() {
                       >
                         <div className="flex items-center justify-between">
                           <div>
-                            <p className="text-sm font-semibold text-on-surface">{b.vehicleModel}</p>
-                            <p className="text-xs text-outline">{b.licensePlate} • {b.color}</p>
-                            <p className="text-xs font-medium mt-1 text-primary">{b.washType}</p>
+                            <p className="text-sm font-semibold text-on-surface">{b.licensePlate}</p>
+                            <p className="text-xs font-medium mt-1 text-primary">{b.scheduledTime}</p>
                           </div>
-                          <div className="text-right">
-                            <p className="text-xs text-outline">Scheduled</p>
-                            <p className="text-sm font-bold text-on-surface">{b.scheduledTime}</p>
-                            <p className="text-xs font-semibold mt-1 text-primary">${b.totalAmount}</p>
-                          </div>
+                          <p className="text-sm font-bold text-on-surface">#{b.id}</p>
                         </div>
-                        {b.addOns.length > 0 && (
-                          <div className="mt-2 flex flex-wrap gap-1">
-                            {b.addOns.map((a) => (
-                              <span key={a.id} className="text-xs px-2 py-0.5 rounded-full bg-surface-container text-primary">{a.name} +${a.price}</span>
-                            ))}
-                          </div>
-                        )}
                         {selectedBooking?.id === b.id && (
                           <div className="flex items-center gap-1 mt-2 text-primary">
                             <ChevronRight className="w-3 h-3" />
@@ -475,11 +461,10 @@ export default function QueuePage() {
                   </div>
                   <button
                     onClick={handleConfirmCheckIn}
-                    disabled={!selectedBooking}
-                    className="w-full py-3 rounded-xl text-sm font-semibold transition bg-primary text-on-primary"
-                    style={{ opacity: !selectedBooking ? 0.5 : 1, cursor: !selectedBooking ? "not-allowed" : "pointer" }}
+                    disabled={!selectedBooking || isLoading}
+                    className="w-full py-3 rounded-xl text-sm font-semibold transition bg-primary text-on-primary disabled:opacity-50 disabled:cursor-not-allowed"
                   >
-                    Confirm Check-in
+                    {isLoading ? "Đang xử lý..." : "Confirm Check-in"}
                   </button>
                 </div>
               )}
@@ -498,8 +483,6 @@ export default function QueuePage() {
                 <X className="w-5 h-5 text-outline" />
               </button>
             </div>
-
-            {/* Thông tin khách hàng — to hơn, nổi bật hơn */}
             <div className="rounded-2xl p-5 mb-4 bg-surface-container-low border border-outline-variant">
               <div className="flex items-start justify-between gap-3">
                 <div>
@@ -513,36 +496,24 @@ export default function QueuePage() {
                 </span>
               </div>
             </div>
-
-            {/* Cảnh báo — nhỏ hơn, phụ */}
             {cancelVehicle.tier === "Guest" ? (
               <div className="rounded-xl px-4 py-3 mb-4 bg-error-container border border-error">
                 <p className="text-xs font-semibold mb-0.5 text-on-error-container">Walk-in Cancellation</p>
-                <p className="text-xs text-on-error-container">
-                  1 violation point will be added to <strong>{cancelVehicle.licensePlate}</strong>. Exceeding 3 in 30 days requires a 20,000 VND deposit on next visit.
-                </p>
+                <p className="text-xs text-on-error-container">1 violation point will be added to <strong>{cancelVehicle.licensePlate}</strong>.</p>
               </div>
             ) : cancelVehicle.tier === "Member" ? (
               <div className="rounded-xl px-4 py-3 mb-4 bg-secondary-fixed border border-secondary">
                 <p className="text-xs font-semibold mb-0.5 text-on-secondary-fixed">Unlimited / Family Package</p>
-                <p className="text-xs text-on-secondary-fixed-variant">
-                  No deposit collected. 1 violation point added. Exceeding 3 in 30 days disables booking for 14 days.
-                </p>
+                <p className="text-xs text-on-secondary-fixed-variant">No deposit collected. 1 violation point added.</p>
               </div>
             ) : (
               <div className="rounded-xl px-4 py-3 mb-4 bg-error-container border border-error">
                 <p className="text-xs font-semibold mb-0.5 text-on-error-container">Single Package — Deposit Required</p>
-                <p className="text-xs text-on-error-container">
-                  100% of the deposit amount will be collected from this customer upon cancellation.
-                </p>
+                <p className="text-xs text-on-error-container">100% of the deposit amount will be collected.</p>
               </div>
             )}
-
             <div className="flex gap-3">
-              <button
-                onClick={() => setCancelVehicle(null)}
-                className="flex-1 py-2.5 rounded-xl text-sm font-semibold border border-outline-variant text-on-surface-variant bg-surface-container-lowest"
-              >
+              <button onClick={() => setCancelVehicle(null)} className="flex-1 py-2.5 rounded-xl text-sm font-semibold border border-outline-variant text-on-surface-variant bg-surface-container-lowest">
                 Keep Booking
               </button>
               <button

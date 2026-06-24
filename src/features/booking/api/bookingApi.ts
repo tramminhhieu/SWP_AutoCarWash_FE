@@ -113,3 +113,17 @@ export async function getBookingDetail(
   );
   return res.data.data;
 }
+
+/**
+ * Cancels a booking.
+ *
+ * @param bookingId - ID of the booking to cancel.
+ * @returns The updated {@link BookingDetail} (status `CANCELLED`), unwrapped
+ *   from the backend's `ApiResponse` envelope.
+ */
+export async function cancelBooking(bookingId: number): Promise<BookingDetail> {
+    const response = await axiosClient.patch<ApiSuccessResponse<BookingDetail>>(
+        API.BOOKINGS.CANCEL(bookingId),
+    );
+    return response.data.data;
+}

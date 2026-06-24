@@ -25,6 +25,7 @@ export const API = {
     PAST: "/api/bookings/past",
     /** `GET` — full detail of a single booking. */
     DETAIL: (bookingId: number | string) => `/api/bookings/${bookingId}`,
+      CANCEL: (bookingId: string | number) => `api/bookings/${bookingId}/cancel`,
   },
   BOOKING: {
     // API-02-01: GET BOOKING CONTEXT

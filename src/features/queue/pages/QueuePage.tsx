@@ -1,10 +1,11 @@
 //author: Ngọc
 //version:2.0.1
 import { useNavigate } from "react-router-dom";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Search, X, ChevronRight, ChevronUp, ChevronDown, Droplets, Check, CreditCard } from "lucide-react";
 // author: Ngọc — import API thật
-import { scanVehicle, confirmCheckIn, type ScanVehicleResponse } from "../services/queueApi";
+import { scanVehicle, confirmCheckIn, cancelGuestLeft, getActiveQueue, type ScanVehicleResponse, type QueueTicketDTO } from "../services/queueApi";
+import { formatVND } from "../../../utils/currency";
 
 interface Vehicle {
   id: number;
@@ -56,13 +57,23 @@ interface CustomerResult {
 // author: Ngọc — comment out mockCustomerDB vì dùng API thật
 // const mockCustomerDB: Record<string, CustomerResult> = { ... };
 
-const initialWaitingPool: Vehicle[] = [
-  { id: 1, bookingId: 101, licensePlate: "LMN-4455", model: "Audi Q7", color: "Metallic Grey", service: "Premium Wash", tier: "PLATINUM", finishedAt: "", totalAmount: 110 },
-  { id: 2, bookingId: 102, licensePlate: "GHI-1122", model: "BMW X5", color: "Alpine White", service: "Deluxe Polish", tier: "GOLD", finishedAt: "", totalAmount: 85 },
-  { id: 3, bookingId: 103, licensePlate: "JKT-3388", model: "Toyota Corolla", color: "Red", service: "Platinum Care", tier: "SILVER", finishedAt: "", totalAmount: 65 },
-  { id: 4, bookingId: 104, licensePlate: "gET-0011", model: "Honda Civic", color: "Black", service: "Basic Rinse", tier: "Member", finishedAt: "", totalAmount: 30 },
-  { id: 5, bookingId: 105, licensePlate: "MSu-2299", model: "Mazda CX-5", color: "Soul Red", service: "Express Clean", tier: "Guest", finishedAt: "", totalAmount: 45 },
-];
+// author: Ngọc — comment out mock Waiting Pool (bookingId giả 101-105 không tồn tại
+// trong DB nên Cancel luôn fail), thay bằng dữ liệu thật từ GET /api/queue
+// const initialWaitingPool: Vehicle[] = [
+//   { id: 1, bookingId: 101, licensePlate: "LMN-4455", model: "Audi Q7", color: "Metallic Grey", service: "Premium Wash", tier: "PLATINUM", finishedAt: "", totalAmount: 110 },
+//   { id: 2, bookingId: 102, licensePlate: "GHI-1122", model: "BMW X5", color: "Alpine White", service: "Deluxe Polish", tier: "GOLD", finishedAt: "", totalAmount: 85 },
+//   { id: 3, bookingId: 103, licensePlate: "JKT-3388", model: "Toyota Corolla", color: "Red", service: "Platinum Care", tier: "SILVER", finishedAt: "", totalAmount: 65 },
+//   { id: 4, bookingId: 104, licensePlate: "gET-0011", model: "Honda Civic", color: "Black", service: "Basic Rinse", tier: "Member", finishedAt: "", totalAmount: 30 },
+//   { id: 5, bookingId: 105, licensePlate: "MSu-2299", model: "Mazda CX-5", color: "Soul Red", service: "Express Clean", tier: "Guest", finishedAt: "", totalAmount: 45 },
+// ];
+
+// author: Ngọc — map customerTier từ BE ("MEMBER"/"GOLD"/"SILVER"/"PLATINUM"/null)
+// sang giá trị tier mà UI đang dùng để tô màu badge (tierBadge)
+const mapTier = (tier: string | null): Vehicle["tier"] => {
+  if (!tier) return "Guest"; // không có customer (khách lẻ/anonymous) -> Guest
+  if (tier === "MEMBER") return "Member";
+  return tier as "PLATINUM" | "GOLD" | "SILVER";
+};
 
 const initialLanes: Lane[] = [
   { lane: "01", plate: "ABC-1234", model: "Tesla Model 3", color: "Blue", service: "Deluxe Ceramic Wash", status: "Washing", est: "4 mins left", bookingId: 301, totalAmount: 60 },
@@ -86,7 +97,8 @@ const tierBadge: Record<string, string> = {
 export default function QueuePage() {
   const navigate = useNavigate();
   const [lanes, setLanes] = useState<Lane[]>(initialLanes);
-  const [waitingPool, setWaitingPool] = useState<Vehicle[]>(initialWaitingPool);
+  // author: Ngọc — Waiting Pool bắt đầu rỗng, load thật từ API qua useEffect dưới
+  const [waitingPool, setWaitingPool] = useState<Vehicle[]>([]);
   const [completed, setCompleted] = useState<Vehicle[]>(initialCompleted);
   const [cancelVehicle, setCancelVehicle] = useState<Vehicle | null>(null);
   const [showCheckin, setShowCheckin] = useState(false);
@@ -97,6 +109,34 @@ export default function QueuePage() {
   // author: Ngọc — thêm state cho API thật
   const [scanResult, setScanResult] = useState<ScanVehicleResponse | null>(null);
   const [isLoading, setIsLoading] = useState(false);
+
+  // author: Ngọc — load Waiting Pool thật từ GET /api/queue khi vào trang
+  useEffect(() => {
+    const loadWaitingPool = async () => {
+      try {
+        const tickets: QueueTicketDTO[] = await getActiveQueue();
+        const mapped: Vehicle[] = tickets
+          .filter((t) => t.status === "WAITING" && t.bookingId !== null)
+          .map((t) => ({
+            id: t.id,
+            bookingId: t.bookingId as number,
+            licensePlate: t.licensePlate ?? "—",
+            model: t.vehicleBrand ?? "",
+            color: t.vehicleColor ?? "",
+            service: t.serviceName ?? "",
+            tier: mapTier(t.customerTier),
+            finishedAt: "",
+            // ghi chú: QueueTicketResponse bên BE chưa có field totalAmount,
+            // cần xin Bình bổ sung nếu muốn hiện đúng số tiền ở Cancel modal
+            totalAmount: 0,
+          }));
+        setWaitingPool(mapped);
+      } catch {
+        // load lỗi thì để Waiting Pool rỗng, không chặn UI
+      }
+    };
+    loadWaitingPool();
+  }, []);
 
   const now = new Date();
   const timeStr = `${now.getHours()}:${String(now.getMinutes()).padStart(2, "0")}`;
@@ -237,6 +277,21 @@ export default function QueuePage() {
       updatedLanes[index] = { ...updatedLanes[index], plate: "—", model: "", color: "", service: "", status: "Empty", est: "", bookingId: 0, totalAmount: 0 };
     }
     setLanes(updatedLanes);
+  };
+
+  // gọi API cancel guest left
+  const handleConfirmCancel = async () => {
+    if (!cancelVehicle) return;
+    setIsLoading(true);
+    try {
+      await cancelGuestLeft(cancelVehicle.bookingId);
+      setWaitingPool((prev) => prev.filter((v) => v.id !== cancelVehicle.id));
+      setCancelVehicle(null);
+    } catch {
+      alert("Huỷ booking thất bại, thử lại.");
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const handleSelectCompleted = (v: Vehicle) => {
@@ -489,7 +544,7 @@ export default function QueuePage() {
                   <p className="text-xl font-bold text-on-surface tracking-wide">{cancelVehicle.licensePlate}</p>
                   <p className="text-sm text-on-surface mt-0.5">{cancelVehicle.model} • {cancelVehicle.color}</p>
                   <p className="text-sm font-semibold text-primary mt-1">{cancelVehicle.service}</p>
-                  <p className="text-sm font-bold text-on-surface mt-1">${cancelVehicle.totalAmount}.00</p>
+                  <p className="text-sm font-bold text-on-surface mt-1">{formatVND(cancelVehicle.totalAmount)}</p>
                 </div>
                 <span className={`text-xs px-3 py-1 rounded-full font-semibold shrink-0 ${tierBadge[cancelVehicle.tier]}`}>
                   {cancelVehicle.tier}
@@ -517,13 +572,11 @@ export default function QueuePage() {
                 Keep Booking
               </button>
               <button
-                onClick={() => {
-                  setWaitingPool((prev) => prev.filter((v) => v.id !== cancelVehicle.id));
-                  setCancelVehicle(null);
-                }}
-                className="flex-1 py-2.5 rounded-xl text-sm font-semibold bg-error text-on-error"
+                onClick={handleConfirmCancel}
+                disabled={isLoading}
+                className="flex-1 py-2.5 rounded-xl text-sm font-semibold bg-error text-on-error disabled:opacity-50"
               >
-                Confirm Cancel
+                {isLoading ? "Đang xử lý..." : "Confirm Cancel"}
               </button>
             </div>
           </div>

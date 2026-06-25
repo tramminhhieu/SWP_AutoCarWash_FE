@@ -7,6 +7,10 @@ export interface BookingVehicle {
   activeSubscription?: {
     type: "UNLIMITED" | "FAMILY";
     servicePackageId: number;
+    // Danh sách các ngày (ISO, "yyyy-MM-dd") trong bookingWindow mà gói này đã được
+    // dùng cho 1 booking khác rồi. FE so ngày đang chọn với mảng này để biết hiện
+    // giá 0đ hay giá thường, áp dụng cho mọi ngày trong bookingWindow, không chỉ hôm nay.
+    usedDates: string[];
   } | null;
 }
 
@@ -80,6 +84,7 @@ export interface PreviewPriceRequest {
   vehicleId: number;
   servicePackageId: number;
   addonServiceIds: number[];
+  appointmentDate: string;
   voucherCode?: string;
 }
 
@@ -99,6 +104,9 @@ export interface PreviewPriceAppliedVoucher {
 
 export interface PreviewPriceResponse {
   currency: string;
+  // true nếu vehicle đã có booking khác dùng subscription để miễn phí đúng vào
+  // appointmentDate đã gửi lên -> BE trả giá thường (không phải 0đ) cho servicePrice
+  isVehicleBookingOnDateAndHasSubscription: boolean;
   breakdown: PreviewPriceBreakdown;
   appliedVoucher?: PreviewPriceAppliedVoucher;
 }

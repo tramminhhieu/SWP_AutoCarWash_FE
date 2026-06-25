@@ -5,7 +5,7 @@
 export const API = {
   AUTH: {
     LOGIN: "/api/v1/auth/login",
-    REGISTER: "/api/auth/register",
+    REGISTER: "/api/v1/auth/register",
   },
 
   LOCATION: {
@@ -25,7 +25,7 @@ export const API = {
     PAST: "/api/bookings/past",
     /** `GET` — full detail of a single booking. */
     DETAIL: (bookingId: number | string) => `/api/bookings/${bookingId}`,
-      CANCEL: (bookingId: string | number) => `api/bookings/${bookingId}/cancel`,
+    CANCEL: (bookingId: string | number) => `api/bookings/${bookingId}/cancel`,
   },
   BOOKING: {
     // API-02-01: GET BOOKING CONTEXT

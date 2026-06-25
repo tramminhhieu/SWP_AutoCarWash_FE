@@ -122,8 +122,8 @@ export async function getBookingDetail(
  *   from the backend's `ApiResponse` envelope.
  */
 export async function cancelBooking(bookingId: number): Promise<BookingDetail> {
-    const response = await axiosClient.patch<ApiSuccessResponse<BookingDetail>>(
-        API.BOOKINGS.CANCEL(bookingId),
-    );
-    return response.data.data;
+  const response = await axiosClient.patch<ApiSuccessResponse<BookingDetail>>(
+    API.BOOKINGS.CANCEL(bookingId),
+  );
+  return response.data.data;
 }

@@ -96,6 +96,9 @@ const BookingCreate = () => {
   // --- State giá tiền preview từ BE (chỉ có khi đã apply voucher) ---
   const [previewTotal, setPreviewTotal] = useState<number | null>(null);
   const [voucherDiscount, setVoucherDiscount] = useState<number | null>(null);
+  const [subscriptionUsedToday, setSubscriptionUsedToday] = useState<
+    boolean | null
+  >(null);
 
   const [contextRefresh] = useState(0);
 
@@ -184,22 +187,47 @@ const BookingCreate = () => {
     serviceId: number,
   ) => vehicle?.activeSubscription?.servicePackageId === serviceId;
 
+  // Gói chỉ miễn phí 1 lần/ngày. Xác định gói đã bị dùng cho NGÀY ĐANG CHỌN hay chưa,
+  // ưu tiên theo thứ tự:
+  // 1) subscriptionUsedToday !== null -> BE đã xác nhận qua preview-price (đúng theo
+  //    appointmentDate đã gửi lên, là nguồn chính xác nhất)
+  // 2) Chưa gọi preview-price -> tạm dùng mảng "usedDates" có sẵn từ booking-context,
+  //    so ngày đang chọn có nằm trong mảng không -> biết ngay, không cần gọi thêm API,
+  //    áp dụng được cho mọi ngày trong bookingWindow (hôm nay, ngày mai,...)
+  const isSubscriptionConsumedForSelectedDate = (
+    vehicle: BookingVehicle | null,
+  ) => {
+    if (subscriptionUsedToday !== null) return subscriptionUsedToday;
+    if (!selectedDate) return false;
+    const selectedDateKey = formatDateKey(selectedDate);
+    return !!vehicle?.activeSubscription?.usedDates.includes(selectedDateKey);
+  };
+
   const isSelectedServiceFree = !!(
     selectedService &&
-    isServiceCoveredBySubscription(selectedVehicle, selectedService.id)
+    isServiceCoveredBySubscription(selectedVehicle, selectedService.id) &&
+    !isSubscriptionConsumedForSelectedDate(selectedVehicle)
   );
 
   // Tổng tiền tự tính ở FE (basePrice + addon đã chọn), dùng làm fallback khi chưa apply voucher
   // Giá gói = 0 nếu gói đang được subscription của xe cover
   const computedSubTotal = useMemo(() => {
     const servicePrice = selectedService
-      ? isServiceCoveredBySubscription(selectedVehicle, selectedService.id)
+      ? isServiceCoveredBySubscription(selectedVehicle, selectedService.id) &&
+        !isSubscriptionConsumedForSelectedDate(selectedVehicle)
         ? 0
         : selectedService.basePrice
       : 0;
     const addonPrice = selectedAddons.reduce((sum, a) => sum + a.price, 0);
     return servicePrice + addonPrice;
-  }, [selectedService, selectedAddons, selectedVehicle]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [
+    selectedService,
+    selectedAddons,
+    selectedVehicle,
+    subscriptionUsedToday,
+    selectedDate,
+  ]);
 
   // Tổng hiển thị cuối: nếu đã có previewTotal (từ API sau khi apply voucher) thì dùng nó,
   // ngược lại dùng số tự tính ở FE
@@ -232,6 +260,7 @@ const BookingCreate = () => {
   // Bấm chọn 1 ngày trên calendar -> gọi API lấy slot (chỉ gọi lúc này, không gọi trước)
   const handleSelectDate = async (date: Date) => {
     setSelectedDate(date);
+    setSubscriptionUsedToday(null);
     if (!selectedServiceId) {
       setSelectedSlot(null);
       setSlots([]);
@@ -247,8 +276,10 @@ const BookingCreate = () => {
       setAppliedVoucherCode(null);
       setPreviewTotal(null);
       setVoucherDiscount(null);
+      setSubscriptionUsedToday(null);
       return;
     }
+
     if (!selectedVehicleId) {
       setVoucherError("Vui lòng chọn xe trước khi chọn voucher.");
       return;
@@ -265,11 +296,14 @@ const BookingCreate = () => {
         vehicleId: selectedVehicleId,
         servicePackageId: selectedServiceId,
         addonServiceIds: selectedAddonIds,
+        appointmentDate: formatDateKey(selectedDate!),
         voucherCode: voucher.voucherCode,
       });
+
       setPreviewTotal(result.breakdown.finalTotal);
       setVoucherDiscount(result.breakdown.voucherDiscount);
       setAppliedVoucherCode(voucher.voucherCode);
+      setSubscriptionUsedToday(result.isVehicleBookingOnDateAndHasSubscription);
     } catch {
       setVoucherError("Đơn của bạn không đủ điều kiện để áp dụng voucher này.");
     } finally {
@@ -438,6 +472,7 @@ const BookingCreate = () => {
                       onSelect={() => {
                         setSelectedVehicleId(vehicle.id);
                         setPreviewTotal(null);
+                        setSubscriptionUsedToday(null);
 
                         if (selectedDate && selectedServiceId) {
                           loadSlots(

@@ -1,3 +1,4 @@
+import type { RoleType } from "./enums";
 // ====== POST /api/v1/auth/login ======
 
 // Request: 1 field "identity" duy nhất cho cả email hoặc số điện thoại
@@ -38,6 +39,7 @@ export interface JwtPayload {
   exp: number;
   email: string;
   name?: string;
+  roles: string | string[];
 }
 
 // Thông tin user rút ra từ token sau khi decode, dùng trong AuthContext
@@ -45,4 +47,5 @@ export interface AuthUser {
   userId: number;
   email: string;
   name?: string;
+  role: RoleType;
 }

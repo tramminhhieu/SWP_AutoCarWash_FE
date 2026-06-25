@@ -82,12 +82,48 @@ export const scanVehicle = async (
   return res.data.data;
 };
 
-// author: Ngọc — thêm hàm xác nhận check-in khi Staff bấm [CONFIRM CHECK_IN]
+// thêm hàm xác nhận check-in khi Staff bấm [CONFIRM CHECK_IN]
 export const confirmCheckIn = async (
   bookingId: number
 ): Promise<CheckInResultResponse> => {
   const res = await axiosClient.post<ApiSuccessResponse<CheckInResultResponse>>(
     `/api/v1/staff/checkin/confirm/${bookingId}`
+  );
+  return res.data.data;
+};
+
+// hàm huỷ booking khi khách bỏ về
+export const cancelGuestLeft = async (bookingId: number): Promise<void> => {
+  const res = await axiosClient.patch<ApiSuccessResponse<null>>(
+    `/api/queue/${bookingId}/cancel-guest-left`
+  );
+  if (!res.data.success) {
+    throw new Error(res.data.message || "Cancel guest left failed");
+  }
+};
+
+// author: Ngọc — type cho 1 ticket hàng chờ, khớp với QueueTicketResponse bên BE
+export interface QueueTicketDTO {
+  id: number;
+  ticketNumber: string;
+  status: string;
+  isBooking: boolean;
+  priorityScore: number;
+  bookingId: number | null;
+  licensePlate: string | null;
+  customerName: string | null;
+  customerTier: string | null;
+  vehicleBrand: string | null;
+  vehicleColor: string | null;
+  serviceName: string | null;
+  stationId: number | null;
+  stationName: string | null;
+}
+
+// author: Ngọc — lấy danh sách hàng chờ thật (status WAITING) để đổ vào Waiting Pool
+export const getActiveQueue = async (): Promise<QueueTicketDTO[]> => {
+  const res = await axiosClient.get<ApiSuccessResponse<QueueTicketDTO[]>>(
+    "/api/queue"
   );
   return res.data.data;
 };

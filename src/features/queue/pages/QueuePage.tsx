@@ -75,16 +75,18 @@ const mapTier = (tier: string | null): Vehicle["tier"] => {
   return tier as "PLATINUM" | "GOLD" | "SILVER";
 };
 
+// author: Ngọc — bỏ data demo (bookingId giả 301-303 không tồn tại trong DB thật,
+// khiến trang Payment báo "Không tải được thông tin booking" khi bấm vào).
+// Active Lanes bắt đầu rỗng (3 lane Empty), chỉ có xe thật sau khi Add to Lane.
 const initialLanes: Lane[] = [
-  { lane: "01", plate: "ABC-1234", model: "Tesla Model 3", color: "Blue", service: "Deluxe Ceramic Wash", status: "Washing", est: "4 mins left", bookingId: 301, totalAmount: 60 },
-  { lane: "02", plate: "WASH-888", model: "BMW X5", color: "Alpine White", service: "Full Detail Package", status: "Completed", est: "12 mins left", bookingId: 302, totalAmount: 90 },
-  { lane: "03", plate: "ABC-1234", model: "Tesla Model 3", color: "Blue", service: "Deluxe Ceramic Wash", status: "Washing", est: "4 mins left", bookingId: 303, totalAmount: 60 },
+  { lane: "01", plate: "—", model: "", color: "", service: "", status: "Empty", est: "", bookingId: 0, totalAmount: 0 },
+  { lane: "02", plate: "—", model: "", color: "", service: "", status: "Empty", est: "", bookingId: 0, totalAmount: 0 },
+  { lane: "03", plate: "—", model: "", color: "", service: "", status: "Empty", est: "", bookingId: 0, totalAmount: 0 },
 ];
 
-const initialCompleted: Vehicle[] = [
-  { id: 6, bookingId: 201, licensePlate: "WYZ-1029", model: "Mercedes GLC", color: "Polar White", service: "Premium Package", tier: "PLATINUM", finishedAt: "14:20", totalAmount: 50, voucherDiscount: 10, pointDiscount: 5 },
-  { id: 7, bookingId: 202, licensePlate: "KLR-8822", model: "Lexus RX", color: "Silver", service: "Full Detail Package", tier: "SILVER", finishedAt: "14:35", totalAmount: 75 },
-];
+// author: Ngọc — bỏ data demo (bookingId giả 201-202), Completed bắt đầu rỗng
+// giống Waiting Pool, chỉ hiện xe thật sau khi bấm "Completed" ở Active Lanes.
+const initialCompleted: Vehicle[] = [];
 
 const tierBadge: Record<string, string> = {
   PLATINUM: "bg-primary-fixed text-on-primary-fixed",
@@ -174,16 +176,16 @@ export default function QueuePage() {
         setSearchResult({
           type: "booked",
           customerName: result.customerName ?? "",
-          tier: "Guest",
+          tier: mapTier(result.customerTier),
           bookings: [{
             id: result.bookingId!,
-            vehicleModel: searchPlate,
+            vehicleModel: result.brandName ?? searchPlate,
             licensePlate: searchPlate,
-            washType: "",
+            washType: result.serviceName ?? "",
             scheduledTime: `${result.slotStartTime} - ${result.slotEndTime}`,
-            totalAmount: 0,
-            color: "",
-            service: "",
+            totalAmount: result.totalAmount ?? 0,
+            color: result.color ?? "",
+            service: result.serviceName ?? "",
             addOns: [],
           }],
         });
@@ -208,7 +210,12 @@ export default function QueuePage() {
     if (!selectedBooking || !scanResult?.bookingId) return;
     setIsLoading(true);
     try {
-      await confirmCheckIn(scanResult.bookingId);
+      const result = await confirmCheckIn(scanResult.bookingId);
+      if (result.requiresWalkIn) {
+        closeCheckinModal();
+        navigate("/staff/walk-in", { state: { oldBookingId: result.oldBookingId } });
+        return;
+      }
       const newVehicle: Vehicle = {
         id: Date.now(),
         bookingId: selectedBooking.id,
@@ -308,9 +315,14 @@ export default function QueuePage() {
           <h1 className="text-2xl font-bold font-heading text-on-background">Live Queue Management</h1>
           <p className="text-sm mt-1 text-on-surface-variant">Real-time status of active wash lanes and waiting vehicles.</p>
         </div>
-        <button onClick={() => setShowCheckin(true)} className="px-4 py-2 rounded-xl text-sm font-semibold transition bg-primary text-on-primary hover:opacity-90">
-          + Check-in
-        </button>
+        <div className="flex gap-2">
+          <button onClick={() => navigate("/staff/walk-in")} className="px-4 py-2 rounded-xl text-sm font-semibold transition border border-primary text-primary hover:bg-primary-fixed/10">
+            + Create Walk-in
+          </button>
+          <button onClick={() => setShowCheckin(true)} className="px-4 py-2 rounded-xl text-sm font-semibold transition bg-primary text-on-primary hover:opacity-90">
+            + Check-in
+          </button>
+        </div>
       </div>
 
       <div className="flex gap-4">
@@ -476,17 +488,27 @@ export default function QueuePage() {
                     <p className="text-sm font-semibold text-on-error-container">No booking found</p>
                     <p className="text-xs mt-1 text-on-error-container">No booking found for "{searchPlate}" today.</p>
                   </div>
-                  <button className="w-full py-3 rounded-xl text-sm font-semibold bg-primary text-on-primary">+ Create Walk-in</button>
+                  <button onClick={() => { closeCheckinModal(); navigate("/staff/walk-in"); }} className="w-full py-3 rounded-xl text-sm font-semibold bg-primary text-on-primary">+ Create Walk-in</button>
                 </div>
               )}
 
               {isSearched && searchResult?.type === "booked" && (
                 <div className="py-2">
+                  {scanResult?.vehiclePenalized && (
+                    <div className="rounded-xl px-4 py-3 mb-3 bg-error-container border border-error">
+                      <p className="text-xs font-semibold text-on-error-container">Xe bị hạn chế</p>
+                      <p className="text-xs text-on-error-container mt-0.5">Xe này có vi phạm. Cần thu cọc phạt 20,000đ trước khi check-in.</p>
+                    </div>
+                  )}
                   <div className="rounded-xl p-3 mb-3 bg-surface-container-low">
                     <p className="font-bold text-sm text-on-surface">{searchResult.customerName}</p>
                     {scanResult && (
                       <p className="text-xs text-outline mt-0.5">
+                        {scanResult.serviceName && <span className="text-primary font-medium">{scanResult.serviceName} • </span>}
                         Slot: {scanResult.slotStartTime} - {scanResult.slotEndTime}
+                        {scanResult.totalAmount != null && scanResult.totalAmount > 0 && (
+                          <span> • {formatVND(scanResult.totalAmount!)}</span>
+                        )}
                       </p>
                     )}
                   </div>

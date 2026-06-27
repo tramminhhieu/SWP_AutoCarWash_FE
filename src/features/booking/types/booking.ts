@@ -146,8 +146,8 @@ export interface BookingCard {
   color: string;
   status: BookingStatus;
   appointmentDate: string;
-  startTime: string;
-  endTime: string;
+  startTime: string | null;
+  endTime: string | null;
   allowedActions: BookingAction[];
 }
 

@@ -9,7 +9,11 @@ import {
   CirclePlus,
   Star,
 } from "lucide-react";
-import { cancelBooking, getPastBookings, getUpcomingBookings } from "../api/bookingApi";
+import {
+  cancelBooking,
+  getPastBookings,
+  getUpcomingBookings,
+} from "../api/bookingApi";
 import type { BookingCard } from "../types/booking";
 import { STATUS_STYLES } from "../constants/statusStyles";
 import {
@@ -18,24 +22,26 @@ import {
 } from "../utils/bookingFormatters";
 
 function BookingCardItem({
-                             booking,
-                             onCancelled,
-                         }: {
-    booking: BookingCard;
-    onCancelled: (bookingId: number) => void;
+  booking,
+  onCancelled,
+}: {
+  booking: BookingCard;
+  onCancelled: (bookingId: number) => void;
 }) {
-    const navigate = useNavigate();
-    const [isCancelling, setIsCancelling] = useState(false);
-    const statusStyle = STATUS_STYLES[booking.status];
+  const navigate = useNavigate();
+  const [isCancelling, setIsCancelling] = useState(false);
+  const statusStyle = STATUS_STYLES[booking.status];
 
-    function handleCancel() {
-        if (!window.confirm("Bạn có chắc muốn hủy lịch hẹn này?")) return;
-        setIsCancelling(true);
-        cancelBooking(booking.bookingId)
-            .then(() => onCancelled(booking.bookingId))
-            .catch(() => window.alert("Không thể hủy lịch hẹn. Vui lòng thử lại sau."))
-            .finally(() => setIsCancelling(false));
-    }
+  function handleCancel() {
+    if (!window.confirm("Bạn có chắc muốn hủy lịch hẹn này?")) return;
+    setIsCancelling(true);
+    cancelBooking(booking.bookingId)
+      .then(() => onCancelled(booking.bookingId))
+      .catch(() =>
+        window.alert("Không thể hủy lịch hẹn. Vui lòng thử lại sau."),
+      )
+      .finally(() => setIsCancelling(false));
+  }
   return (
     <div className="flex flex-col rounded-[8px] border border-outline-variant/50 bg-white shadow-[0px_10px_25px_-5px_rgba(17,24,39,0.05)]">
       <div className="flex flex-col gap-8 p-8">
@@ -84,7 +90,9 @@ function BookingCardItem({
               Time
             </span>
             <span className="text-lg font-semibold text-on-surface">
-              {formatTimeRange(booking.startTime, booking.endTime)}
+              {booking.startTime && booking.endTime
+                ? formatTimeRange(booking.startTime, booking.endTime)
+                : "—"}
             </span>
           </div>
         </div>
@@ -95,11 +103,11 @@ function BookingCardItem({
           <div className="flex items-center gap-8">
             {booking.allowedActions.includes("CANCEL") && (
               <button
-                  onClick={handleCancel}
-                  disabled={isCancelling}
-                  className="text-sm font-medium tracking-[0.14px] text-error"
+                onClick={handleCancel}
+                disabled={isCancelling}
+                className="text-sm font-medium tracking-[0.14px] text-error"
               >
-                  {isCancelling ? "CANCELLING…" : "CANCEL"}
+                {isCancelling ? "CANCELLING…" : "CANCEL"}
               </button>
             )}
             {booking.allowedActions.includes("WRITE_REVIEW") && (
@@ -226,15 +234,17 @@ export default function BookingHistory() {
         </div>
       ) : (
         <div className="flex flex-col gap-6">
-            {bookings.map((booking) => (
-                <BookingCardItem
-                    key={booking.bookingId}
-                    booking={booking}
-                    onCancelled={(bookingId) =>
-                        setBookings((prev) => prev.filter((b) => b.bookingId !== bookingId))
-                    }
-                />
-            ))}
+          {bookings.map((booking) => (
+            <BookingCardItem
+              key={booking.bookingId}
+              booking={booking}
+              onCancelled={(bookingId) =>
+                setBookings((prev) =>
+                  prev.filter((b) => b.bookingId !== bookingId),
+                )
+              }
+            />
+          ))}
 
           {activeTab === "upcoming" && (
             <div className="flex h-48 flex-col items-center justify-center gap-3 rounded-[8px] border border-dashed border-outline-variant bg-surface-container-low">

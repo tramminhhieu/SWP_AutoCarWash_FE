@@ -1,6 +1,12 @@
 import { useState, type ReactNode } from "react";
 import { jwtDecode } from "jwt-decode";
-import { getToken, setToken, clearTokens } from "../utils/storage";
+import {
+  getToken,
+  setToken,
+  clearTokens,
+  getUserName,
+  setUserName,
+} from "../utils/storage";
 import type { AuthUser, JwtPayload } from "../features/auth/types/auth";
 import type { RoleType } from "../features/auth/types/enums";
 import { AuthContext } from "./AuthContextObject";
@@ -46,7 +52,8 @@ const getInitialUser = (): AuthUser | null => {
     return null;
   }
 
-  return decodedUser;
+  const savedName = getUserName();
+  return savedName ? { ...decodedUser, name: savedName } : decodedUser;
 };
 
 // CHỈ tạo AuthProvider (component) ở đây - Context object đã tách ra AuthContextObject.ts
@@ -59,6 +66,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   // Gọi sau khi login API trả về token thành công
   const loginWithToken = (token: string, name?: string) => {
     setToken(token);
+    if (name) setUserName(name);
     const decodedUser = decodeUserFromToken(token);
     if (decodedUser && name) {
       setUser({ ...decodedUser, name });

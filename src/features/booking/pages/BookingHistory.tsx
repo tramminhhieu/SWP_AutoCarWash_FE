@@ -15,7 +15,7 @@ import {
   getUpcomingBookings,
 } from "../api/bookingApi";
 import type { BookingCard } from "../types/booking";
-import { STATUS_STYLES } from "../constants/statusStyles";
+import BookingStatusBadge from "../../../components/ui/BookingStatusBadge";
 import {
   formatAppointmentDate,
   formatTimeRange,
@@ -30,7 +30,6 @@ function BookingCardItem({
 }) {
   const navigate = useNavigate();
   const [isCancelling, setIsCancelling] = useState(false);
-  const statusStyle = STATUS_STYLES[booking.status];
 
   function handleCancel() {
     if (!window.confirm("Bạn có chắc muốn hủy lịch hẹn này?")) return;
@@ -62,18 +61,7 @@ function BookingCardItem({
               </div>
             </div>
           </div>
-          <div
-            className={`flex shrink-0 items-center gap-2 rounded-md border px-[17px] py-[7px] ${statusStyle.bgClassName} ${statusStyle.borderClassName}`}
-          >
-            <span
-              className={`size-2 rounded-full ${statusStyle.dotClassName}`}
-            />
-            <span
-              className={`text-xs font-bold uppercase tracking-[0.6px] ${statusStyle.textClassName}`}
-            >
-              {statusStyle.label}
-            </span>
-          </div>
+          <BookingStatusBadge status={booking.status} />
         </div>
 
         <div className="grid grid-cols-2 gap-8 border-t border-outline-variant/20 pt-[33px]">

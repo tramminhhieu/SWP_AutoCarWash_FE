@@ -10,7 +10,7 @@ import {
 } from "lucide-react";
 import { getBookingDetail } from "../api/bookingApi";
 import type { BookingDetail as BookingDetailData } from "../types/booking";
-import { STATUS_STYLES } from "../constants/statusStyles";
+import BookingStatusBadge from "../../../components/ui/BookingStatusBadge";
 import {
   formatAppointmentDate,
   formatCurrency,
@@ -51,8 +51,6 @@ export default function BookingDetail() {
     };
   }, [bookingId]);
 
-  const statusStyle = booking ? STATUS_STYLES[booking.status] : null;
-
   return (
     <div className="mx-auto flex max-w-[1440px] flex-col gap-8 px-12 py-8">
       <div className="flex flex-col gap-2">
@@ -79,7 +77,7 @@ export default function BookingDetail() {
         <div className="flex h-48 items-center justify-center text-base text-error">
           {error}
         </div>
-      ) : isLoading || !booking || !statusStyle ? (
+      ) : isLoading || !booking ? (
         <div className="flex h-48 items-center justify-center text-base text-outline">
           Đang tải...
         </div>
@@ -105,18 +103,7 @@ export default function BookingDetail() {
                     </div>
                   </div>
                 </div>
-                <div
-                  className={`flex shrink-0 items-center gap-2 rounded-md border px-[17px] py-[7px] ${statusStyle.bgClassName} ${statusStyle.borderClassName}`}
-                >
-                  <span
-                    className={`size-2 rounded-full ${statusStyle.dotClassName}`}
-                  />
-                  <span
-                    className={`text-xs font-bold uppercase tracking-[0.6px] ${statusStyle.textClassName}`}
-                  >
-                    {statusStyle.label}
-                  </span>
-                </div>
+                <BookingStatusBadge status={booking.status} />
               </div>
 
               <div className="grid grid-cols-2 gap-8 border-t border-outline-variant/20 pt-[33px]">

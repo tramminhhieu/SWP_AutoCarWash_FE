@@ -11,7 +11,11 @@ import VehicleAdd from "../features/customer/pages/VehicleAdd";
 import PrivateRoute from "./PrivateRoute";
 import RoleRoute from "./RoleRoute";
 import ServicePackageList from "../features/servicepackage/pages/ServicePackageList";
-import StaffHome from "../features/staff/pages/Home";
+// ported from feature/FE-queue-management (working-tree only, chưa merge vào dev)
+import StaffLayout from "../layouts/StaffLayout";
+import QueuePage from "../features/queue/pages/QueuePage";
+import WalkInPage from "../features/queue/pages/WalkInPage";
+import PaymentPage from "../features/payment/pages/PaymentPage";
 
 export default function AppRouter() {
   return (
@@ -42,7 +46,14 @@ export default function AppRouter() {
 
       <Route element={<PrivateRoute />}>
         <Route element={<RoleRoute allowedRoles={["STAFF"]} />}>
-          <Route path="/staff" element={<StaffHome />} />
+          {/* Staff login về thẳng Queue, không qua dashboard placeholder nữa */}
+          <Route path="/staff" element={<Navigate to="/staff/queue" replace />} />
+          {/* ported from feature/FE-queue-management (working-tree only) */}
+          <Route element={<StaffLayout />}>
+            <Route path="/staff/queue" element={<QueuePage />} />
+            <Route path="/staff/walk-in" element={<WalkInPage />} />
+            <Route path="/staff/payment/:bookingId" element={<PaymentPage />} />
+          </Route>
         </Route>
       </Route>
 

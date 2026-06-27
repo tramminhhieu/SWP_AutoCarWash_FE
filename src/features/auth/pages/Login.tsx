@@ -3,6 +3,7 @@ import { Link, useNavigate, useLocation } from "react-router-dom";
 import { login } from "../api/authApi";
 import { useAuth } from "../../../hooks/useAuth";
 import { getApiErrorInfo } from "../../../lib/axiosClient";
+import { jwtDecode } from "jwt-decode";
 
 // Regex kiểm tra định dạng email cơ bản
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -67,10 +68,13 @@ const Login = () => {
     try {
       const result = await login({ identity: identity.trim(), password });
       loginWithToken(result.token, result.name);
-
-      // AC-01: chuyển hướng về trang chủ kèm thông báo chào mừng (toast),
-      // truyền qua route state để Home đọc và hiện toast rồi tự xóa
-      navigate("/", {
+      const decoded = jwtDecode<import("../types/auth").JwtPayload>(
+        result.token,
+      );
+      const role = decoded.roles ?? "CUSTOMER";
+      const redirectPath =
+        role === "STAFF" ? "/staff" : role === "ADMIN" ? "/admin" : "/";
+      navigate(redirectPath, {
         state: { loginSuccessMessage: result.message },
       });
     } catch (error) {

@@ -11,6 +11,7 @@ import VehicleAdd from "../features/customer/pages/VehicleAdd";
 import PrivateRoute from "./PrivateRoute";
 import RoleRoute from "./RoleRoute";
 import ServicePackageList from "../features/servicepackage/pages/ServicePackageList";
+import StaffHome from "../features/staff/pages/Home";
 
 export default function AppRouter() {
   return (
@@ -39,16 +40,11 @@ export default function AppRouter() {
         </Route>
       </Route>
 
-      {/* TODO: nhóm route STAFF - chưa có StaffLayout/page nào nên chưa import/khai báo,
-          khi có page thật thì thêm theo đúng khung dưới đây (lồng trong PrivateRoute):
       <Route element={<PrivateRoute />}>
         <Route element={<RoleRoute allowedRoles={["STAFF"]} />}>
-          <Route element={<StaffLayout />}>
-            <Route path="/staff" element={<...>} />
-          </Route>
+          <Route path="/staff" element={<StaffHome />} />
         </Route>
       </Route>
-      */}
 
       {/* TODO: nhóm route ADMIN - tương tự STAFF, chưa có AdminLayout/page nào:
       <Route element={<PrivateRoute />}>

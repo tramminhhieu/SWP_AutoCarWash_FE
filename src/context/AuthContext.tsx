@@ -8,15 +8,7 @@ import {
   setUserName,
 } from "../utils/storage";
 import type { AuthUser, JwtPayload } from "../features/auth/types/auth";
-import type { RoleType } from "../features/auth/types/enums";
 import { AuthContext } from "./AuthContextObject";
-
-// Chuẩn hóa claim "roles": BE có thể trả string đơn hoặc array, có thể có
-// prefix "ROLE_" (convention Spring Security) -> luôn quy về 1 RoleType sạch
-const extractRole = (rolesClaim: JwtPayload["roles"]): RoleType => {
-  const rawRole = Array.isArray(rolesClaim) ? rolesClaim[0] : rolesClaim;
-  return rawRole.replace(/^ROLE_/, "") as RoleType;
-};
 
 // Decode JWT token thành AuthUser, trả về null nếu token không hợp lệ/hết hạn
 const decodeUserFromToken = (token: string): AuthUser | null => {
@@ -32,7 +24,7 @@ const decodeUserFromToken = (token: string): AuthUser | null => {
       userId: Number(payload.sub),
       email: payload.email,
       name: payload.name,
-      role: extractRole(payload.roles),
+      role: payload.roles ?? "CUSTOMER",
     };
   } catch {
     return null;

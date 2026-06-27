@@ -341,7 +341,7 @@ export default function QueuePage() {
     if (!cancelVehicle) return;
     setIsLoading(true);
     try {
-      await cancelGuestLeft(cancelVehicle.bookingId);
+      await cancelGuestLeft(cancelVehicle.id);
       setWaitingPool((prev) => prev.filter((v) => v.id !== cancelVehicle.id));
       setCancelVehicle(null);
     } catch {

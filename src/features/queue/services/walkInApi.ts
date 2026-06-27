@@ -29,7 +29,7 @@ export interface BookingSummaryResponse {
   transferredCredit: number;
   remainingBalance: number;
   systemNotice: string | null;
-  isActionBlock: boolean;
+  actionBlock: boolean;
   availableSlots: AvailableSlotDTO[];
 }
 

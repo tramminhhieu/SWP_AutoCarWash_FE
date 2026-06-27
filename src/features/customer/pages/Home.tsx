@@ -1,34 +1,85 @@
+import { useEffect, useState } from "react";
 import {
   Infinity as InfinityIcon,
   CheckCircle2,
   PiggyBank,
 } from "lucide-react";
-import { Link } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
+import { useAuth } from "../../../hooks/useAuth";
 
 // === ẢNH các section khác: tự import file ảnh thật vào đây khi có ===
 import heroImg from "../../../assets/hero.jpg";
 import servicePackageImg from "../../../assets/servicePackage.jpg";
 import unlimitedSubscriptionImg from "../../../assets/unlimitedSubscription.jpg";
-// import familyPlanImg from "../../../assets/home/family-plan-sunset.jpg";
+import familySubscriptionImg from "../../../assets/familySubscription.jpg";
 
-/**
- * Trang Home (Customer) - "Gloss & Gear"
- * Bám sát mockup Membership_Showcase__Immersive_Journey_v2.png
- * Header/Layout đã có sẵn ở CustomerLayout, page này chỉ render phần nội dung.
- *
- * Toàn bộ màu/font/spacing dùng class Tailwind được sinh từ token khai báo
- * trong index.css (@theme), theo đúng Tailwind CSS v4 - không dùng
- * tailwind.config.js.
- *
- * Nền trang: màu trắng đơn (bg-surface), không dùng gradient.
- *
- * Section Hero riêng: dùng heroImg làm ảnh nền phủ toàn section (absolute,
- * object-cover), phủ thêm lớp overlay trắng mờ (bg-surface/80) để giữ độ
- * đọc của chữ. Không còn khung ảnh bo góc bên cạnh text như layout ban đầu.
- */
 const Home = () => {
+  const location = useLocation();
+  const navigate = useNavigate();
+  const { isAuthenticated } = useAuth();
+
+  // Bấm "Booking Now" -> nếu chưa đăng nhập thì chuyển sang /login luôn (kèm "from"
+  // để Login biết quay lại đúng trang đặt lịch sau khi đăng nhập thành công),
+  // tránh việc cho qua /booking/location rồi mới bị PrivateRoute đá ngược lại
+  const handleBookingNowClick = () => {
+    if (isAuthenticated) {
+      navigate("/booking/location");
+    } else {
+      navigate("/login", { state: { from: "/booking/location" } });
+    }
+  };
+
+  // Đọc message thành công ngay lúc render lần đầu bằng lazy initializer của useState -
+  // KHÔNG setState trong effect để tránh lỗi "set-state-in-effect" (cascading render)
+  const [toastMessage, setToastMessage] = useState<string | null>(() => {
+    const state = location.state as {
+      loginSuccessMessage?: string;
+      bookingSuccessMessage?: string;
+    } | null;
+    return state?.bookingSuccessMessage ?? state?.loginSuccessMessage ?? null;
+  });
+
+  // Effect này chỉ tương tác với router (external system) để dọn state khỏi history,
+  // không gọi setState nên không vi phạm rule - chỉ chạy 1 lần lúc mount
+  useEffect(() => {
+    if (location.state) {
+      navigate(location.pathname, { replace: true, state: {} });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // Tự ẩn toast sau 3 giây
+  useEffect(() => {
+    if (!toastMessage) return;
+    const timer = setTimeout(() => setToastMessage(null), 3000);
+    return () => clearTimeout(timer);
+  }, [toastMessage]);
+
   return (
     <div className="w-full bg-surface">
+      {/* Toast thông báo thành công - cố định ở giữa màn hình, dùng Lime Green
+          (tertiary) theo DESIGN.md vì đây là "Success state" */}
+      {toastMessage && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
+          <div className="flex flex-col items-center gap-4 rounded-2xl bg-surface-container-lowest px-8 py-8 shadow-xl max-w-sm w-full mx-4 text-center">
+            <CheckCircle2 size={48} className="text-tertiary-fixed-dim" />
+            <p className="text-headline-md font-semibold text-on-surface">
+              Thành công!
+            </p>
+            <p className="text-body-md text-on-surface-variant">
+              {toastMessage}
+            </p>
+            <button
+              type="button"
+              onClick={() => setToastMessage(null)}
+              className="mt-2 w-full rounded-lg bg-primary px-6 py-3 text-body-md font-semibold text-on-primary hover:opacity-90"
+            >
+              Tiếp tục
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* ========================================================== */}
       {/* SECTION 1: HERO - Precision Care for Every Drive            */}
       {/* Ảnh nền phủ toàn section, làm mờ bằng overlay trắng để giữ  */}
@@ -58,13 +109,14 @@ const Home = () => {
               and dependable detailing experience — so you can get back on the
               road with confidence.
             </p>
-            {/* Bấm vào sẽ chuyển sang trang chọn Location (bước 1 flow đặt lịch) */}
-            <Link
-              to="/booking/location"
+            {/* Bấm vào sẽ check đăng nhập trước khi chuyển sang trang chọn Location */}
+            <button
+              type="button"
+              onClick={handleBookingNowClick}
               className="mt-7 inline-block px-6 py-3 rounded-lg bg-primary text-on-primary font-body font-semibold text-sm"
             >
               Booking Now
-            </Link>
+            </button>
           </div>
         </div>
       </section>
@@ -108,22 +160,21 @@ const Home = () => {
               ))}
             </ul>
 
-            <button className="mt-7 px-6 py-3 rounded-lg bg-primary text-on-primary font-body font-semibold text-sm">
+            <button
+              type="button"
+              onClick={() => navigate("/servicePackages")}
+              className="mt-7 px-6 py-3 rounded-lg bg-primary text-on-primary font-body font-semibold text-sm"
+            >
               Get Started
             </button>
           </div>
 
           {/* Cột phải: ảnh tunnel rửa xe kiểu vòm */}
-          <div className="rounded-lg overflow-hidden w-full aspect-[4/3] shadow-soft">
+          <div className="rounded-lg overflow-hidden w-full aspect-[4/3] shadow-[0_20px_50px_-8px_rgba(0,0,0,0.35)]">
             <img
               src={servicePackageImg}
               alt="Single session wash tunnel"
               className="w-full h-full object-cover"
-            />
-            <img
-              src=""
-              alt="Single session wash tunnel"
-              className="w-full h-full object-cover bg-surface-container-high"
             />
           </div>
         </div>
@@ -135,16 +186,11 @@ const Home = () => {
       <section className="max-w-page mx-auto px-margin-mobile md:px-margin-desktop py-20">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-10 items-center">
           {/* Cột trái: ảnh tunnel neon (đảo vị trí ảnh sang trái theo mockup) */}
-          <div className="rounded-lg overflow-hidden w-full aspect-[4/3] shadow-soft">
+          <div className="rounded-lg overflow-hidden w-full aspect-[4/3] shadow-[0_20px_50px_-8px_rgba(0,0,0,0.35)]">
             <img
               src={unlimitedSubscriptionImg}
               alt="Unlimited access neon wash tunnel"
               className="w-full h-full object-cover"
-            />
-            <img
-              src=""
-              alt="Unlimited access neon wash tunnel"
-              className="w-full h-full object-cover bg-inverse-surface"
             />
           </div>
 
@@ -193,7 +239,11 @@ const Home = () => {
               </div>
             </div>
 
-            <button className="mt-7 px-6 py-3 rounded-lg bg-on-surface text-on-primary font-body font-semibold text-sm">
+            <button
+              type="button"
+              onClick={() => navigate("/servicePackages")}
+              className="mt-7 px-6 py-3 rounded-lg bg-primary text-on-primary font-body font-semibold text-sm"
+            >
               Get Started
             </button>
           </div>
@@ -233,18 +283,21 @@ const Home = () => {
               )}
             </div>
 
-            <button className="mt-7 px-6 py-3 rounded-lg bg-primary text-on-primary font-body font-semibold text-sm">
+            <button
+              type="button"
+              onClick={() => navigate("/servicePackages")}
+              className="mt-7 px-6 py-3 rounded-lg bg-primary text-on-primary font-body font-semibold text-sm"
+            >
               Get Started
             </button>
           </div>
 
           {/* Cột phải: ảnh tunnel hoàng hôn tím */}
-          <div className="rounded-lg overflow-hidden w-full aspect-[4/3] shadow-soft">
-            {/* TODO: thay bằng <img src={familyPlanImg} alt="Family plan sunset wash tunnel" className="w-full h-full object-cover" /> */}
+          <div className="rounded-lg overflow-hidden w-full aspect-[4/3] shadow-[0_20px_50px_-8px_rgba(0,0,0,0.35)]">
             <img
-              src=""
-              alt="Family plan sunset wash tunnel"
-              className="w-full h-full object-cover bg-surface-container-high"
+              src={familySubscriptionImg}
+              alt="Family subscription wash tunnel"
+              className="w-full h-full object-cover"
             />
           </div>
         </div>

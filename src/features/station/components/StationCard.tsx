@@ -34,7 +34,7 @@ const StationCard = ({ station, isSelected, onSelect }: StationCardProps) => {
           className={`shrink-0 rounded-full px-2.5 py-1 text-label-md font-bold
             ${
               station.operating
-                ? "bg-tertiary-fixed/20 text-tertiary-fixed-dim"
+                ? "bg-tertiary-fixed/30 text-tertiary-fixed-dim"
                 : "bg-surface-container-high text-on-surface-variant"
             }`}
         >

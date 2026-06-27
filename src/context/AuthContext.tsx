@@ -1,63 +1,88 @@
-import { createContext, useState, type ReactNode } from "react";
+import { useState, type ReactNode } from "react";
+import { jwtDecode } from "jwt-decode";
+import { getToken, setToken, clearTokens } from "../utils/storage";
+import type { AuthUser, JwtPayload } from "../features/auth/types/auth";
+import type { RoleType } from "../features/auth/types/enums";
+import { AuthContext } from "./AuthContextObject";
 
-/**
- * Shape user lưu trong AuthContext.
- * firstName/lastName khớp với bảng customer trong DB.
- */
-export interface AuthUser {
-  id: number;
-  firstName: string;
-  lastName: string;
-  email: string;
-  role: "CUSTOMER" | "STAFF" | "ADMIN";
-}
-
-export interface AuthContextValue {
-  isAuthenticated: boolean;
-  user: AuthUser | null;
-  login: () => void;
-  logout: () => void;
-}
-
-// Mock user giả để test UI - chưa nối API/token thật
-const MOCK_USER: AuthUser = {
-  id: 1,
-  firstName: "Tấn",
-  lastName: "Phong",
-  email: "tanphong@example.com",
-  role: "CUSTOMER",
+// Chuẩn hóa claim "roles": BE có thể trả string đơn hoặc array, có thể có
+// prefix "ROLE_" (convention Spring Security) -> luôn quy về 1 RoleType sạch
+const extractRole = (rolesClaim: JwtPayload["roles"]): RoleType => {
+  const rawRole = Array.isArray(rolesClaim) ? rolesClaim[0] : rolesClaim;
+  return rawRole.replace(/^ROLE_/, "") as RoleType;
 };
-// eslint-disable-next-line react-refresh/only-export-components
-export const AuthContext = createContext<AuthContextValue | undefined>(
-  undefined,
-);
 
-interface AuthProviderProps {
-  children: ReactNode;
-}
+// Decode JWT token thành AuthUser, trả về null nếu token không hợp lệ/hết hạn
+const decodeUserFromToken = (token: string): AuthUser | null => {
+  try {
+    const payload = jwtDecode<JwtPayload>(token);
 
-export function AuthProvider({ children }: AuthProviderProps) {
-  // TẠM: set sẵn MOCK_USER ngay khi load để test UI trạng thái đã login,
-  // không cần bấm nút gì. Khi nối API thật, đổi lại thành useState(null)
-  // và để login() thật set user sau khi gọi authApi.login() thành công.
-  const [user, setUser] = useState<AuthUser | null>(MOCK_USER);
+    // Kiểm tra token hết hạn (exp tính bằng giây, Date.now() tính bằng ms)
+    if (payload.exp * 1000 < Date.now()) {
+      return null;
+    }
 
-  // TODO: thay bằng gọi authApi.login() thật khi nối backend
-  const login = () => {
-    setUser(MOCK_USER);
+    return {
+      userId: Number(payload.sub),
+      email: payload.email,
+      name: payload.name,
+      role: extractRole(payload.roles),
+    };
+  } catch {
+    return null;
+  }
+};
+
+// Tính state user ban đầu từ token đã lưu (nếu có), dùng làm lazy initializer cho useState.
+// Đặt ngoài component để không bị tạo lại mỗi lần render.
+const getInitialUser = (): AuthUser | null => {
+  const existingToken = getToken();
+  if (!existingToken) return null;
+
+  const decodedUser = decodeUserFromToken(existingToken);
+  if (!decodedUser) {
+    // Token hỏng hoặc hết hạn -> dọn luôn, không giữ token rác trong storage
+    clearTokens();
+    return null;
+  }
+
+  return decodedUser;
+};
+
+// CHỈ tạo AuthProvider (component) ở đây - Context object đã tách ra AuthContextObject.ts
+// KHÔNG export useAuth ở đây (đã chuyển sang hooks/useAuth.ts)
+export const AuthProvider = ({ children }: { children: ReactNode }) => {
+  // Lazy initializer: getInitialUser() chỉ chạy đúng 1 lần lúc mount, không cần useEffect
+  const [user, setUser] = useState<AuthUser | null>(getInitialUser);
+  const [isLoading] = useState(false);
+
+  // Gọi sau khi login API trả về token thành công
+  const loginWithToken = (token: string, name?: string) => {
+    setToken(token);
+    const decodedUser = decodeUserFromToken(token);
+    if (decodedUser && name) {
+      setUser({ ...decodedUser, name });
+    } else {
+      setUser(decodedUser);
+    }
   };
 
-  // TODO: thay bằng gọi authApi.logout() + clearTokens() thật khi nối backend
   const logout = () => {
+    clearTokens();
     setUser(null);
   };
 
-  const value: AuthContextValue = {
-    isAuthenticated: !!user,
-    user,
-    login,
-    logout,
-  };
-
-  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
-}
+  return (
+    <AuthContext.Provider
+      value={{
+        user,
+        isAuthenticated: !!user,
+        isLoading,
+        loginWithToken,
+        logout,
+      }}
+    >
+      {children}
+    </AuthContext.Provider>
+  );
+};

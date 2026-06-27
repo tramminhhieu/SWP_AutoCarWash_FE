@@ -36,11 +36,7 @@ export default function Login() {
       <h1 className="font-['Montserrat'] text-2xl font-bold text-[#141b2b]">
         Login
       </h1>
-      <p className="mt-2 font-['Inter'] text-sm text-[#434655]">
-        Form đăng nhập thật sẽ thêm sau. Tạm dùng nút bên dưới để test UI.
-      </p>
-
-      {/* author: Ngọc — thêm form login thật */}
+      {/* form login */}
       <div className="mt-6 flex flex-col gap-3">
         <input
           type="text"

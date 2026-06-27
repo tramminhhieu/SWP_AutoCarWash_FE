@@ -3,38 +3,6 @@ import axiosClient from "../../../lib/axiosClient";
 import type { ApiSuccessResponse } from "../../../types/apiResponse";
 
 // ── Types ──────────────────────────────────────────────────────────────────
-export interface VehicleDTO {
-  id: number;
-  bookingId: number;
-  licensePlate: string;
-  model: string;
-  color: string;
-  service: string;
-  tier: "PLATINUM" | "GOLD" | "SILVER" | "Member" | "Guest";
-  finishedAt: string;
-  totalAmount: number;
-  voucherDiscount?: number;
-  pointDiscount?: number;
-}
-
-export interface LaneDTO {
-  laneId: string;
-  laneNumber: string;
-  plate: string;
-  model: string;
-  color: string;
-  service: string;
-  status: "WASHING" | "AVAILABLE";
-  estimatedTime: string;
-  bookingId: number;
-  totalAmount: number;
-}
-
-export interface QueuePageData {
-  activeLanes: LaneDTO[];
-  waitingPool: VehicleDTO[];
-  completed: VehicleDTO[];
-}
 
 // author: Ngọc — thêm type cho response scan biển số từ BE
 export interface ScanVehicleResponse {
@@ -45,6 +13,24 @@ export interface ScanVehicleResponse {
   slotEndTime: string | null;
   hasBooking: boolean;
   vehiclePenalized: boolean;
+  appointmentDate: string | null;
+  bookingType: string | null;
+  brandName: string | null;
+  color: string | null;
+  customerTier: string | null;
+  depositAmount: number | null;
+  depositPaid: boolean | null;
+  remainingAmount: number | null;
+  serviceName: string | null;
+  servicePrice: number | null;
+  stationAddress: string | null;
+  stationName: string | null;
+  status: string | null;
+  technicianName: string | null;
+  totalAmount: number | null;
+  voucherCode: string | null;
+  voucherDiscountAmount: number | null;
+  voucherDiscountPercent: number | null;
 }
 
 // author: Ngọc — thêm type cho response confirm check-in từ BE
@@ -53,23 +39,14 @@ export interface CheckInResultResponse {
   licensePlate: string;
   customerName: string;
   status: string;
+  queueTicketNumber: string | null;
+  minutesDeviation: number | null;
+  message: string;
+  requiresWalkIn: boolean;
+  oldBookingId: number | null;
 }
 
 // ── API calls ──────────────────────────────────────────────────────────────
-// Lấy toàn bộ dữ liệu queue
-export const getQueueData = async (): Promise<QueuePageData> => {
-  const res = await axiosClient.get<ApiSuccessResponse<QueuePageData>>(
-    "/api/queue"
-  );
-  return res.data.data;
-};
-
-// Staff click [Completed] — đổi trạng thái washlane + booking
-export const completeLane = async (laneId: string): Promise<void> => {
-  await axiosClient.patch<ApiSuccessResponse<void>>(
-    `/api/lanes/${laneId}/complete`
-  );
-};
 
 // author: Ngọc — thêm hàm quét biển số xe tại quầy
 export const scanVehicle = async (
@@ -120,10 +97,31 @@ export interface QueueTicketDTO {
   stationName: string | null;
 }
 
-// author: Ngọc — lấy danh sách hàng chờ thật (status WAITING) để đổ vào Waiting Pool
-export const getActiveQueue = async (): Promise<QueueTicketDTO[]> => {
+// BE trả về array phẳng QueueTicketDTO[], FE tự group theo status
+export interface QueuePageData {
+  activeLanes: QueueTicketDTO[]; // status === "IN_SERVICE"
+  waitingPool: QueueTicketDTO[]; // status === "WAITING"
+  completed: QueueTicketDTO[]; // status === "COMPLETED"
+}
+
+// author: Ngọc — lấy toàn bộ dữ liệu queue, group theo status ở FE
+export const getQueueData = async (): Promise<QueuePageData> => {
   const res = await axiosClient.get<ApiSuccessResponse<QueueTicketDTO[]>>(
     "/api/queue"
+  );
+  const tickets = res.data.data;
+  return {
+    activeLanes: tickets.filter((t) => t.status === "IN_SERVICE"),
+    waitingPool: tickets.filter((t) => t.status === "WAITING"),
+    completed: tickets.filter((t) => t.status === "COMPLETED"),
+  };
+};
+
+export const collectPenaltyDeposit = async (
+  bookingId: number
+): Promise<CheckInResultResponse> => {
+  const res = await axiosClient.post<ApiSuccessResponse<CheckInResultResponse>>(
+    `/api/v1/staff/checkin/collect-penalty-deposit/${bookingId}`
   );
   return res.data.data;
 };

@@ -51,7 +51,12 @@ const generateWeekDays = (startDate: Date) => {
   return days;
 };
 
-const formatDateKey = (date: Date) => date.toISOString().split("T")[0]; // "2026-06-18"
+const formatDateKey = (date: Date) => {
+  const y = date.getFullYear();
+  const m = String(date.getMonth() + 1).padStart(2, "0");
+  const d = String(date.getDate()).padStart(2, "0");
+  return `${y}-${m}-${d}`;
+};
 
 const WEEKDAY_LABELS = ["SUN", "MON", "TUE", "WED", "THU", "FRI", "SAT"];
 
@@ -170,12 +175,12 @@ const BookingCreate = () => {
   };
 
   const selectedVehicle =
-    context?.vehicles.find((v) => v.id === selectedVehicleId) ?? null;
+    context?.vehicles?.find((v) => v.id === selectedVehicleId) ?? null;
   const selectedService =
-    context?.servicePackages.find((s) => s.id === selectedServiceId) ?? null;
+    context?.servicePackages?.find((s) => s.id === selectedServiceId) ?? null;
   const selectedAddons = useMemo(
     () =>
-      context?.addonServices.filter((a) => selectedAddonIds.includes(a.id)) ??
+      context?.addonServices?.filter((a) => selectedAddonIds.includes(a.id)) ??
       [],
     [context?.addonServices, selectedAddonIds],
   );
@@ -404,6 +409,12 @@ const BookingCreate = () => {
       </main>
     );
   }
+  // Chống crash nếu BE trả null cho các field danh sách thay vì [] (đúng ra theo
+  // API-02-01, case SUCCESS thì các field này luôn phải là array, có thể rỗng)
+  const vehicles = context.vehicles ?? [];
+  const servicePackages = context.servicePackages ?? [];
+  const addonServices = context.addonServices ?? [];
+  const vouchers = context.vouchers ?? [];
 
   return (
     <main className="bg-background">
@@ -454,14 +465,14 @@ const BookingCreate = () => {
                 </h2>
               </div>
 
-              {context.vehicles.length === 0 ? (
+              {vehicles.length === 0 ? (
                 <p className="text-body-md text-on-surface-variant">
                   Bạn chưa có phương tiện nào. Vui lòng thêm xe trước khi đặt
                   lịch.
                 </p>
               ) : (
                 <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-                  {context.vehicles.map((vehicle) => (
+                  {vehicles.map((vehicle) => (
                     <VehicleOption
                       key={vehicle.id}
                       vehicle={vehicle}
@@ -500,16 +511,19 @@ const BookingCreate = () => {
               </div>
 
               <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
-                {context.servicePackages.map((service, idx) => (
+                {servicePackages.map((service, idx) => (
                   <ServiceOption
                     key={service.id}
                     service={service}
                     icon={SERVICE_ICONS[idx % SERVICE_ICONS.length]}
                     isSelected={service.id === selectedServiceId}
-                    isCovered={isServiceCoveredBySubscription(
-                      selectedVehicle,
-                      service.id,
-                    )}
+                    isCovered={
+                      isServiceCoveredBySubscription(
+                        selectedVehicle,
+                        service.id,
+                      ) &&
+                      !isSubscriptionConsumedForSelectedDate(selectedVehicle)
+                    }
                     onSelect={() => handleSelectService(service.id)}
                   />
                 ))}
@@ -517,7 +531,7 @@ const BookingCreate = () => {
             </section>
 
             {/* BƯỚC 3: Enhance Your Service (addon) */}
-            {context.addonServices.length > 0 && (
+            {addonServices.length > 0 && (
               <section>
                 <div className="flex items-center gap-2 pb-4">
                   <span className="flex h-6 w-6 items-center justify-center rounded-full bg-primary text-label-sm font-semibold text-on-primary">
@@ -529,7 +543,7 @@ const BookingCreate = () => {
                 </div>
 
                 <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-                  {context.addonServices.map((addon) => (
+                  {addonServices.map((addon) => (
                     <AddonOption
                       key={addon.id}
                       addon={addon}
@@ -642,7 +656,7 @@ const BookingCreate = () => {
             </section>
 
             {/* BƯỚC 7: Promotion Voucher (giữ đúng số 7 theo mockup) */}
-            {context.vouchers.length > 0 && (
+            {vouchers.length > 0 && (
               <section>
                 <div className="flex items-center gap-2 pb-4">
                   <span className="flex h-6 w-6 items-center justify-center rounded-full bg-primary text-label-sm font-semibold text-on-primary">
@@ -654,7 +668,7 @@ const BookingCreate = () => {
                 </div>
 
                 <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
-                  {context.vouchers.map((voucher) => (
+                  {vouchers.map((voucher) => (
                     <VoucherOption
                       key={voucher.id}
                       voucher={voucher}
@@ -664,10 +678,6 @@ const BookingCreate = () => {
                     />
                   ))}
                 </div>
-
-                {voucherError && (
-                  <p className="mt-3 text-body-md text-error">{voucherError}</p>
-                )}
               </section>
             )}
           </div>
@@ -792,6 +802,11 @@ const BookingCreate = () => {
             </div>
             {bookingError && (
               <p className="mb-3 text-body-md text-error">{bookingError}</p>
+            )}
+            {voucherError && (
+              <p className="mt-3 text-body-md text-error text-center pb-3">
+                {voucherError}
+              </p>
             )}
             <button
               type="button"

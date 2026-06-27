@@ -70,9 +70,11 @@ export const confirmCheckIn = async (
 };
 
 // hàm huỷ booking khi khách bỏ về
-export const cancelGuestLeft = async (bookingId: number): Promise<void> => {
+// author: Ngọc — BE đã đổi path param từ bookingId sang ticketId (queue ticket id),
+// đổi tên param cho khớp; FE phải truyền ticket.id, KHÔNG phải booking.id nữa
+export const cancelGuestLeft = async (ticketId: number): Promise<void> => {
   const res = await axiosClient.patch<ApiSuccessResponse<null>>(
-    `/api/queue/${bookingId}/cancel-guest-left`
+    `/api/queue/${ticketId}/cancel-guest-left`
   );
   if (!res.data.success) {
     throw new Error(res.data.message || "Cancel guest left failed");
@@ -115,6 +117,14 @@ export const getQueueData = async (): Promise<QueuePageData> => {
     waitingPool: tickets.filter((t) => t.status === "WAITING"),
     completed: tickets.filter((t) => t.status === "COMPLETED"),
   };
+};
+
+// author: Ngọc — gọi API thêm xe vào làn rửa (WAITING -> IN_SERVICE), BE mới thêm endpoint này
+export const startService = async (ticketId: number): Promise<QueueTicketDTO> => {
+  const res = await axiosClient.patch<ApiSuccessResponse<QueueTicketDTO>>(
+    `/api/queue/${ticketId}/start`
+  );
+  return res.data.data;
 };
 
 export const collectPenaltyDeposit = async (

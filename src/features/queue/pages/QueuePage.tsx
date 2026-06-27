@@ -4,7 +4,7 @@ import { useNavigate } from "react-router-dom";
 import { useState, useEffect } from "react";
 import { Search, X, ChevronRight, ChevronUp, ChevronDown, Droplets, Check, CreditCard } from "lucide-react";
 // author: Ngọc — import API thật
-import { scanVehicle, confirmCheckIn, cancelGuestLeft, getQueueData, type ScanVehicleResponse } from "../services/queueApi";
+import { scanVehicle, confirmCheckIn, cancelGuestLeft, startService, getQueueData, type ScanVehicleResponse } from "../services/queueApi";
 // ported onto dev: dev không có utils/currency.ts, dùng formatCurrency của dev thay formatVND
 import { formatCurrency as formatVND } from "../../../utils/format";
 
@@ -297,19 +297,29 @@ export default function QueuePage() {
     });
   };
 
-  const handleAddToLane = () => {
+  // author: Ngọc — gọi API PATCH /api/queue/{ticketId}/start để chuyển ticket
+  // WAITING -> IN_SERVICE, chỉ cập nhật UI sau khi BE xác nhận thành công
+  const handleAddToLane = async () => {
     if (waitingPool.length === 0) return;
     const emptyIndex = lanes.findIndex((l) => l.status === "Empty");
     if (emptyIndex === -1) return;
     const next = waitingPool[0];
-    setLanes((prev) =>
-      prev.map((l, i) =>
-        i === emptyIndex
-          ? { ...l, plate: next.licensePlate, model: next.model, color: next.color, service: next.service, status: "Washing", est: "20 mins left", bookingId: next.bookingId, totalAmount: next.totalAmount }
-          : l
-      )
-    );
-    setWaitingPool((prev) => prev.slice(1));
+    setIsLoading(true);
+    try {
+      await startService(next.id);
+      setLanes((prev) =>
+        prev.map((l, i) =>
+          i === emptyIndex
+            ? { ...l, plate: next.licensePlate, model: next.model, color: next.color, service: next.service, status: "Washing", est: "20 mins left", bookingId: next.bookingId, totalAmount: next.totalAmount }
+            : l
+        )
+      );
+      setWaitingPool((prev) => prev.filter((v) => v.id !== next.id));
+    } catch {
+      alert("Thêm xe vào làn thất bại, thử lại.");
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const handleCompleted = (index: number) => {
@@ -338,11 +348,13 @@ export default function QueuePage() {
   };
 
   // gọi API cancel guest left
+  // author: Ngọc — BE đổi path param sang ticketId, phải truyền cancelVehicle.id
+  // (= queue ticket id), KHÔNG truyền bookingId nữa
   const handleConfirmCancel = async () => {
     if (!cancelVehicle) return;
     setIsLoading(true);
     try {
-      await cancelGuestLeft(cancelVehicle.bookingId);
+      await cancelGuestLeft(cancelVehicle.id);
       setWaitingPool((prev) => prev.filter((v) => v.id !== cancelVehicle.id));
       setCancelVehicle(null);
     } catch {
@@ -420,7 +432,7 @@ export default function QueuePage() {
             </div>
             <button
               onClick={handleAddToLane}
-              disabled={!hasEmptyLane || waitingPool.length === 0}
+              disabled={!hasEmptyLane || waitingPool.length === 0 || isLoading}
               className="w-6 h-6 rounded-full flex items-center justify-center text-sm bg-white/20 text-white transition hover:bg-white/30 disabled:opacity-40 disabled:cursor-not-allowed"
             >+</button>
           </div>

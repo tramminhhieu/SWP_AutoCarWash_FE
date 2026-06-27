@@ -25,6 +25,7 @@ axiosClient.interceptors.response.use(
   (error) => {
     if (error.response?.status === 401) {
       clearTokens();
+      window.location.href = "/login";
     }
     return Promise.reject(error);
   },

@@ -4,7 +4,7 @@ import { useNavigate } from "react-router-dom";
 import { useState, useEffect } from "react";
 import { Search, X, ChevronRight, ChevronUp, ChevronDown, Droplets, Check, CreditCard } from "lucide-react";
 // author: Ngọc — import API thật
-import { scanVehicle, confirmCheckIn, cancelGuestLeft, getActiveQueue, type ScanVehicleResponse, type QueueTicketDTO } from "../services/queueApi";
+import { scanVehicle, confirmCheckIn, cancelGuestLeft, getQueueData, type ScanVehicleResponse } from "../services/queueApi";
 import { formatVND } from "../../../utils/currency";
 
 interface Vehicle {
@@ -19,6 +19,10 @@ interface Vehicle {
   totalAmount: number;
   voucherDiscount?: number;
   pointDiscount?: number;
+  // author: Ngọc — bookingType (ADVANCE/WALK_IN/SUBSCRIPTION) từ BE, dùng để
+  // phân biệt khách dùng gói Unlimited/Family (SUBSCRIPTION) khi Cancel,
+  // KHÔNG dùng tier (loyalty BRONZE/SILVER/GOLD) cho việc này vì 2 khái niệm độc lập
+  bookingType?: string | null;
 }
 
 interface Lane {
@@ -75,18 +79,20 @@ const mapTier = (tier: string | null): Vehicle["tier"] => {
   return tier as "PLATINUM" | "GOLD" | "SILVER";
 };
 
-// author: Ngọc — bỏ data demo (bookingId giả 301-303 không tồn tại trong DB thật,
-// khiến trang Payment báo "Không tải được thông tin booking" khi bấm vào).
-// Active Lanes bắt đầu rỗng (3 lane Empty), chỉ có xe thật sau khi Add to Lane.
-const initialLanes: Lane[] = [
-  { lane: "01", plate: "—", model: "", color: "", service: "", status: "Empty", est: "", bookingId: 0, totalAmount: 0 },
-  { lane: "02", plate: "—", model: "", color: "", service: "", status: "Empty", est: "", bookingId: 0, totalAmount: 0 },
-  { lane: "03", plate: "—", model: "", color: "", service: "", status: "Empty", est: "", bookingId: 0, totalAmount: 0 },
-];
+// author: Ngọc — số lane tối thiểu luôn hiển thị (pad bằng Empty nếu IN_SERVICE ít hơn)
+const MIN_LANES = 3;
 
-// author: Ngọc — bỏ data demo (bookingId giả 201-202), Completed bắt đầu rỗng
-// giống Waiting Pool, chỉ hiện xe thật sau khi bấm "Completed" ở Active Lanes.
-const initialCompleted: Vehicle[] = [];
+const makeEmptyLane = (index: number): Lane => ({
+  lane: String(index + 1).padStart(2, "0"),
+  plate: "—",
+  model: "",
+  color: "",
+  service: "",
+  status: "Empty",
+  est: "",
+  bookingId: 0,
+  totalAmount: 0,
+});
 
 const tierBadge: Record<string, string> = {
   PLATINUM: "bg-primary-fixed text-on-primary-fixed",
@@ -98,10 +104,12 @@ const tierBadge: Record<string, string> = {
 
 export default function QueuePage() {
   const navigate = useNavigate();
-  const [lanes, setLanes] = useState<Lane[]>(initialLanes);
+  const [lanes, setLanes] = useState<Lane[]>(
+    Array.from({ length: MIN_LANES }, (_, i) => makeEmptyLane(i))
+  );
   // author: Ngọc — Waiting Pool bắt đầu rỗng, load thật từ API qua useEffect dưới
   const [waitingPool, setWaitingPool] = useState<Vehicle[]>([]);
-  const [completed, setCompleted] = useState<Vehicle[]>(initialCompleted);
+  const [completed, setCompleted] = useState<Vehicle[]>([]);
   const [cancelVehicle, setCancelVehicle] = useState<Vehicle | null>(null);
   const [showCheckin, setShowCheckin] = useState(false);
   const [searchPlate, setSearchPlate] = useState("");
@@ -112,13 +120,16 @@ export default function QueuePage() {
   const [scanResult, setScanResult] = useState<ScanVehicleResponse | null>(null);
   const [isLoading, setIsLoading] = useState(false);
 
-  // author: Ngọc — load Waiting Pool thật từ GET /api/queue khi vào trang
+  // author: Ngọc — load toàn bộ queue thật từ GET /api/queue khi vào trang,
+  // group theo status để đổ vào cả 3 cột (Active Lanes / Waiting Pool / Completed)
   useEffect(() => {
-    const loadWaitingPool = async () => {
+    const loadQueue = async () => {
       try {
-        const tickets: QueueTicketDTO[] = await getActiveQueue();
-        const mapped: Vehicle[] = tickets
-          .filter((t) => t.status === "WAITING" && t.bookingId !== null)
+        const data = await getQueueData();
+
+        // Waiting Pool: status WAITING
+        const waiting: Vehicle[] = data.waitingPool
+          .filter((t) => t.bookingId !== null)
           .map((t) => ({
             id: t.id,
             bookingId: t.bookingId as number,
@@ -132,12 +143,49 @@ export default function QueuePage() {
             // cần xin Bình bổ sung nếu muốn hiện đúng số tiền ở Cancel modal
             totalAmount: 0,
           }));
-        setWaitingPool(mapped);
+        setWaitingPool(waiting);
+
+        // Active Lanes: status IN_SERVICE, pad đến MIN_LANES bằng Empty
+        const activeLanes: Lane[] = data.activeLanes.map((t, idx) => ({
+          lane: String(idx + 1).padStart(2, "0"),
+          plate: t.licensePlate ?? "—",
+          model: t.vehicleBrand ?? "",
+          color: t.vehicleColor ?? "",
+          service: t.serviceName ?? "",
+          status: "Washing" as const,
+          est: "",
+          bookingId: t.bookingId ?? 0,
+          totalAmount: 0,
+        }));
+        const totalSlots = Math.max(MIN_LANES, activeLanes.length);
+        const paddedLanes: Lane[] = [
+          ...activeLanes,
+          ...Array.from({ length: totalSlots - activeLanes.length }, (_, i) =>
+            makeEmptyLane(activeLanes.length + i)
+          ),
+        ];
+        setLanes(paddedLanes);
+
+        // Completed: status COMPLETED
+        const done: Vehicle[] = data.completed
+          .filter((t) => t.bookingId !== null)
+          .map((t) => ({
+            id: t.id,
+            bookingId: t.bookingId as number,
+            licensePlate: t.licensePlate ?? "—",
+            model: t.vehicleBrand ?? "",
+            color: t.vehicleColor ?? "",
+            service: t.serviceName ?? "",
+            tier: mapTier(t.customerTier),
+            finishedAt: "",
+            totalAmount: 0,
+          }));
+        setCompleted(done);
       } catch {
-        // load lỗi thì để Waiting Pool rỗng, không chặn UI
+        // load lỗi thì giữ state ban đầu, không chặn UI
       }
     };
-    loadWaitingPool();
+    loadQueue();
   }, []);
 
   const now = new Date();
@@ -226,6 +274,8 @@ export default function QueuePage() {
         tier: searchResult?.tier ?? "Guest",
         finishedAt: "",
         totalAmount: selectedBooking.totalAmount,
+        // author: Ngọc — lưu bookingType từ scan result để modal Cancel phân biệt đúng
+        bookingType: scanResult.bookingType,
       };
       setWaitingPool((prev) => [...prev, newVehicle]);
       closeCheckinModal();
@@ -281,7 +331,7 @@ export default function QueuePage() {
       updatedLanes[index] = { ...updatedLanes[index], plate: next.licensePlate, model: next.model, color: next.color, service: next.service, status: "Washing", est: "20 mins left", bookingId: next.bookingId, totalAmount: next.totalAmount };
       setWaitingPool((prev) => prev.slice(1));
     } else {
-      updatedLanes[index] = { ...updatedLanes[index], plate: "—", model: "", color: "", service: "", status: "Empty", est: "", bookingId: 0, totalAmount: 0 };
+      updatedLanes[index] = makeEmptyLane(index);
     }
     setLanes(updatedLanes);
   };
@@ -421,6 +471,9 @@ export default function QueuePage() {
             <CreditCard className="w-4 h-4 text-white/80" />
           </div>
           <div className="rounded-b-2xl p-2.5 flex flex-col gap-2 bg-surface-container-lowest shadow-sm">
+            {completed.length === 0 && (
+              <p className="text-xs text-center py-4 text-outline">No completed vehicles</p>
+            )}
             {completed.map((v) => (
               <div key={v.id} onClick={() => handleSelectCompleted(v)} className="rounded-xl px-3 py-2.5 cursor-pointer transition hover:bg-surface-container-low bg-white border border-outline-variant/20">
                 <div className="flex items-center justify-between mb-0.5">
@@ -578,7 +631,7 @@ export default function QueuePage() {
                 <p className="text-xs font-semibold mb-0.5 text-on-error-container">Walk-in Cancellation</p>
                 <p className="text-xs text-on-error-container">1 violation point will be added to <strong>{cancelVehicle.licensePlate}</strong>.</p>
               </div>
-            ) : cancelVehicle.tier === "Member" ? (
+            ) : cancelVehicle.bookingType === "SUBSCRIPTION" ? (
               <div className="rounded-xl px-4 py-3 mb-4 bg-secondary-fixed border border-secondary">
                 <p className="text-xs font-semibold mb-0.5 text-on-secondary-fixed">Unlimited / Family Package</p>
                 <p className="text-xs text-on-secondary-fixed-variant">No deposit collected. 1 violation point added.</p>

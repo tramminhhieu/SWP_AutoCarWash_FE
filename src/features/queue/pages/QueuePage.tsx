@@ -1,6 +1,6 @@
 //author: Ngọc
 //version:2.0.1
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 import { useState, useEffect } from "react";
 import { Search, X, ChevronRight, ChevronUp, ChevronDown, Droplets, Check, CreditCard } from "lucide-react";
 // author: Ngọc — import API thật
@@ -109,6 +109,7 @@ const tierBadge: Record<string, string> = {
 
 export default function QueuePage() {
   const navigate = useNavigate();
+  const location = useLocation();
   const [lanes, setLanes] = useState<Lane[]>(
     Array.from({ length: MIN_LANES }, (_, i) => makeEmptyLane(i))
   );
@@ -193,7 +194,7 @@ export default function QueuePage() {
       }
     };
     loadQueue();
-  }, []);
+  }, [location.key]);
 
   const now = new Date();
   const timeStr = `${now.getHours()}:${String(now.getMinutes()).padStart(2, "0")}`;

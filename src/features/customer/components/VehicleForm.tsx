@@ -7,8 +7,8 @@ import { getApiErrorInfo } from "../../../lib/axiosClient";
 // Regex biển số VN: 2 số đầu (mã tỉnh) + 1-2 chữ (trừ I, O dễ nhầm số) + "-" + 4-5 số
 // Theo đúng AC đã chốt: ^[0-9]{2}[A-HJ-NP-Z]{1,2}-[0-9]{4,5}$
 const LICENSE_PLATE_REGEX = /^[0-9]{2}[A-HJ-NP-Z]{1,2}-[0-9]{4,5}$/;
-const TEXT_ONLY_REGEX = /^[a-zA-Z\s]+$/;
-const MAX_FIELD_LENGTH = 50;
+const TEXT_ONLY_REGEX = /^[a-zA-Z\s-]+$/;
+const MAX_FIELD_LENGTH = 20;
 
 interface VehicleFormProps {
   // Gọi khi thêm xe thành công, kèm message từ BE để page cha hiển thị thông báo
@@ -138,6 +138,7 @@ const VehicleForm = ({ onSuccess, onCancel }: VehicleFormProps) => {
           value={licensePlate}
           onChange={(e) => setLicensePlate(e.target.value.toUpperCase())}
           placeholder="12A-45678"
+          maxLength={10}
           className={`w-full rounded-lg border px-4 py-2.5 text-body-md text-on-surface outline-none transition-colors placeholder:text-on-surface-variant/60
             ${licensePlateError ? "border-error" : "border-outline-variant focus:border-primary"}`}
         />

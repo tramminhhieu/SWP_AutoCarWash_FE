@@ -36,6 +36,9 @@ interface Lane {
   est: string;
   bookingId: number;
   totalAmount: number;
+  tier?: Vehicle["tier"];
+  voucherDiscount?: number;
+  pointDiscount?: number;
 }
 
 interface BookingItem {
@@ -310,7 +313,7 @@ export default function QueuePage() {
       setLanes((prev) =>
         prev.map((l, i) =>
           i === emptyIndex
-            ? { ...l, plate: next.licensePlate, model: next.model, color: next.color, service: next.service, status: "Washing", est: "20 mins left", bookingId: next.bookingId, totalAmount: next.totalAmount }
+            ? { ...l, plate: next.licensePlate, model: next.model, color: next.color, service: next.service, status: "Washing", est: "20 mins left", bookingId: next.bookingId, totalAmount: next.totalAmount, tier: next.tier, voucherDiscount: next.voucherDiscount, pointDiscount: next.pointDiscount }
             : l
         )
       );
@@ -331,9 +334,11 @@ export default function QueuePage() {
       model: lane.model,
       color: lane.color,
       service: lane.service,
-      tier: "Guest",
+      tier: lane.tier ?? "Guest",
       finishedAt: timeStr,
       totalAmount: lane.totalAmount,
+      voucherDiscount: lane.voucherDiscount,
+      pointDiscount: lane.pointDiscount,
     };
     setCompleted((prev) => [...prev, newCompleted]);
     const updatedLanes = [...lanes];

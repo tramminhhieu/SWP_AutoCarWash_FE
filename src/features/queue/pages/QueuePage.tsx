@@ -4,7 +4,7 @@ import { useNavigate } from "react-router-dom";
 import { useState, useEffect } from "react";
 import { Search, X, ChevronRight, ChevronUp, ChevronDown, Droplets, Check, CreditCard } from "lucide-react";
 // author: Ngọc — import API thật
-import { scanVehicle, confirmCheckIn, cancelGuestLeft, startService, getQueueData, type ScanVehicleResponse } from "../services/queueApi";
+import { scanVehicle, confirmCheckIn, cancelGuestLeft, startService, completeService, getQueueData, type ScanVehicleResponse } from "../services/queueApi";
 // ported onto dev: dev không có utils/currency.ts, dùng formatCurrency của dev thay formatVND
 import { formatCurrency as formatVND } from "../../../utils/format";
 
@@ -36,6 +36,7 @@ interface Lane {
   est: string;
   bookingId: number;
   totalAmount: number;
+  ticketId?: number;
   tier?: Vehicle["tier"];
   voucherDiscount?: number;
   pointDiscount?: number;
@@ -160,6 +161,7 @@ export default function QueuePage() {
           est: "",
           bookingId: t.bookingId ?? 0,
           totalAmount: 0,
+          ticketId: t.id,
           tier: mapTier(t.customerTier),
         }));
         const totalSlots = Math.max(MIN_LANES, activeLanes.length);
@@ -314,7 +316,7 @@ export default function QueuePage() {
       setLanes((prev) =>
         prev.map((l, i) =>
           i === emptyIndex
-            ? { ...l, plate: next.licensePlate, model: next.model, color: next.color, service: next.service, status: "Washing", est: "20 mins left", bookingId: next.bookingId, totalAmount: next.totalAmount, tier: next.tier, voucherDiscount: next.voucherDiscount, pointDiscount: next.pointDiscount }
+            ? { ...l, plate: next.licensePlate, model: next.model, color: next.color, service: next.service, status: "Washing", est: "20 mins left", bookingId: next.bookingId, totalAmount: next.totalAmount, ticketId: next.id, tier: next.tier, voucherDiscount: next.voucherDiscount, pointDiscount: next.pointDiscount }
             : l
         )
       );
@@ -326,31 +328,40 @@ export default function QueuePage() {
     }
   };
 
-  const handleCompleted = (index: number) => {
+  const handleCompleted = async (index: number) => {
     const lane = lanes[index];
-    const newCompleted: Vehicle = {
-      id: Date.now(),
-      bookingId: lane.bookingId,
-      licensePlate: lane.plate,
-      model: lane.model,
-      color: lane.color,
-      service: lane.service,
-      tier: lane.tier ?? "Guest",
-      finishedAt: timeStr,
-      totalAmount: lane.totalAmount,
-      voucherDiscount: lane.voucherDiscount,
-      pointDiscount: lane.pointDiscount,
-    };
-    setCompleted((prev) => [...prev, newCompleted]);
-    const updatedLanes = [...lanes];
-    if (waitingPool.length > 0) {
-      const next = waitingPool[0];
-      updatedLanes[index] = { ...updatedLanes[index], plate: next.licensePlate, model: next.model, color: next.color, service: next.service, status: "Washing", est: "20 mins left", bookingId: next.bookingId, totalAmount: next.totalAmount };
-      setWaitingPool((prev) => prev.slice(1));
-    } else {
-      updatedLanes[index] = makeEmptyLane(index);
+    if (!lane.ticketId) return;
+    setIsLoading(true);
+    try {
+      await completeService(lane.ticketId);
+      const newCompleted: Vehicle = {
+        id: Date.now(),
+        bookingId: lane.bookingId,
+        licensePlate: lane.plate,
+        model: lane.model,
+        color: lane.color,
+        service: lane.service,
+        tier: lane.tier ?? "Guest",
+        finishedAt: timeStr,
+        totalAmount: lane.totalAmount,
+        voucherDiscount: lane.voucherDiscount,
+        pointDiscount: lane.pointDiscount,
+      };
+      setCompleted((prev) => [...prev, newCompleted]);
+      const updatedLanes = [...lanes];
+      if (waitingPool.length > 0) {
+        const next = waitingPool[0];
+        updatedLanes[index] = { ...updatedLanes[index], plate: next.licensePlate, model: next.model, color: next.color, service: next.service, status: "Washing", est: "20 mins left", bookingId: next.bookingId, totalAmount: next.totalAmount, ticketId: next.id };
+        setWaitingPool((prev) => prev.slice(1));
+      } else {
+        updatedLanes[index] = makeEmptyLane(index);
+      }
+      setLanes(updatedLanes);
+    } catch {
+      // show nothing — isLoading will reset and button re-enables
+    } finally {
+      setIsLoading(false);
     }
-    setLanes(updatedLanes);
   };
 
   // gọi API cancel guest left

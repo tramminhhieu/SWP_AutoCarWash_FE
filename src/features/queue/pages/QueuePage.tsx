@@ -160,6 +160,7 @@ export default function QueuePage() {
           est: "",
           bookingId: t.bookingId ?? 0,
           totalAmount: 0,
+          tier: mapTier(t.customerTier),
         }));
         const totalSlots = Math.max(MIN_LANES, activeLanes.length);
         const paddedLanes: Lane[] = [

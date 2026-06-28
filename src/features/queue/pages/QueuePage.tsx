@@ -174,9 +174,10 @@ export default function QueuePage() {
         ];
         setLanes(paddedLanes);
 
-        // Completed: status COMPLETED
+        // Completed: status COMPLETED — filter out booking just paid (passed via navigate state)
+        const paidBookingId = (location.state as { paidBookingId?: number } | null)?.paidBookingId;
         const done: Vehicle[] = data.completed
-          .filter((t) => t.bookingId !== null)
+          .filter((t) => t.bookingId !== null && t.bookingId !== paidBookingId)
           .map((t) => ({
             id: t.id,
             bookingId: t.bookingId as number,

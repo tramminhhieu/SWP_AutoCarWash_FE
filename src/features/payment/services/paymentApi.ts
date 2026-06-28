@@ -1,4 +1,4 @@
-/@author: BaoNgoc/
+/* @author: BaoNgoc */
 import axiosClient from "../../../lib/axiosClient";
 import type { ApiSuccessResponse } from "../../../types/apiResponse";
 

@@ -8,9 +8,24 @@ import type { RegisterFieldError } from "../types/auth";
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 // Regex kiểm tra số điện thoại VN: bắt đầu bằng 0, theo sau 9 số (tổng 10 số)
 const PHONE_REGEX = /^0\d{9}$/;
+const PHONE_MAX_LENGTH = 10;
+
+const NAME_REGEX = /^[a-zA-ZÀ-ỹđĐ\s]+$/;
+const NAME_MIN_LENGTH = 2;
+const NAME_MAX_LENGTH = 50;
+
+const ALLOWED_EMAIL_DOMAINS = [
+  "gmail.com",
+  "yahoo.com",
+  "outlook.com",
+  "hotmail.com",
+  "icloud.com",
+  "mail.com",
+];
+const EMAIL_MAX_LENGTH = 100;
 
 // AC-05: message dùng chung cho mọi trường bắt buộc bị bỏ trống
-const REQUIRED_ERROR = "Không được để trống";
+const REQUIRED_ERROR = "This field is required";
 
 const Register = () => {
   const navigate = useNavigate();
@@ -54,10 +69,36 @@ const Register = () => {
     if (!lastName.trim()) {
       setLastNameError(REQUIRED_ERROR);
       isValid = false;
+    } else if (!NAME_REGEX.test(lastName.trim())) {
+      setLastNameError("Last name must contain letters only");
+      isValid = false;
+    } else if (lastName.trim().length < NAME_MIN_LENGTH) {
+      setLastNameError(
+        `Last name must be at least ${NAME_MIN_LENGTH} characters`,
+      );
+      isValid = false;
+    } else if (lastName.trim().length > NAME_MAX_LENGTH) {
+      setLastNameError(
+        `Last name must not exceed ${NAME_MAX_LENGTH} characters`,
+      );
+      isValid = false;
     }
 
     if (!firstName.trim()) {
       setFirstNameError(REQUIRED_ERROR);
+      isValid = false;
+    } else if (!NAME_REGEX.test(firstName.trim())) {
+      setFirstNameError("First name must contain letters only");
+      isValid = false;
+    } else if (firstName.trim().length < NAME_MIN_LENGTH) {
+      setFirstNameError(
+        `First name must be at least ${NAME_MIN_LENGTH} characters`,
+      );
+      isValid = false;
+    } else if (firstName.trim().length > NAME_MAX_LENGTH) {
+      setFirstNameError(
+        `First name must not exceed ${NAME_MAX_LENGTH} characters`,
+      );
       isValid = false;
     }
 
@@ -65,9 +106,16 @@ const Register = () => {
       setEmailError(REQUIRED_ERROR);
       isValid = false;
     } else if (!EMAIL_REGEX.test(email.trim())) {
-      // AC-04
-      setEmailError("Invalid email");
+      setEmailError("Invalid email format");
       isValid = false;
+    } else {
+      const domain = email.trim().split("@")[1];
+      if (!ALLOWED_EMAIL_DOMAINS.includes(domain)) {
+        setEmailError(
+          "Please use a common email provider (Gmail, Yahoo, Outlook, etc.)",
+        );
+        isValid = false;
+      }
     }
 
     if (!phone.trim()) {
@@ -90,8 +138,10 @@ const Register = () => {
       setPasswordError(REQUIRED_ERROR);
       isValid = false;
     } else if (password.length < 6) {
-      // Khớp rule BE: INVALID_PASSWORD
       setPasswordError("Password must be at least 6 characters long");
+      isValid = false;
+    } else if (password.length > 50) {
+      setPasswordError("Password must not exceed 50 characters");
       isValid = false;
     }
 
@@ -144,8 +194,8 @@ const Register = () => {
     setIsSubmitting(true);
     try {
       await register({
-        firstName: firstName.trim(),
-        lastName: lastName.trim(),
+        firstName: firstName.trim().replace(/\s+/g, " "),
+        lastName: lastName.trim().replace(/\s+/g, " "),
         birthday,
         phone: phone.trim(),
         email: email.trim(),
@@ -271,6 +321,7 @@ const Register = () => {
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 placeholder="email@example.com"
+                maxLength={EMAIL_MAX_LENGTH}
                 className={`w-full rounded-lg border px-4 py-2.5 text-body-md text-on-surface outline-none transition-colors
                   ${emailError ? "border-error" : "border-outline-variant focus:border-primary"}`}
               />
@@ -293,6 +344,7 @@ const Register = () => {
                 value={phone}
                 onChange={(e) => setPhone(e.target.value)}
                 placeholder="0123456789"
+                maxLength={PHONE_MAX_LENGTH}
                 className={`w-full rounded-lg border px-4 py-2.5 text-body-md text-on-surface outline-none transition-colors
                   ${phoneError ? "border-error" : "border-outline-variant focus:border-primary"}`}
               />

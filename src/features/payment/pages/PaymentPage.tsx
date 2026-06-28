@@ -40,6 +40,7 @@ export default function PaymentPage() {
 
   const [paymentMethod, setPaymentMethod] = useState<"cash" | "card">("cash");
   const [received, setReceived] = useState(0);
+  const [payError, setPayError] = useState("");
 
   useEffect(() => {
     if (!bookingId) {
@@ -69,24 +70,20 @@ export default function PaymentPage() {
     detail?.remainingAmount ?? Math.max(subtotal - voucherDiscount, 0);
   const change = received - total;
   const isInsufficient = received > 0 && received < total;
-  const canConfirm = received >= total && total > 0;
+  const canConfirm = total === 0 || (received >= total && total > 0);
 
   const handleConfirm = async () => {
     if (!canConfirm || !bookingId) return;
-    if (paymentMethod !== "cash") {
-      alert("This is a demo, currently only cash payment is supported.");
-      return;
-    }
+    setPayError("");
     setIsPaying(true);
     try {
-      const result = await processCashPayment({
+      await processCashPayment({
         bookingId,
         receivedAmount: received,
       });
-      alert(`Payment successful! Change: ${formatVND(result.changeAmount)}`);
       navigate("/staff/queue");
     } catch {
-      alert("Payment failed. Please try again.");
+      setPayError("Payment failed. Please try again.");
     } finally {
       setIsPaying(false);
     }
@@ -311,6 +308,12 @@ export default function PaymentPage() {
               </p>
             )}
           </div>
+
+          {payError && (
+            <div className="rounded-xl px-4 py-3 bg-error/10 border border-error/30">
+              <p className="text-sm text-error">{payError}</p>
+            </div>
+          )}
 
           <button
             onClick={handleConfirm}

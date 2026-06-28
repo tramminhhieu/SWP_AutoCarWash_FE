@@ -138,7 +138,7 @@ export default function PaymentPage() {
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm">
           <div className="relative rounded-2xl p-8 bg-surface-container-lowest border border-outline-variant/30 flex flex-col items-center gap-4 max-w-sm w-full mx-4 shadow-xl">
             <button
-              onClick={() => navigate("/staff/queue")}
+              onClick={() => navigate("/staff/queue", { state: { paidBookingId: bookingId } })}
               className="absolute top-3 right-3 rounded-full p-1.5 hover:bg-surface-container transition text-outline"
             >
               <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -155,7 +155,7 @@ export default function PaymentPage() {
               <p className="text-sm text-on-surface-variant">Booking #{bookingId} has been completed.</p>
             </div>
             <button
-              onClick={() => navigate("/staff/queue")}
+              onClick={() => navigate("/staff/queue", { state: { paidBookingId: bookingId } })}
               className="w-full py-3 rounded-xl text-sm font-semibold bg-primary text-on-primary transition"
             >
               Back to Queue

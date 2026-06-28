@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { Eye, EyeOff } from "lucide-react";
 import { Link, useNavigate } from "react-router-dom";
 import { register } from "../api/authApi";
 import { getApiErrorInfo } from "../../../lib/axiosClient";
@@ -37,6 +38,8 @@ const Register = () => {
   const [birthday, setBirthday] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
   // Lỗi riêng từng field
   const [lastNameError, setLastNameError] = useState<string | null>(null);
@@ -264,7 +267,7 @@ const Register = () => {
               <input
                 id="lastName"
                 type="text"
-                maxLength={50}
+                maxLength={20}
                 autoComplete="family-name"
                 value={lastName}
                 onChange={(e) => setLastName(e.target.value)}
@@ -289,7 +292,7 @@ const Register = () => {
               <input
                 id="firstName"
                 type="text"
-                maxLength={50}
+                maxLength={20}
                 autoComplete="given-name"
                 value={firstName}
                 onChange={(e) => setFirstName(e.target.value)}
@@ -370,62 +373,79 @@ const Register = () => {
               onChange={(e) => setBirthday(e.target.value)}
               max={new Date().toISOString().split("T")[0]}
               className={`w-full rounded-lg border px-4 py-2.5 text-body-md text-on-surface outline-none transition-colors
-                ${birthdayError ? "border-error" : "border-outline-variant focus:border-primary"}`}
+    ${birthdayError ? "border-error" : "border-outline-variant focus:border-primary"}`}
             />
+
             {birthdayError && (
               <p className="mt-1.5 text-label-md text-error">{birthdayError}</p>
             )}
           </div>
 
           {/* Row: Password - Confirm Password */}
-          <div className="mb-2 grid grid-cols-1 gap-4 sm:grid-cols-2">
-            <div>
-              <label
-                htmlFor="password"
-                className="mb-1.5 block text-body-md font-medium text-on-surface"
-              >
-                Mật khẩu
-              </label>
+          <div>
+            <label
+              htmlFor="password"
+              className="mb-1.5 block text-body-md font-medium text-on-surface"
+            >
+              Password
+            </label>
+            <div className="relative">
               <input
                 id="password"
-                type="password"
+                type={showPassword ? "text" : "password"}
                 autoComplete="new-password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 placeholder="••••••••"
-                className={`w-full rounded-lg border px-4 py-2.5 text-body-md text-on-surface outline-none transition-colors
-                  ${passwordError ? "border-error" : "border-outline-variant focus:border-primary"}`}
+                maxLength={20}
+                className={`w-full rounded-lg border px-4 py-2.5 pr-10 text-body-md text-on-surface outline-none transition-colors
+        ${passwordError ? "border-error" : "border-outline-variant focus:border-primary"}`}
               />
-              {passwordError && (
-                <p className="mt-1.5 text-label-md text-error">
-                  {passwordError}
-                </p>
-              )}
-            </div>
-
-            <div>
-              <label
-                htmlFor="confirmPassword"
-                className="mb-1.5 block text-body-md font-medium text-on-surface"
+              <button
+                type="button"
+                onClick={() => setShowPassword((v) => !v)}
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-on-surface-variant hover:text-on-surface"
               >
-                Xác nhận mật khẩu
-              </label>
+                {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+              </button>
+            </div>
+            {passwordError && (
+              <p className="mt-1.5 text-label-md text-error">{passwordError}</p>
+            )}
+          </div>
+
+          <div>
+            <label
+              htmlFor="confirmPassword"
+              className="mb-1.5 block text-body-md font-medium text-on-surface"
+            >
+              Confirm Password
+            </label>
+            <div className="relative">
               <input
                 id="confirmPassword"
-                type="password"
+                type={showConfirmPassword ? "text" : "password"}
                 autoComplete="new-password"
                 value={confirmPassword}
                 onChange={(e) => setConfirmPassword(e.target.value)}
                 placeholder="••••••••"
-                className={`w-full rounded-lg border px-4 py-2.5 text-body-md text-on-surface outline-none transition-colors
-                  ${confirmPasswordError ? "border-error" : "border-outline-variant focus:border-primary"}`}
+                maxLength={20}
+                className={`w-full rounded-lg border px-4 py-2.5 pr-10 text-body-md text-on-surface outline-none transition-colors
+        ${confirmPasswordError ? "border-error" : "border-outline-variant focus:border-primary"}`}
               />
-              {confirmPasswordError && (
-                <p className="mt-1.5 text-label-md text-error">
-                  {confirmPasswordError}
-                </p>
-              )}
+              <button
+                type="button"
+                onClick={() => setShowConfirmPassword((v) => !v)}
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-on-surface-variant hover:text-on-surface"
+              >
+                {showConfirmPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+              </button>
             </div>
+            {confirmPasswordError && (
+              <p className="mt-1.5 text-label-md text-error">
+                {confirmPasswordError}
+              </p>
+            )}
           </div>
 
           <button

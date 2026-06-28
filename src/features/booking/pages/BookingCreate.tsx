@@ -371,7 +371,7 @@ const BookingCreate = () => {
 
       navigate("/", {
         state: {
-          bookingSuccessMessage: `Booking confirmed! Booking ID #${result.bookingId}.`,
+          bookingSuccessMessage: `Booking confirmed! Booking ID: ${result.bookingId}.`,
         },
       });
     } catch (error) {

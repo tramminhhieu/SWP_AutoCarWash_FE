@@ -127,6 +127,13 @@ export const startService = async (ticketId: number): Promise<QueueTicketDTO> =>
   return res.data.data;
 };
 
+export const completeService = async (ticketId: number): Promise<QueueTicketDTO> => {
+  const res = await axiosClient.patch<ApiSuccessResponse<QueueTicketDTO>>(
+    `/api/queue/${ticketId}/complete`
+  );
+  return res.data.data;
+};
+
 export const collectPenaltyDeposit = async (
   bookingId: number
 ): Promise<CheckInResultResponse> => {

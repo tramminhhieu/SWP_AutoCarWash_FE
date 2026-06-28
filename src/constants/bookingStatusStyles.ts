@@ -37,7 +37,7 @@ export const BOOKING_STATUS_STYLES: Record<BookingStatus, BookingStatusStyle> =
       borderClassName: "border-tertiary/10",
     },
     PAID: {
-      label: "COMPLETED",
+      label: "PAID",
       dotClassName: "bg-[#22c55e]",
       textClassName: "text-[#22c55e]",
       bgClassName: "bg-tertiary-fixed/20",
@@ -71,4 +71,11 @@ export const BOOKING_STATUS_STYLES: Record<BookingStatus, BookingStatusStyle> =
       bgClassName: "bg-error-container",
       borderClassName: "border-error/10",
     },
+      CHECK_OUT: {
+          label: "COMPLETED",
+          dotClassName: "bg-[#22c55e]",
+          textClassName: "text-[#22c55e]",
+          bgClassName: "bg-tertiary-fixed/20",
+          borderClassName: "border-tertiary/10",
+      }
   };

@@ -124,7 +124,8 @@ export type BookingStatus =
   | "WASHING"
   | "PAID"
   | "CANCELLED"
-  | "NO_SHOW";
+  | "NO_SHOW"
+    | "CHECK_OUT";
 
 /**
  * Action a customer is allowed to take on a given booking, as returned by

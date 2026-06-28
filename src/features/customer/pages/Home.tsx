@@ -64,7 +64,7 @@ const Home = () => {
           <div className="flex flex-col items-center gap-4 rounded-2xl bg-surface-container-lowest px-8 py-8 shadow-xl max-w-sm w-full mx-4 text-center">
             <CheckCircle2 size={48} className="text-tertiary-fixed-dim" />
             <p className="text-headline-md font-semibold text-on-surface">
-              Thành công!
+              Success!
             </p>
             <p className="text-body-md text-on-surface-variant">
               {toastMessage}
@@ -74,7 +74,7 @@ const Home = () => {
               onClick={() => setToastMessage(null)}
               className="mt-2 w-full rounded-lg bg-primary px-6 py-3 text-body-md font-semibold text-on-primary hover:opacity-90"
             >
-              Tiếp tục
+              Continue
             </button>
           </div>
         </div>

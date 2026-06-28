@@ -132,11 +132,12 @@ const BookingCreate = () => {
           setIsNoVehicleError(true);
           setContextError(
             beMessage ??
-              "Bạn chưa có phương tiện nào. Vui lòng thêm xe trước khi đặt lịch.",
+              "You have no vehicles. Please add a vehicle before booking.",
           );
         } else {
           setContextError(
-            beMessage ?? "Không thể tải thông tin đặt lịch. Vui lòng thử lại.",
+            beMessage ??
+              "Unable to load booking information. Please try again.",
           );
         }
       } finally {
@@ -167,7 +168,7 @@ const BookingCreate = () => {
       setSlots(data);
     } catch {
       setSlotsError(
-        "Không còn khung giờ trống trong ngày đã chọn. Vui lòng đổi ngày, đổi trạm hoặc đổi gói dịch vụ khác.",
+        "No available time slots for the selected date. Please choose a different date, station, or service package.",
       );
     } finally {
       setIsLoadingSlots(false);
@@ -269,7 +270,9 @@ const BookingCreate = () => {
     if (!selectedServiceId) {
       setSelectedSlot(null);
       setSlots([]);
-      setSlotsError("Vui lòng chọn gói dịch vụ trước khi xem khung giờ.");
+      setSlotsError(
+        "Please select a service package before viewing time slots.",
+      );
       return;
     }
     await loadSlots(date, selectedServiceId, selectedAddonIds);
@@ -286,11 +289,13 @@ const BookingCreate = () => {
     }
 
     if (!selectedVehicleId) {
-      setVoucherError("Vui lòng chọn xe trước khi chọn voucher.");
+      setVoucherError("Please select a vehicle before choosing a voucher.");
       return;
     }
     if (!selectedServiceId) {
-      setVoucherError("Vui lòng chọn gói dịch vụ trước khi chọn voucher.");
+      setVoucherError(
+        "Please select a service package before choosing a voucher.",
+      );
       return;
     }
     setApplyingVoucherCode(voucher.voucherCode);
@@ -310,7 +315,9 @@ const BookingCreate = () => {
       setAppliedVoucherCode(voucher.voucherCode);
       setSubscriptionUsedToday(result.isVehicleBookingOnDateAndHasSubscription);
     } catch {
-      setVoucherError("Đơn của bạn không đủ điều kiện để áp dụng voucher này.");
+      setVoucherError(
+        "Your order does not meet the criteria for applying this voucher.",
+      );
     } finally {
       setApplyingVoucherCode(null);
     }
@@ -364,14 +371,12 @@ const BookingCreate = () => {
 
       navigate("/", {
         state: {
-          bookingSuccessMessage: `Đặt lịch thành công! Mã đặt lịch #${result.bookingId}.`,
+          bookingSuccessMessage: `Booking confirmed! Booking ID #${result.bookingId}.`,
         },
       });
     } catch (error) {
       const { message } = getApiErrorInfo(error);
-      setBookingError(
-        message ?? "Đặt lịch không thành công. Vui lòng thử lại.",
-      );
+      setBookingError(message ?? "Failed to create booking. Please try again.");
     } finally {
       setIsBookingSubmitting(false);
     }
@@ -402,7 +407,7 @@ const BookingCreate = () => {
               }
               className="mt-5 rounded-lg bg-primary px-6 py-3 text-body-md font-semibold text-on-primary hover:opacity-90"
             >
-              Thêm xe ngay
+              Add Vehicle
             </button>
           )}
         </div>
@@ -467,8 +472,8 @@ const BookingCreate = () => {
 
               {vehicles.length === 0 ? (
                 <p className="text-body-md text-on-surface-variant">
-                  Bạn chưa có phương tiện nào. Vui lòng thêm xe trước khi đặt
-                  lịch.
+                  You have no vehicles. Please add a vehicle before
+                  booking.{" "}
                 </p>
               ) : (
                 <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
@@ -731,7 +736,7 @@ const BookingCreate = () => {
               </div>
             ) : (
               <p className="pb-3 text-body-md text-on-surface-variant">
-                Chưa chọn gói dịch vụ
+                No service selected
               </p>
             )}
 
@@ -819,7 +824,7 @@ const BookingCreate = () => {
                     : "cursor-not-allowed bg-surface-container-high text-on-surface-variant"
                 }`}
             >
-              {isBookingSubmitting ? "Đang xử lý..." : "Confirm Booking →"}
+              {isBookingSubmitting ? "Processing..." : "Confirm Booking →"}
             </button>
           </aside>
         </div>
@@ -923,7 +928,7 @@ const ServiceOption = ({
     </p>
     {isCovered && (
       <p className="mt-1 text-label-sm font-semibold text-tertiary">
-        Đã bao gồm trong gói của bạn
+        Included in your package
       </p>
     )}
   </button>
@@ -1000,16 +1005,16 @@ const VoucherOption = ({
       {voucher.discountPercentage}% Off - {voucher.voucherCode}
     </p>
     <p className="text-body-md text-on-surface-variant">
-      Đơn tối thiểu {formatCurrency(voucher.minOrderValue)}
+      Min order {formatCurrency(voucher.minOrderValue)}
     </p>
     <p
       className={`mt-2 text-label-md font-semibold ${isApplied ? "text-primary" : "text-on-surface-variant"}`}
     >
       {isApplying
-        ? "Đang áp dụng..."
+        ? "Applying..."
         : isApplied
-          ? "Đã chọn ✓"
-          : "Click để chọn"}
+          ? "Selected ✓"
+          : "Click to select"}
     </p>
   </button>
 );

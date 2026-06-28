@@ -17,7 +17,7 @@ const AddVehicle = () => {
     const timer = setTimeout(() => {
       navigate("/", {
         state: {
-          successMessage: successMessage ?? "Xe đã được thêm thành công.",
+          successMessage: successMessage ?? "Vehicle added successfully.",
         },
       });
     }, REDIRECT_DELAY_MS);
@@ -40,11 +40,9 @@ const AddVehicle = () => {
               <span className="flex h-12 w-12 items-center justify-center rounded-full bg-tertiary-fixed/30 text-tertiary-fixed-dim">
                 <CheckCircle2 size={28} strokeWidth={2} />
               </span>
-              <p className="text-headline-md text-on-surface">
-                Thêm xe thành công!
-              </p>
+              <p className="text-headline-md text-on-surface">Vehicle added!</p>
               <p className="text-body-md text-on-surface-variant">
-                Đang chuyển bạn về trang chủ...
+                Redirecting to home...
               </p>
             </div>
           ) : (

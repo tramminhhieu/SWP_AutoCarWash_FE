@@ -3,6 +3,7 @@ import { Link, useNavigate, useLocation } from "react-router-dom";
 import { login } from "../api/authApi";
 import { useAuth } from "../../../hooks/useAuth";
 import { getApiErrorInfo } from "../../../lib/axiosClient";
+import { Eye, EyeOff } from "lucide-react";
 import { jwtDecode } from "jwt-decode";
 
 // Regex kiểm tra định dạng email cơ bản
@@ -16,6 +17,7 @@ const Login = () => {
 
   const [identity, setIdentity] = useState("");
   const [password, setPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
 
   // Lỗi riêng từng field (AC-01.5: để trống)
   const [identityError, setIdentityError] = useState<string | null>(null);
@@ -154,7 +156,7 @@ const Login = () => {
                 htmlFor="password"
                 className="mb-1.5 block text-body-md font-medium text-on-surface"
               >
-                Mật khẩu
+                Password
               </label>
               <Link
                 to="/forgot-password"
@@ -163,16 +165,26 @@ const Login = () => {
                 Forgot password?
               </Link>
             </div>
-            <input
-              id="password"
-              type="password"
-              autoComplete="current-password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              placeholder="••••••••"
-              className={`w-full rounded-lg border px-4 py-2.5 text-body-md text-on-surface outline-none transition-colors
-                ${passwordError ? "border-error" : "border-outline-variant focus:border-primary"}`}
-            />
+            <div className="relative">
+              <input
+                id="password"
+                type={showPassword ? "text" : "password"}
+                autoComplete="current-password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                placeholder="••••••••"
+                maxLength={20}
+                className={`w-full rounded-lg border px-4 py-2.5 pr-10 text-body-md text-on-surface outline-none transition-colors
+                  ${passwordError ? "border-error" : "border-outline-variant focus:border-primary"}`}
+              />
+              <button
+                type="button"
+                onClick={() => setShowPassword((v) => !v)}
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-on-surface-variant hover:text-on-surface"
+              >
+                {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+              </button>
+            </div>
             {passwordError && (
               <p className="mt-1.5 text-label-md text-error">{passwordError}</p>
             )}
@@ -192,7 +204,7 @@ const Login = () => {
           </button>
 
           <p className="mt-5 text-center text-body-md text-on-surface-variant">
-            Chưa có tài khoản?{" "}
+            Don't have an account?{" "}
             <Link
               to="/register"
               className="font-medium text-primary hover:underline"

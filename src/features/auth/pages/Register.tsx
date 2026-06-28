@@ -66,7 +66,7 @@ const Register = () => {
       isValid = false;
     } else if (!EMAIL_REGEX.test(email.trim())) {
       // AC-04
-      setEmailError("Email không hợp lệ");
+      setEmailError("Invalid email");
       isValid = false;
     }
 
@@ -74,7 +74,7 @@ const Register = () => {
       setPhoneError(REQUIRED_ERROR);
       isValid = false;
     } else if (!PHONE_REGEX.test(phone.trim())) {
-      setPhoneError("Số điện thoại không hợp lệ");
+      setPhoneError("Invalid phone number");
       isValid = false;
     }
 
@@ -82,7 +82,7 @@ const Register = () => {
       setBirthdayError(REQUIRED_ERROR);
       isValid = false;
     } else if (new Date(birthday) > new Date()) {
-      setBirthdayError("Ngày sinh không hợp lệ");
+      setBirthdayError("Invalid birthday");
       isValid = false;
     }
 
@@ -91,7 +91,7 @@ const Register = () => {
       isValid = false;
     } else if (password.length < 6) {
       // Khớp rule BE: INVALID_PASSWORD
-      setPasswordError("Mật khẩu phải có ít nhất 6 ký tự");
+      setPasswordError("Password must be at least 6 characters long");
       isValid = false;
     }
 
@@ -99,7 +99,7 @@ const Register = () => {
       setConfirmPasswordError(REQUIRED_ERROR);
       isValid = false;
     } else if (confirmPassword !== password) {
-      setConfirmPasswordError("Mật khẩu xác nhận không khớp");
+      setConfirmPasswordError("Confirm password does not match");
       isValid = false;
     }
 
@@ -114,7 +114,7 @@ const Register = () => {
           // AC-02: dùng message theo nghiệp vụ, không dùng message mặc định "Email đã tồn tại" của BE
           setEmailError(
             err.errorCode === "EMAIL_ALREADY_EXISTS"
-              ? "Email này đã được sử dụng. Vui lòng dùng email khác hoặc đăng nhập."
+              ? "This email is already in use. Please use another email or sign in."
               : err.message,
           );
           break;
@@ -122,7 +122,7 @@ const Register = () => {
           // AC-03
           setPhoneError(
             err.errorCode === "PHONE_ALREADY_EXISTS"
-              ? "Số điện thoại này đã được sử dụng."
+              ? "This phone number is already in use."
               : err.message,
           );
           break;
@@ -157,7 +157,7 @@ const Register = () => {
       navigate("/login", {
         state: {
           registerSuccessMessage:
-            "Đăng ký thành công! Vui lòng đăng nhập để tiếp tục.",
+            "Registration successful! Please sign in to continue.",
         },
       });
     } catch (error) {
@@ -170,7 +170,7 @@ const Register = () => {
       if (fieldErrors?.length) {
         applyServerFieldErrors(fieldErrors);
       } else {
-        setFormError(message ?? "Đăng ký thất bại. Vui lòng thử lại.");
+        setFormError(message ?? "Registration failed. Please try again.");
       }
     } finally {
       setIsSubmitting(false);
@@ -190,7 +190,7 @@ const Register = () => {
           <h1 className="font-headline text-headline-md font-bold">
             Create Account
           </h1>
-          Đăng ký để bắt đầu sử dụng{" "}
+          Sign up to get started with{" "}
           <span className="font-bold text-2xl text-primary">HydroLux</span>
         </div>
 
@@ -218,7 +218,7 @@ const Register = () => {
                 autoComplete="family-name"
                 value={lastName}
                 onChange={(e) => setLastName(e.target.value)}
-                placeholder="Họ"
+                placeholder="Last Name"
                 className={`w-full rounded-lg border px-4 py-2.5 text-body-md text-on-surface outline-none transition-colors
                   ${lastNameError ? "border-error" : "border-outline-variant focus:border-primary"}`}
               />
@@ -243,7 +243,7 @@ const Register = () => {
                 autoComplete="given-name"
                 value={firstName}
                 onChange={(e) => setFirstName(e.target.value)}
-                placeholder="Tên"
+                placeholder="First Name"
                 className={`w-full rounded-lg border px-4 py-2.5 text-body-md text-on-surface outline-none transition-colors
                   ${firstNameError ? "border-error" : "border-outline-variant focus:border-primary"}`}
               />
@@ -386,11 +386,11 @@ const Register = () => {
                   : "bg-primary text-on-primary hover:opacity-90"
               }`}
           >
-            {isSubmitting ? "Đang đăng ký..." : "Register"}
+            {isSubmitting ? "Signing up..." : "Register"}
           </button>
 
           <p className="mt-5 text-center text-body-md text-on-surface-variant">
-            Đã có tài khoản?{" "}
+            Already have an account?{" "}
             <Link
               to="/login"
               className="font-medium text-primary hover:underline"

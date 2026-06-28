@@ -104,9 +104,7 @@ export default function ServicePackageList() {
       })
       .catch(() => {
         if (isMounted) {
-          setError(
-            "Không thể tải danh sách gói dịch vụ. Vui lòng thử lại sau.",
-          );
+          setError("Failed to load service packages. Please try again.");
         }
       })
       .finally(() => {
@@ -151,11 +149,11 @@ export default function ServicePackageList() {
           </div>
         ) : isLoading ? (
           <div className="flex h-48 items-center justify-center text-base text-outline">
-            Đang tải...
+            Loading...
           </div>
         ) : packages.length === 0 ? (
           <div className="flex h-48 items-center justify-center text-base text-outline">
-            Hiện chưa có gói dịch vụ nào.
+            No service packages available.
           </div>
         ) : (
           <div className="grid grid-cols-1 gap-6 md:grid-cols-3">

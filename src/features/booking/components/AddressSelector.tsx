@@ -151,9 +151,7 @@ const AddressSelector = () => {
         if (!ignore) setProvinces(data);
       } catch {
         if (!ignore) {
-          setProvinceError(
-            "Không thể tải danh sách tỉnh/thành. Vui lòng thử lại.",
-          );
+          setProvinceError("Failed to load provinces. Please try again.");
         }
       } finally {
         if (!ignore) setIsLoadingProvinces(false);
@@ -183,7 +181,7 @@ const AddressSelector = () => {
       const data = await getCommunesByProvince(provinceId);
       setCommunes(data);
     } catch {
-      setCommuneError("Không thể tải danh sách quận/huyện. Vui lòng thử lại.");
+      setCommuneError("Failed to load districts. Please try again.");
     } finally {
       setIsLoadingCommunes(false);
     }
@@ -201,9 +199,7 @@ const AddressSelector = () => {
       const data = await getStationsByCommune(communeId);
       setStations(data);
     } catch {
-      setStationError(
-        "Không thể tải danh sách trung tâm dịch vụ. Vui lòng thử lại.",
-      );
+      setStationError("Failed to load service centers. Please try again.");
     } finally {
       setIsLoadingStations(false);
     }
@@ -276,7 +272,8 @@ const AddressSelector = () => {
             <Loading rows={3} />
           ) : stations.length === 0 ? (
             <p className="px-5 py-6 text-body-md text-on-surface-variant">
-              {stationError ?? "Không có trung tâm dịch vụ nào ở khu vực này."}
+              {stationError ??
+                "Failed to load service centers. Please try again."}
             </p>
           ) : (
             <ul className="flex flex-col gap-3 p-4">

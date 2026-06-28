@@ -37,7 +37,7 @@ export default function BookingDetail() {
         })
         .catch(() => {
           if (isMounted)
-            setError("Không thể tải thông tin booking. Vui lòng thử lại sau.");
+            setError("Failed to load booking details. Please try again.");
         })
         .finally(() => {
           if (isMounted) setIsLoading(false);
@@ -79,7 +79,7 @@ export default function BookingDetail() {
         </div>
       ) : isLoading || !booking ? (
         <div className="flex h-48 items-center justify-center text-base text-outline">
-          Đang tải...
+          Loading...
         </div>
       ) : (
         <div className="flex flex-col gap-6">

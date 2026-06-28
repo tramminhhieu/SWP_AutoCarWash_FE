@@ -42,34 +42,34 @@ const VehicleForm = ({ onSuccess, onCancel }: VehicleFormProps) => {
 
     const plate = licensePlate.trim().toUpperCase();
     if (!plate) {
-      setLicensePlateError("Biển số xe không được để trống");
+      setLicensePlateError("License plate is required");
       isValid = false;
     } else if (!LICENSE_PLATE_REGEX.test(plate)) {
       setLicensePlateError(
-        "Biển số xe không hợp lệ (ví dụ: 29A-12345 hoặc 51AB-12345)",
+        "Invalid license plate format (e.g., 29A-12345 or 51AB-12345)",
       );
       isValid = false;
     }
 
     if (!brand.trim()) {
-      setBrandError("Hãng xe không được để trống");
+      setBrandError("Brand is required");
       isValid = false;
     } else if (!TEXT_ONLY_REGEX.test(brand.trim())) {
-      setBrandError("Hãng xe chỉ được chứa chữ cái");
+      setBrandError("Brand must contain only letters");
       isValid = false;
     } else if (brand.trim().length > MAX_FIELD_LENGTH) {
-      setBrandError(`Hãng xe không được vượt quá ${MAX_FIELD_LENGTH} ký tự`);
+      setBrandError(`Brand cannot exceed ${MAX_FIELD_LENGTH} characters`);
       isValid = false;
     }
 
     if (!color.trim()) {
-      setColorError("Màu xe không được để trống");
+      setColorError("Color is required");
       isValid = false;
     } else if (!TEXT_ONLY_REGEX.test(color.trim())) {
-      setColorError("Màu xe chỉ được chứa chữ cái");
+      setColorError("Color must contain only letters");
       isValid = false;
     } else if (color.trim().length > MAX_FIELD_LENGTH) {
-      setColorError(`Màu xe không được vượt quá ${MAX_FIELD_LENGTH} ký tự`);
+      setColorError(`Color cannot exceed ${MAX_FIELD_LENGTH} characters`);
       isValid = false;
     }
 
@@ -95,9 +95,11 @@ const VehicleForm = ({ onSuccess, onCancel }: VehicleFormProps) => {
 
       // Biển số đã tồn tại -> highlight đúng field License Plate, không phải lỗi chung
       if (errorCode === LICENSE_PLATE_ALREADY_EXISTS) {
-        setLicensePlateError(message ?? "Biển số xe đã tồn tại trong hệ thống");
+        setLicensePlateError(
+          message ?? "License plate already exists in the system",
+        );
       } else {
-        setFormError(message ?? "Không thể thêm xe. Vui lòng thử lại.");
+        setFormError(message ?? "Unable to add vehicle. Please try again.");
       }
     } finally {
       setIsSubmitting(false);
@@ -213,7 +215,7 @@ const VehicleForm = ({ onSuccess, onCancel }: VehicleFormProps) => {
             }`}
         >
           <Save size={16} />
-          {isSubmitting ? "Đang lưu..." : "Save Vehicle"}
+          {isSubmitting ? "Saving..." : "Save Vehicle"}
         </button>
       </div>
     </form>

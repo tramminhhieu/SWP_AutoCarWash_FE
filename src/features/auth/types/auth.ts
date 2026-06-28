@@ -32,15 +32,15 @@ export interface RegisterFieldError {
 }
 
 // Payload thật sự nằm trong JWT, BE encode bằng JWTClaimsSet (xem Login.tsx/AuthContext)
-// Lưu ý: BE cần bổ sung claim "name" (đã thống nhất với BE), nếu chưa có sẽ là undefined
 export interface JwtPayload {
-  sub: string; // userId
+  sub: string;
   iat: number;
   exp: number;
   email: string;
   name?: string;
-  roles: string | string[];
+  roles?: RoleType;
 }
+
 
 // Thông tin user rút ra từ token sau khi decode, dùng trong AuthContext
 export interface AuthUser {

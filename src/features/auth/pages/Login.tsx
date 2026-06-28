@@ -40,18 +40,18 @@ const Login = () => {
     setPasswordError(null);
 
     if (!identity.trim()) {
-      setIdentityError("Email hoặc Số điện thoại không được để trống");
+      setIdentityError("Email or phone number is required");
       isValid = false;
     } else if (
       !EMAIL_REGEX.test(identity.trim()) &&
       !PHONE_REGEX.test(identity.trim())
     ) {
-      setIdentityError("Vui lòng nhập đúng định dạng email hoặc số điện thoại");
+      setIdentityError("Please enter a valid email or phone number");
       isValid = false;
     }
 
     if (!password) {
-      setPasswordError("Mật khẩu không được để trống");
+      setPasswordError("Password is required");
       isValid = false;
     }
 
@@ -84,9 +84,9 @@ const Login = () => {
       // AC-01.2 + AC-01.3: sai mật khẩu hoặc tài khoản không tồn tại - dùng CHUNG 1 message
       // để không tiết lộ tài khoản có tồn tại hay không, đúng yêu cầu AC-01.3
       if (errorCode === "ACCOUNT_INACTIVE") {
-        setFormError(message ?? "Tài khoản của bạn đã bị vô hiệu hóa.");
+        setFormError(message ?? "Your account has been disabled.");
       } else {
-        setFormError("Email/Số điện thoại hoặc mật khẩu không chính xác");
+        setFormError("Incorrect email/phone or password");
       }
     } finally {
       setIsSubmitting(false);
@@ -106,7 +106,7 @@ const Login = () => {
           <h1 className=" font-headline text-headline-md font-bold">
             Welcome Back
           </h1>
-          Đăng nhập để tiếp tục với{" "}
+          Sign in to continue with{" "}
           <span className="font-bold text-2xl text-primary">HydroLux</span>
         </div>
 
@@ -130,7 +130,7 @@ const Login = () => {
               htmlFor="identity"
               className="mb-1.5 block text-body-md font-medium text-on-surface"
             >
-              Email hoặc Số điện thoại
+              Email or Phone Number
             </label>
             <input
               id="identity"
@@ -138,7 +138,7 @@ const Login = () => {
               autoComplete="username"
               value={identity}
               onChange={(e) => setIdentity(e.target.value)}
-              placeholder="Nhập email hoặc số điện thoại"
+              placeholder="Enter email or phone number"
               className={`w-full rounded-lg border px-4 py-2.5 text-body-md text-on-surface outline-none transition-colors
                 ${identityError ? "border-error" : "border-outline-variant focus:border-primary"}`}
             />
@@ -188,7 +188,7 @@ const Login = () => {
                   : "bg-primary text-on-primary hover:opacity-90"
               }`}
           >
-            {isSubmitting ? "Đang đăng nhập..." : "Login"}
+            {isSubmitting ? "Signing in..." : "Login"}
           </button>
 
           <p className="mt-5 text-center text-body-md text-on-surface-variant">

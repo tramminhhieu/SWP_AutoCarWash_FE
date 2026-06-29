@@ -16,6 +16,7 @@ import {
 } from "../api/bookingApi";
 import type { BookingCard } from "../types/booking";
 import BookingStatusBadge from "../../../components/ui/BookingStatusBadge";
+import Modal from "../../../components/ui/Modal";
 import {
   formatAppointmentDate,
   formatTimeRange,
@@ -30,15 +31,23 @@ function BookingCardItem({
 }) {
   const navigate = useNavigate();
   const [isCancelling, setIsCancelling] = useState(false);
+  const [showCancelModal, setShowCancelModal] = useState(false);
 
   function handleCancel() {
-    if (!window.confirm("Bạn có chắc muốn hủy lịch hẹn này?")) return;
+    setShowCancelModal(true);
+  }
+
+  function handleConfirmCancel() {
     setIsCancelling(true);
     cancelBooking(booking.bookingId)
-      .then(() => onCancelled(booking.bookingId))
-      .catch(() =>
-        window.alert("Không thể hủy lịch hẹn. Vui lòng thử lại sau."),
-      )
+      .then(() => {
+        setShowCancelModal(false);
+        onCancelled(booking.bookingId);
+      })
+      .catch(() => {
+        setShowCancelModal(false);
+        window.alert("Unable to cancel booking. Please try again later.");
+      })
       .finally(() => setIsCancelling(false));
   }
   return (
@@ -118,6 +127,18 @@ function BookingCardItem({
           </div>
         </div>
       )}
+
+      <Modal
+        isOpen={showCancelModal}
+        onClose={() => { if (!isCancelling) setShowCancelModal(false); }}
+        variant="danger"
+        title="Cancel Booking"
+        message="Are you sure you want to cancel this appointment? This action cannot be undone."
+        confirmText="Cancel Booking"
+        cancelText="Keep Booking"
+        onConfirm={handleConfirmCancel}
+        isConfirmLoading={isCancelling}
+      />
     </div>
   );
 }
@@ -164,13 +185,6 @@ export default function BookingHistory() {
     <div className="mx-auto flex max-w-[1440px] flex-col gap-8 px-12 py-8">
       <div className="flex items-end justify-between">
         <div className="flex flex-col gap-2">
-          <div className="flex items-center gap-1">
-            <span className="text-xs font-semibold text-outline">Profile</span>
-            <ChevronRight className="size-3 text-outline" />
-            <span className="text-xs font-semibold text-on-surface-variant">
-              My Booking
-            </span>
-          </div>
           <h1 className="font-heading text-headline-xl font-bold tracking-[-1.2px] text-on-surface">
             Service History &amp; Bookings
           </h1>

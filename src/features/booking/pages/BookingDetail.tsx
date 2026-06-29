@@ -1,10 +1,8 @@
 import { useEffect, useState } from "react";
-import { useNavigate, useParams } from "react-router-dom";
+import { useParams } from "react-router-dom";
 import {
-  ArrowLeft,
   Calendar,
   Car,
-  ChevronRight,
   MapPin,
   User,
 } from "lucide-react";
@@ -19,7 +17,6 @@ import {
 
 export default function BookingDetail() {
   const { bookingId } = useParams<{ bookingId: string }>();
-  const navigate = useNavigate();
   const [booking, setBooking] = useState<BookingDetailData | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -54,20 +51,6 @@ export default function BookingDetail() {
   return (
     <div className="mx-auto flex max-w-[1440px] flex-col gap-8 px-12 py-8">
       <div className="flex flex-col gap-2">
-        <div className="flex items-center gap-1">
-          <span className="text-xs font-semibold text-outline">Profile</span>
-          <ChevronRight className="size-3 text-outline" />
-          <button
-            onClick={() => navigate("/booking/history")}
-            className="text-xs font-semibold text-outline hover:text-on-surface-variant"
-          >
-            My Booking
-          </button>
-          <ChevronRight className="size-3 text-outline" />
-          <span className="text-xs font-semibold text-on-surface-variant">
-            Booking Detail
-          </span>
-        </div>
         <h1 className="font-heading text-headline-xl font-bold tracking-[-1.2px] text-on-surface">
           Booking Detail
         </h1>
@@ -162,6 +145,13 @@ export default function BookingDetail() {
                 Price Breakdown
               </h3>
 
+              {booking.customerTier && (
+                <div className="flex items-center justify-between text-sm">
+                  <span className="text-on-surface-variant">Customer Tier</span>
+                  <span className="font-semibold text-on-surface">{booking.customerTier}</span>
+                </div>
+              )}
+
               <div className="flex items-center justify-between border-t border-outline-variant/20 pt-4 text-sm">
                 <span className="text-on-surface-variant">
                   {booking.serviceName}
@@ -185,20 +175,24 @@ export default function BookingDetail() {
                 </div>
               ))}
 
-              {booking.voucherCode && (
-                <div className="flex items-center justify-between text-sm">
-                  <span className="text-on-surface-variant">
-                    Voucher ({booking.voucherCode}
-                    {booking.voucherDiscountPercent
-                      ? ` -${booking.voucherDiscountPercent}%`
-                      : ""}
-                    )
-                  </span>
-                  <span className="font-semibold text-error">
-                    -{formatCurrency(booking.voucherDiscountAmount)}
-                  </span>
-                </div>
-              )}
+              <div className="flex items-center justify-between text-sm">
+                <span className="text-on-surface-variant">
+                  Voucher{booking.voucherCode ? ` (${booking.voucherCode}${booking.voucherDiscountPercent ? ` -${booking.voucherDiscountPercent}%` : ""})` : ""}
+                </span>
+                <span className="font-semibold text-error">
+                  -{formatCurrency(booking.voucherDiscountAmount)}
+                </span>
+              </div>
+
+              <div className="flex items-center justify-between text-sm">
+                <span className="text-on-surface-variant">Point Discount</span>
+                <span className="font-semibold text-error">-{formatCurrency(booking.pointDiscountAmount)}</span>
+              </div>
+
+              <div className="flex items-center justify-between text-sm">
+                <span className="text-on-surface-variant">Discount</span>
+                <span className="font-semibold text-error">-{formatCurrency(booking.discountAmount)}</span>
+              </div>
 
               <div className="flex items-center justify-between border-t border-outline-variant/20 pt-4 text-base">
                 <span className="font-semibold text-on-surface">Total</span>
@@ -225,13 +219,6 @@ export default function BookingDetail() {
             </div>
           </div>
 
-          <button
-            onClick={() => navigate("/booking/history")}
-            className="flex items-center gap-2 self-start text-sm font-bold tracking-[0.14px] text-primary"
-          >
-            <ArrowLeft className="size-3.5" />
-            Back to My Bookings
-          </button>
         </div>
       )}
     </div>

@@ -99,23 +99,28 @@ export interface QueueTicketDTO {
   stationName: string | null;
 }
 
-// BE trả về array phẳng QueueTicketDTO[], FE tự group theo status
+interface QueueBoardResponse {
+  availableLaneCount: number;
+  queue: QueueTicketDTO[];
+}
+
 export interface QueuePageData {
+  availableLaneCount: number;
   activeLanes: QueueTicketDTO[]; // status === "IN_SERVICE"
   waitingPool: QueueTicketDTO[]; // status === "WAITING"
   completed: QueueTicketDTO[]; // status === "COMPLETED"
 }
 
-// author: Ngọc — lấy toàn bộ dữ liệu queue, group theo status ở FE
 export const getQueueData = async (): Promise<QueuePageData> => {
-  const res = await axiosClient.get<ApiSuccessResponse<QueueTicketDTO[]>>(
+  const res = await axiosClient.get<ApiSuccessResponse<QueueBoardResponse>>(
     "/api/queue"
   );
-  const tickets = res.data.data;
+  const { availableLaneCount, queue } = res.data.data;
   return {
-    activeLanes: tickets.filter((t) => t.status === "IN_SERVICE"),
-    waitingPool: tickets.filter((t) => t.status === "WAITING"),
-    completed: tickets.filter((t) => t.status === "COMPLETED"),
+    availableLaneCount,
+    activeLanes: queue.filter((t) => t.status === "IN_SERVICE"),
+    waitingPool: queue.filter((t) => t.status === "WAITING"),
+    completed: queue.filter((t) => t.status === "COMPLETED"),
   };
 };
 

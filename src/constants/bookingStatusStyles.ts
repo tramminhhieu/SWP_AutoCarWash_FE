@@ -72,7 +72,7 @@ export const BOOKING_STATUS_STYLES: Record<BookingStatus, BookingStatusStyle> =
       borderClassName: "border-error/10",
     },
       CHECK_OUT: {
-          label: "COMPLETED",
+          label: "CHECK_OUT",
           dotClassName: "bg-[#22c55e]",
           textClassName: "text-[#22c55e]",
           bgClassName: "bg-tertiary-fixed/20",

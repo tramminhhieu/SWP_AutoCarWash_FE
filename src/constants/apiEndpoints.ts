@@ -19,9 +19,9 @@ export const API = {
       `/api/communes/${communeId}/stations`,
   },
   BOOKINGS: {
-    /** `GET` — list of a customer's upcoming bookings (CONFIRMED/CHECKED_IN/WASHING). */
+    /** `GET` — list of a customer's upcoming bookings (CONFIRMED/CHECK_IN/WASHING). */
     UPCOMING: "api/bookings/upcoming",
-    /** `GET` — list of a customer's past bookings (PAID/CANCELLED/NO_SHOW). */
+    /** `GET` — list of a customer's past bookings (PAID/CANCELED/NO_SHOW). */
     PAST: "/api/bookings/past",
     /** `GET` — full detail of a single booking. */
     DETAIL: (bookingId: number | string) => `/api/bookings/${bookingId}`,

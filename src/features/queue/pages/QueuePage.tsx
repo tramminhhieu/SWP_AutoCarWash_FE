@@ -127,7 +127,7 @@ export default function QueuePage() {
     const loadQueue = async () => {
       try {
         const data = await getQueueData();
-        setTotalLanes(data.availableLaneCount);
+        setTotalLanes(data.activeLaneCount);
 
         // Waiting Pool: WAITING status
         const waiting: Vehicle[] = data.waitingPool.map((t) => ({
@@ -157,7 +157,7 @@ export default function QueuePage() {
           ticketId: t.id,
           tier: mapTier(t.customerTier),
         }));
-        const totalSlots = Math.max(data.availableLaneCount, activeLanes.length);
+        const totalSlots = Math.max(data.activeLaneCount, activeLanes.length);
         const paddedLanes: Lane[] = [
           ...activeLanes,
           ...Array.from({ length: totalSlots - activeLanes.length }, (_, i) =>

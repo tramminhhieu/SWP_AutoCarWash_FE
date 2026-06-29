@@ -99,7 +99,8 @@ export interface QueueTicketDTO {
   stationName: string | null;
 }
 
-interface QueueBoardResponse {
+// BE trả về object có queue array và availableLaneCount
+interface QueueResponseData {
   availableLaneCount: number;
   queue: QueueTicketDTO[];
 }
@@ -112,7 +113,7 @@ export interface QueuePageData {
 }
 
 export const getQueueData = async (): Promise<QueuePageData> => {
-  const res = await axiosClient.get<ApiSuccessResponse<QueueBoardResponse>>(
+  const res = await axiosClient.get<ApiSuccessResponse<QueueResponseData>>(
     "/api/queue"
   );
   const { availableLaneCount, queue } = res.data.data;

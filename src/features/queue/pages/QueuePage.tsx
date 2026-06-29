@@ -84,11 +84,11 @@ const mapTier = (tier: string | null): Vehicle["tier"] => {
   return tier as "PLATINUM" | "GOLD" | "SILVER";
 };
 
-// author: Ngọc — số lane tối thiểu luôn hiển thị (pad bằng Empty nếu IN_SERVICE ít hơn)
+// fallback khi BE chưa trả lanes (môi trường dev chưa có dữ liệu làn)
 const MIN_LANES = 3;
 
-const makeEmptyLane = (index: number): Lane => ({
-  lane: String(index + 1).padStart(2, "0"),
+const makeEmptyLane = (laneName: string): Lane => ({
+  lane: laneName,
   plate: "—",
   model: "",
   color: "",
@@ -111,7 +111,7 @@ export default function QueuePage() {
   const navigate = useNavigate();
   const location = useLocation();
   const [lanes, setLanes] = useState<Lane[]>(
-    Array.from({ length: MIN_LANES }, (_, i) => makeEmptyLane(i))
+    Array.from({ length: MIN_LANES }, (_, i) => makeEmptyLane(String(i + 1).padStart(2, "0")))
   );
   // author: Ngọc — Waiting Pool bắt đầu rỗng, load thật từ API qua useEffect dưới
   const [waitingPool, setWaitingPool] = useState<Vehicle[]>([]);
@@ -154,27 +154,34 @@ export default function QueuePage() {
           }));
         setWaitingPool(waiting);
 
-        // Active Lanes: status IN_SERVICE, pad đến MIN_LANES bằng Empty
-        const activeLanes: Lane[] = data.activeLanes.map((t, idx) => ({
-          lane: String(idx + 1).padStart(2, "0"),
-          plate: t.licensePlate ?? "—",
-          model: t.vehicleBrand ?? "",
-          color: t.vehicleColor ?? "",
-          service: t.serviceName ?? "",
-          status: "Washing" as const,
-          est: "",
-          bookingId: t.bookingId ?? 0,
-          totalAmount: 0,
-          ticketId: t.id,
-          tier: mapTier(t.customerTier),
+        // Active Lanes: ghép IN_SERVICE tickets vào lanes theo index
+        // (BE không map ticket → lane cụ thể nên dùng thứ tự: ticket[0] → lane[0])
+        const inServiceTickets = data.activeLanes;
+        const fallbackLanes = Array.from({ length: MIN_LANES }, (_, i) => ({
+          id: i + 1,
+          laneName: String(i + 1).padStart(2, "0"),
+          status: "AVAILABLE",
         }));
-        const totalSlots = Math.max(MIN_LANES, activeLanes.length);
-        const paddedLanes: Lane[] = [
-          ...activeLanes,
-          ...Array.from({ length: totalSlots - activeLanes.length }, (_, i) =>
-            makeEmptyLane(activeLanes.length + i)
-          ),
-        ];
+        const laneSource = data.realLanes.length > 0 ? data.realLanes : fallbackLanes;
+        const paddedLanes: Lane[] = laneSource.map((beLane, idx) => {
+          const ticket = inServiceTickets[idx];
+          if (ticket) {
+            return {
+              lane: beLane.laneName,
+              plate: ticket.licensePlate ?? "—",
+              model: ticket.vehicleBrand ?? "",
+              color: ticket.vehicleColor ?? "",
+              service: ticket.serviceName ?? "",
+              status: "Washing" as const,
+              est: "",
+              bookingId: ticket.bookingId ?? 0,
+              totalAmount: 0,
+              ticketId: ticket.id,
+              tier: mapTier(ticket.customerTier),
+            };
+          }
+          return makeEmptyLane(beLane.laneName);
+        });
         setLanes(paddedLanes);
 
         // Completed: status COMPLETED — filter out booking just paid (passed via navigate state)
@@ -375,11 +382,13 @@ export default function QueuePage() {
         updatedLanes[index] = { ...updatedLanes[index], plate: next.licensePlate, model: next.model, color: next.color, service: next.service, status: "Washing", est: "20 mins left", bookingId: next.bookingId, totalAmount: next.totalAmount, ticketId: next.id };
         setWaitingPool((prev) => prev.slice(1));
       } else {
-        updatedLanes[index] = makeEmptyLane(index);
+        updatedLanes[index] = makeEmptyLane(lanes[index].lane);
       }
       setLanes(updatedLanes);
-    } catch {
-      // show nothing — isLoading will reset and button re-enables
+    } catch (err) {
+      const { message } = getApiErrorInfo(err);
+      setLaneError(message ?? "Failed to complete service. Please try again.");
+      setTimeout(() => setLaneError(null), 5000);
     } finally {
       setIsLoading(false);
     }
@@ -446,7 +455,7 @@ export default function QueuePage() {
               <div key={lane.lane} className="rounded-2xl p-3 flex items-center gap-3 bg-white shadow-sm border border-outline-variant/30">
                 <div className="w-12 h-12 rounded-xl flex flex-col items-center justify-center shrink-0 bg-primary text-on-primary">
                   <span className="text-[10px] font-medium leading-none">LANE</span>
-                  <span className="text-base font-bold leading-tight">{lane.lane}</span>
+                  <span className="text-base font-bold leading-tight">{lane.lane.replace(/\D+/g, '') || lane.lane}</span>
                 </div>
                 {lane.status === "Empty" ? (
                   <div className="flex-1">

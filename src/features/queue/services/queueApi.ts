@@ -99,13 +99,25 @@ export interface QueueTicketDTO {
   stationName: string | null;
 }
 
+// khớp với WashLaneResponse bên BE (field mới từ dev 2026-06-29)
+// BE seed data dùng "ACTIVE" cho làn đang hoạt động (chưa bị xoá)
+export interface WashLaneResponse {
+  id: number;
+  laneName: string;
+  status: string; // "AVAILABLE" | "WASHING" | "ACTIVE" — tuỳ DB seed
+}
+
 interface QueueBoardResponse {
   availableLaneCount: number;
+  activeLaneCount: number;
+  lanes: WashLaneResponse[];
   queue: QueueTicketDTO[];
 }
 
 export interface QueuePageData {
   availableLaneCount: number;
+  activeLaneCount: number;
+  realLanes: WashLaneResponse[]; // danh sách làn thật từ BE
   activeLanes: QueueTicketDTO[]; // status === "IN_SERVICE"
   waitingPool: QueueTicketDTO[]; // status === "WAITING"
   completed: QueueTicketDTO[]; // status === "COMPLETED"
@@ -115,9 +127,11 @@ export const getQueueData = async (): Promise<QueuePageData> => {
   const res = await axiosClient.get<ApiSuccessResponse<QueueBoardResponse>>(
     "/api/queue"
   );
-  const { availableLaneCount, queue } = res.data.data;
+  const { availableLaneCount, activeLaneCount, lanes, queue } = res.data.data;
   return {
     availableLaneCount,
+    activeLaneCount,
+    realLanes: lanes ?? [],
     activeLanes: queue.filter((t) => t.status === "IN_SERVICE"),
     waitingPool: queue.filter((t) => t.status === "WAITING"),
     completed: queue.filter((t) => t.status === "COMPLETED"),

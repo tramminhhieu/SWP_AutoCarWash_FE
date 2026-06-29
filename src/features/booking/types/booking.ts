@@ -181,6 +181,8 @@ export interface BookingDetail {
   voucherCode: string | null;
   voucherDiscountPercent: number | null;
   voucherDiscountAmount: number;
+  pointDiscountAmount: number | null; // field mới từ BE dev 2026-06-29
+  discountAmount: number | null;      // tổng giảm giá (voucher + điểm)
   totalAmount: number;
   isDepositPaid: boolean;
   depositAmount: number | null;

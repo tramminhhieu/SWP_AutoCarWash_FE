@@ -181,6 +181,9 @@ export interface BookingDetail {
   voucherCode: string | null;
   voucherDiscountPercent: number | null;
   voucherDiscountAmount: number;
+  customerTier: string | null;
+  pointDiscountAmount: number;
+  discountAmount: number;
   totalAmount: number;
   isDepositPaid: boolean;
   depositAmount: number | null;

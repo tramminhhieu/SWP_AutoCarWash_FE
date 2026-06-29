@@ -1,12 +1,12 @@
 //author: Ngọc
 //version:2.0.1
-import { useNavigate, useLocation } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import { useState, useEffect } from "react";
 import { Search, X, ChevronRight, ChevronUp, ChevronDown, Droplets, Check, CreditCard } from "lucide-react";
 // author: Ngọc — import API thật
 import { scanVehicle, confirmCheckIn, cancelGuestLeft, startService, completeService, getQueueData, type ScanVehicleResponse } from "../services/queueApi";
+// ported onto dev: dev không có utils/currency.ts, dùng formatCurrency của dev thay formatVND
 import { formatCurrency as formatVND } from "../../../utils/format";
-import { getApiErrorInfo } from "../../../lib/axiosClient";
 
 interface Vehicle {
   id: number;
@@ -84,9 +84,6 @@ const mapTier = (tier: string | null): Vehicle["tier"] => {
   return tier as "PLATINUM" | "GOLD" | "SILVER";
 };
 
-// author: Ngọc — số lane tối thiểu luôn hiển thị (pad bằng Empty nếu IN_SERVICE ít hơn)
-const MIN_LANES = 3;
-
 const makeEmptyLane = (index: number): Lane => ({
   lane: String(index + 1).padStart(2, "0"),
   plate: "—",
@@ -109,10 +106,7 @@ const tierBadge: Record<string, string> = {
 
 export default function QueuePage() {
   const navigate = useNavigate();
-  const location = useLocation();
-  const [lanes, setLanes] = useState<Lane[]>(
-    Array.from({ length: MIN_LANES }, (_, i) => makeEmptyLane(i))
-  );
+  const [lanes, setLanes] = useState<Lane[]>([]);
   // author: Ngọc — Waiting Pool bắt đầu rỗng, load thật từ API qua useEffect dưới
   const [waitingPool, setWaitingPool] = useState<Vehicle[]>([]);
   const [completed, setCompleted] = useState<Vehicle[]>([]);
@@ -125,9 +119,7 @@ export default function QueuePage() {
   // author: Ngọc — thêm state cho API thật
   const [scanResult, setScanResult] = useState<ScanVehicleResponse | null>(null);
   const [isLoading, setIsLoading] = useState(false);
-  const [checkinError, setCheckinError] = useState<string | null>(null);
-  const [noShowNotice, setNoShowNotice] = useState<string | null>(null);
-  const [laneError, setLaneError] = useState<string | null>(null);
+  const [totalLanes, setTotalLanes] = useState(0);
 
   // author: Ngọc — load toàn bộ queue thật từ GET /api/queue khi vào trang,
   // group theo status để đổ vào cả 3 cột (Active Lanes / Waiting Pool / Completed)
@@ -135,26 +127,23 @@ export default function QueuePage() {
     const loadQueue = async () => {
       try {
         const data = await getQueueData();
+        setTotalLanes(data.availableLaneCount);
 
-        // Waiting Pool: status WAITING
-        const waiting: Vehicle[] = data.waitingPool
-          .filter((t) => t.bookingId !== null)
-          .map((t) => ({
-            id: t.id,
-            bookingId: t.bookingId as number,
-            licensePlate: t.licensePlate ?? "—",
-            model: t.vehicleBrand ?? "",
-            color: t.vehicleColor ?? "",
-            service: t.serviceName ?? "",
-            tier: mapTier(t.customerTier),
-            finishedAt: "",
-            // ghi chú: QueueTicketResponse bên BE chưa có field totalAmount,
-            // cần xin Bình bổ sung nếu muốn hiện đúng số tiền ở Cancel modal
-            totalAmount: 0,
-          }));
+        // Waiting Pool: WAITING status
+        const waiting: Vehicle[] = data.waitingPool.map((t) => ({
+          id: t.id,
+          bookingId: t.bookingId ?? 0,
+          licensePlate: t.licensePlate ?? "—",
+          model: t.vehicleBrand ?? "",
+          color: t.vehicleColor ?? "",
+          service: t.serviceName ?? "",
+          tier: mapTier(t.customerTier),
+          finishedAt: "",
+          totalAmount: 0,
+        }));
         setWaitingPool(waiting);
 
-        // Active Lanes: status IN_SERVICE, pad đến MIN_LANES bằng Empty
+        // Active Lanes: IN_SERVICE status, padded to MIN_LANES with Empty
         const activeLanes: Lane[] = data.activeLanes.map((t, idx) => ({
           lane: String(idx + 1).padStart(2, "0"),
           plate: t.licensePlate ?? "—",
@@ -168,7 +157,7 @@ export default function QueuePage() {
           ticketId: t.id,
           tier: mapTier(t.customerTier),
         }));
-        const totalSlots = Math.max(MIN_LANES, activeLanes.length);
+        const totalSlots = Math.max(data.availableLaneCount, activeLanes.length);
         const paddedLanes: Lane[] = [
           ...activeLanes,
           ...Array.from({ length: totalSlots - activeLanes.length }, (_, i) =>
@@ -177,28 +166,25 @@ export default function QueuePage() {
         ];
         setLanes(paddedLanes);
 
-        // Completed: status COMPLETED — filter out booking just paid (passed via navigate state)
-        const paidBookingId = (location.state as { paidBookingId?: number } | null)?.paidBookingId;
-        const done: Vehicle[] = data.completed
-          .filter((t) => t.bookingId !== null && t.bookingId !== paidBookingId)
-          .map((t) => ({
-            id: t.id,
-            bookingId: t.bookingId as number,
-            licensePlate: t.licensePlate ?? "—",
-            model: t.vehicleBrand ?? "",
-            color: t.vehicleColor ?? "",
-            service: t.serviceName ?? "",
-            tier: mapTier(t.customerTier),
-            finishedAt: "",
-            totalAmount: 0,
-          }));
+        // Completed: COMPLETED status
+        const done: Vehicle[] = data.completed.map((t) => ({
+          id: t.id,
+          bookingId: t.bookingId ?? 0,
+          licensePlate: t.licensePlate ?? "—",
+          model: t.vehicleBrand ?? "",
+          color: t.vehicleColor ?? "",
+          service: t.serviceName ?? "",
+          tier: mapTier(t.customerTier),
+          finishedAt: "",
+          totalAmount: 0,
+        }));
         setCompleted(done);
-      } catch {
-        // load lỗi thì giữ state ban đầu, không chặn UI
+      } catch (e) {
+        console.error("[Queue] loadQueue error:", e);
       }
     };
     loadQueue();
-  }, [location.key]);
+  }, []);
 
   const now = new Date();
   const timeStr = `${now.getHours()}:${String(now.getMinutes()).padStart(2, "0")}`;
@@ -208,10 +194,10 @@ export default function QueuePage() {
     setShowCheckin(false);
     setSearchPlate("");
     setSearchResult(null);
+    // author: Ngọc — reset scanResult khi đóng modal
     setScanResult(null);
     setSelectedBooking(null);
     setIsSearched(false);
-    setCheckinError(null);
   };
 
   // author: Ngọc — đổi từ mock sang gọi API thật
@@ -229,7 +215,6 @@ export default function QueuePage() {
     setIsLoading(true);
     setIsSearched(true);
     setSelectedBooking(null);
-    setCheckinError(null);
     try {
       const result = await scanVehicle(searchPlate);
       setScanResult(result);
@@ -270,26 +255,13 @@ export default function QueuePage() {
   const handleConfirmCheckIn = async () => {
     if (!selectedBooking || !scanResult?.bookingId) return;
     setIsLoading(true);
-    setCheckinError(null);
     try {
       const result = await confirmCheckIn(scanResult.bookingId);
-
-      // Late arrival + single package + no lane → BE asks FE to open walk-in
       if (result.requiresWalkIn) {
         closeCheckinModal();
         navigate("/staff/walk-in", { state: { oldBookingId: result.oldBookingId } });
         return;
       }
-
-      // Late arrival + subscription + no lane → BE marks NO_SHOW, records violation
-      if (result.status === "NO_SHOW") {
-        closeCheckinModal();
-        setNoShowNotice(result.message ?? "Booking marked as no-show. Violation recorded.");
-        setTimeout(() => setNoShowNotice(null), 6000);
-        return;
-      }
-
-      // Success: add vehicle to waiting pool
       const newVehicle: Vehicle = {
         id: Date.now(),
         bookingId: selectedBooking.id,
@@ -300,13 +272,13 @@ export default function QueuePage() {
         tier: searchResult?.tier ?? "Guest",
         finishedAt: "",
         totalAmount: selectedBooking.totalAmount,
+        // author: Ngọc — lưu bookingType từ scan result để modal Cancel phân biệt đúng
         bookingType: scanResult.bookingType,
       };
       setWaitingPool((prev) => [...prev, newVehicle]);
       closeCheckinModal();
-    } catch (err) {
-      const { message } = getApiErrorInfo(err);
-      setCheckinError(message ?? "Check-in failed. Please try again.");
+    } catch {
+      alert("Check-in thất bại, thử lại.");
     } finally {
       setIsLoading(false);
     }
@@ -340,10 +312,8 @@ export default function QueuePage() {
         )
       );
       setWaitingPool((prev) => prev.filter((v) => v.id !== next.id));
-    } catch (err) {
-      const { message } = getApiErrorInfo(err);
-      setLaneError(message ?? "Failed to add vehicle to lane. Please try again.");
-      setTimeout(() => setLaneError(null), 5000);
+    } catch {
+      alert("Thêm xe vào làn thất bại, thử lại.");
     } finally {
       setIsLoading(false);
     }
@@ -370,13 +340,7 @@ export default function QueuePage() {
       };
       setCompleted((prev) => [...prev, newCompleted]);
       const updatedLanes = [...lanes];
-      if (waitingPool.length > 0) {
-        const next = waitingPool[0];
-        updatedLanes[index] = { ...updatedLanes[index], plate: next.licensePlate, model: next.model, color: next.color, service: next.service, status: "Washing", est: "20 mins left", bookingId: next.bookingId, totalAmount: next.totalAmount, ticketId: next.id };
-        setWaitingPool((prev) => prev.slice(1));
-      } else {
-        updatedLanes[index] = makeEmptyLane(index);
-      }
+      updatedLanes[index] = makeEmptyLane(index);
       setLanes(updatedLanes);
     } catch {
       // show nothing — isLoading will reset and button re-enables
@@ -395,10 +359,8 @@ export default function QueuePage() {
       await cancelGuestLeft(cancelVehicle.id);
       setWaitingPool((prev) => prev.filter((v) => v.id !== cancelVehicle.id));
       setCancelVehicle(null);
-    } catch (err) {
-      const { message } = getApiErrorInfo(err);
-      setLaneError(message ?? "Failed to cancel booking. Please try again.");
-      setTimeout(() => setLaneError(null), 5000);
+    } catch {
+      alert("Huỷ booking thất bại, thử lại.");
     } finally {
       setIsLoading(false);
     }
@@ -425,22 +387,13 @@ export default function QueuePage() {
         </div>
       </div>
 
-      {noShowNotice && (
-        <div className="mb-4 rounded-xl px-4 py-3 bg-error-container border border-error text-sm text-on-error-container font-medium">
-          No-show recorded: {noShowNotice}
-        </div>
-      )}
-
-      {laneError && (
-        <div className="mb-4 rounded-xl px-4 py-3 bg-error-container border border-error text-sm text-on-error-container font-medium">
-          {laneError}
-        </div>
-      )}
-
       <div className="flex gap-4">
         {/* Active Lanes */}
         <div className="w-90 shrink-0">
-          <p className="text-xs font-semibold uppercase mb-3 text-outline">Active Lanes</p>
+          <div className="mb-3">
+            <p className="text-xs font-semibold uppercase text-outline">Active Lanes</p>
+            <p className="text-xs text-outline">{lanes.filter(l => l.status === "Washing").length}/{totalLanes} lanes in use</p>
+          </div>
           <div className="flex flex-col gap-3">
             {lanes.map((lane, index) => (
               <div key={lane.lane} className="rounded-2xl p-3 flex items-center gap-3 bg-white shadow-sm border border-outline-variant/30">
@@ -607,19 +560,12 @@ export default function QueuePage() {
                 </div>
               )}
 
-              {checkinError && (
-                <div className="rounded-xl px-4 py-3 mb-3 bg-error-container border border-error">
-                  <p className="text-xs font-semibold text-on-error-container">Check-in failed</p>
-                  <p className="text-xs text-on-error-container mt-0.5">{checkinError}</p>
-                </div>
-              )}
-
               {isSearched && searchResult?.type === "booked" && (
                 <div className="py-2">
                   {scanResult?.vehiclePenalized && (
                     <div className="rounded-xl px-4 py-3 mb-3 bg-error-container border border-error">
-                      <p className="text-xs font-semibold text-on-error-container">Vehicle Restricted</p>
-                      <p className="text-xs text-on-error-container mt-0.5">This vehicle has violations. A 20,000 VND penalty deposit must be collected before check-in.</p>
+                      <p className="text-xs font-semibold text-on-error-container">Xe bị hạn chế</p>
+                      <p className="text-xs text-on-error-container mt-0.5">Xe này có vi phạm. Cần thu cọc phạt 20,000đ trước khi check-in.</p>
                     </div>
                   )}
                   <div className="rounded-xl p-3 mb-3 bg-surface-container-low">
@@ -663,7 +609,7 @@ export default function QueuePage() {
                     disabled={!selectedBooking || isLoading}
                     className="w-full py-3 rounded-xl text-sm font-semibold transition bg-primary text-on-primary disabled:opacity-50 disabled:cursor-not-allowed"
                   >
-                    {isLoading ? "Processing..." : "Confirm Check-in"}
+                    {isLoading ? "Đang xử lý..." : "Confirm Check-in"}
                   </button>
                 </div>
               )}
@@ -720,7 +666,7 @@ export default function QueuePage() {
                 disabled={isLoading}
                 className="flex-1 py-2.5 rounded-xl text-sm font-semibold bg-error text-on-error disabled:opacity-50"
               >
-                {isLoading ? "Processing..." : "Confirm Cancel"}
+                {isLoading ? "Đang xử lý..." : "Confirm Cancel"}
               </button>
             </div>
           </div>

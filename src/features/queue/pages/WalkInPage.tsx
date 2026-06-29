@@ -11,7 +11,8 @@ import {
   type BookingSummaryResponse,
   type AvailableSlotDTO,
 } from "../services/walkInApi";
-import { formatVND } from "../../../utils/currency";
+// ported onto dev: dev không có utils/currency.ts, dùng formatCurrency của dev thay formatVND
+import { formatCurrency as formatVND } from "../../../utils/format";
 
 // hardcode tạm — thay bằng API khi BE có endpoint /api/service-packages
 const SERVICE_PACKAGES = [

@@ -1,68 +1,209 @@
 import { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { Link, useNavigate, useLocation } from "react-router-dom";
+import { login } from "../api/authApi";
 import { useAuth } from "../../../hooks/useAuth";
+import { getApiErrorInfo } from "../../../lib/axiosClient";
+import { jwtDecode } from "jwt-decode";
 
-export default function Login() {
-  const { login } = useAuth();
+// Regex kiểm tra định dạng email cơ bản
+const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+// Regex kiểm tra số điện thoại VN: bắt đầu bằng 0, theo sau 9 số (tổng 10 số)
+const PHONE_REGEX = /^0\d{9}$/;
+
+const Login = () => {
   const navigate = useNavigate();
-  // author: Ngọc — thêm state cho form login thật
+  const { loginWithToken } = useAuth();
+
   const [identity, setIdentity] = useState("");
   const [password, setPassword] = useState("");
-  const [error, setError] = useState("");
-  const [loading, setLoading] = useState(false);
 
-  // TODO: thay bằng form thật (email/password) gọi authApi.login()
-  // author: Ngọc — handleMockLogin đổi thành handleLogin gọi API thật
-  // const handleMockLogin = () => {
-  //   login();
-  //   navigate("/profile");
-  // };
-  const handleLogin = async () => {
-    if (!identity.trim() || !password.trim()) return;
-    setLoading(true);
-    setError("");
+  // Lỗi riêng từng field (AC-01.5: để trống)
+  const [identityError, setIdentityError] = useState<string | null>(null);
+  const [passwordError, setPasswordError] = useState<string | null>(null);
+  // Lỗi chung hiện trên cùng form (sai thông tin / tài khoản inactive)
+  const [formError, setFormError] = useState<string | null>(null);
+
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  // trong component, ngay sau khai báo navigate
+  const location = useLocation();
+  const [successMessage] = useState<string | null>(
+    (location.state as { registerSuccessMessage?: string })
+      ?.registerSuccessMessage ?? null,
+  );
+
+  // Validate trước khi gọi API: chỉ check rỗng + format hợp lệ (email hoặc phone),
+  // không tự đoán identity sai/đúng tài khoản - việc đó để BE xử lý
+  const validate = (): boolean => {
+    let isValid = true;
+    setIdentityError(null);
+    setPasswordError(null);
+
+    if (!identity.trim()) {
+      setIdentityError("Email or phone number is required");
+      isValid = false;
+    } else if (
+      !EMAIL_REGEX.test(identity.trim()) &&
+      !PHONE_REGEX.test(identity.trim())
+    ) {
+      setIdentityError("Please enter a valid email or phone number");
+      isValid = false;
+    }
+
+    if (!password) {
+      setPasswordError("Password is required");
+      isValid = false;
+    }
+
+    return isValid;
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setFormError(null);
+
+    if (!validate()) return;
+
+    setIsSubmitting(true);
     try {
-      await login(identity, password);
-      navigate("/staff/queue");
-    } catch {
-      setError("Email/SĐT hoặc mật khẩu không đúng.");
+      const result = await login({ identity: identity.trim(), password });
+      loginWithToken(result.token, result.name);
+      const decoded = jwtDecode<import("../types/auth").JwtPayload>(
+        result.token,
+      );
+      const role = decoded.roles ?? "CUSTOMER";
+      const redirectPath =
+        role === "STAFF" ? "/staff" : role === "ADMIN" ? "/admin" : "/";
+      navigate(redirectPath, {
+        state: { loginSuccessMessage: result.message },
+      });
+    } catch (error) {
+      const { errorCode, message } = getApiErrorInfo(error);
+
+      // AC-01.4: tài khoản Inactive - BE trả message riêng, hiện đúng message đó
+      // AC-01.2 + AC-01.3: sai mật khẩu hoặc tài khoản không tồn tại - dùng CHUNG 1 message
+      // để không tiết lộ tài khoản có tồn tại hay không, đúng yêu cầu AC-01.3
+      if (errorCode === "ACCOUNT_INACTIVE") {
+        setFormError(message ?? "Your account has been disabled.");
+      } else {
+        setFormError("Incorrect email/phone or password");
+      }
     } finally {
-      setLoading(false);
+      setIsSubmitting(false);
     }
   };
 
   return (
-    <div className="mx-auto max-w-md px-4 py-12">
-      <h1 className="font-['Montserrat'] text-2xl font-bold text-[#141b2b]">
-        Login
-      </h1>
-      {/* form login */}
-      <div className="mt-6 flex flex-col gap-3">
-        <input
-          type="text"
-          placeholder="Email hoặc số điện thoại"
-          value={identity}
-          onChange={(e) => setIdentity(e.target.value)}
-          className="w-full rounded-lg border border-gray-300 px-4 py-2 text-sm outline-none focus:border-blue-500"
-        />
-        <input
-          type="password"
-          placeholder="Mật khẩu"
-          value={password}
-          onChange={(e) => setPassword(e.target.value)}
-          onKeyDown={(e) => e.key === "Enter" && handleLogin()}
-          className="w-full rounded-lg border border-gray-300 px-4 py-2 text-sm outline-none focus:border-blue-500"
-        />
-        {error && <p className="text-xs text-red-500">{error}</p>}
-        <button
-          type="button"
-          onClick={handleLogin}
-          disabled={loading}
-          className="w-full rounded-lg bg-[#1D4ED8] px-4 py-2 font-['Inter'] text-sm font-semibold text-white hover:bg-[#0037b0] disabled:opacity-50"
-        >
-          {loading ? "Đang đăng nhập..." : "Đăng nhập"}
-        </button>
+    <main className="flex min-h-[calc(100vh-64px)] items-center justify-center bg-background px-4 py-12">
+      <div className="w-full max-w-md rounded-2xl border border-outline-variant bg-surface-container-lowest p-8 shadow-[0_10px_25px_-5px_rgba(29,78,216,0.05)]">
+        {/* Logo + tên brand - cùng nền trắng với form, không tách rời */}
+        <div className="flex flex-col items-center pb-8">
+          <img
+            src="/favicon-512x512.png"
+            alt="HydroLux"
+            className="h-20 w-20 object-contain"
+          />
+          <h1 className=" font-headline text-headline-md font-bold">
+            Welcome Back
+          </h1>
+          Sign in to continue with{" "}
+          <span className="font-bold text-2xl text-primary">HydroLux</span>
+        </div>
+
+        <form onSubmit={handleSubmit}>
+          {/* Thông báo đăng ký thành công, truyền từ Register.tsx qua route state */}
+          {successMessage && (
+            <div className="mb-4 rounded-lg border border-tertiary/30 bg-tertiary-container/10 px-4 py-3 text-body-md text-tertiary">
+              {successMessage}
+            </div>
+          )}
+          {/* Lỗi chung của form (sai thông tin / inactive) */}
+          {formError && (
+            <div className="mb-4 rounded-lg border border-error/30 bg-error-container px-4 py-3 text-body-md text-on-error-container">
+              {formError}
+            </div>
+          )}
+
+          {/* Field Email/Phone - 1 field duy nhất */}
+          <div className="mb-4">
+            <label
+              htmlFor="identity"
+              className="mb-1.5 block text-body-md font-medium text-on-surface"
+            >
+              Email or Phone Number
+            </label>
+            <input
+              id="identity"
+              type="text"
+              autoComplete="username"
+              value={identity}
+              onChange={(e) => setIdentity(e.target.value)}
+              placeholder="Enter email or phone number"
+              className={`w-full rounded-lg border px-4 py-2.5 text-body-md text-on-surface outline-none transition-colors
+                ${identityError ? "border-error" : "border-outline-variant focus:border-primary"}`}
+            />
+            {identityError && (
+              <p className="mt-1.5 text-label-md text-error">{identityError}</p>
+            )}
+          </div>
+
+          {/* Field Password */}
+          <div className="mb-2">
+            <div className="flex items-center justify-between">
+              <label
+                htmlFor="password"
+                className="mb-1.5 block text-body-md font-medium text-on-surface"
+              >
+                Mật khẩu
+              </label>
+              <Link
+                to="/forgot-password"
+                className="text-label-md font-medium text-primary hover:underline"
+              >
+                Forgot password?
+              </Link>
+            </div>
+            <input
+              id="password"
+              type="password"
+              autoComplete="current-password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              placeholder="••••••••"
+              className={`w-full rounded-lg border px-4 py-2.5 text-body-md text-on-surface outline-none transition-colors
+                ${passwordError ? "border-error" : "border-outline-variant focus:border-primary"}`}
+            />
+            {passwordError && (
+              <p className="mt-1.5 text-label-md text-error">{passwordError}</p>
+            )}
+          </div>
+
+          <button
+            type="submit"
+            disabled={isSubmitting}
+            className={`mt-5 w-full rounded-lg px-6 py-3 text-body-md font-semibold transition-colors
+              ${
+                isSubmitting
+                  ? "cursor-not-allowed bg-surface-container-high text-on-surface-variant"
+                  : "bg-primary text-on-primary hover:opacity-90"
+              }`}
+          >
+            {isSubmitting ? "Signing in..." : "Login"}
+          </button>
+
+          <p className="mt-5 text-center text-body-md text-on-surface-variant">
+            Chưa có tài khoản?{" "}
+            <Link
+              to="/register"
+              className="font-medium text-primary hover:underline"
+            >
+              Register
+            </Link>
+          </p>
+        </form>
       </div>
-    </div>
+    </main>
   );
-}
+};
+
+export default Login;

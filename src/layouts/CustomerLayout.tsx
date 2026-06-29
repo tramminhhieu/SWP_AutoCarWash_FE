@@ -1,6 +1,22 @@
-import { Outlet } from "react-router-dom";
+import { Outlet, useLocation } from "react-router-dom";
 import CustomerHeader from "./CustomerHeader";
+import CustomerFooter from "./CustomerFooter";
 import { useAuth } from "../hooks/useAuth";
+import BackButton from "../components/ui/BackButton";
+
+const HIDDEN_ROUTES = ["/", "/login", "/register"];
+
+function BackButtonWrapper() {
+  const location = useLocation();
+  if (location.key === "default" || HIDDEN_ROUTES.includes(location.pathname)) {
+    return null;
+  }
+  return (
+    <div className="px-4 pt-4 sm:px-6 lg:px-12">
+      <BackButton />
+    </div>
+  );
+}
 
 /**
  * Khung giao diện chung cho mọi trang khách hàng.
@@ -16,9 +32,8 @@ export default function CustomerLayout() {
         user={
           user
             ? {
-                firstName: user.firstName,
-                lastName: user.lastName,
-                role: user.role,
+                name: user.name,
+                email: user.email,
               }
             : undefined
         }
@@ -26,10 +41,11 @@ export default function CustomerLayout() {
       />
 
       <main className="flex-1">
+        <BackButtonWrapper />
         <Outlet />
       </main>
 
-      {/* TODO: thêm CustomerFooter ở đây khi sẵn sàng */}
+      <CustomerFooter />
     </div>
   );
 }

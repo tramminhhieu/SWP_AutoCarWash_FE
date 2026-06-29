@@ -114,16 +114,16 @@ export interface PreviewPriceResponse {
  * Lifecycle status of a booking, as returned by the backend's
  * `BookingCardResponse.status` field.
  *
- * - `CONFIRMED` / `CHECKED_IN` / `WASHING` — appear in the "upcoming" list.
- * - `PAID` / `CANCELLED` / `NO_SHOW` — appear in the "past" list.
+ * - `CONFIRMED` / `CHECK_IN` / `WASHING` — appear in the "upcoming" list.
+ * - `PAID` / `CANCELED` / `NO_SHOW` — appear in the "past" list.
  */
 export type BookingStatus =
   | "PENDING"
   | "CONFIRMED"
-  | "CHECKED_IN"
+  | "CHECK_IN"
   | "WASHING"
   | "PAID"
-  | "CANCELLED"
+  | "CANCELED"
   | "NO_SHOW"
     | "CHECK_OUT";
 

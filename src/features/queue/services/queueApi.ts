@@ -101,13 +101,15 @@ export interface QueueTicketDTO {
 
 // BE trả về object có queue array và availableLaneCount
 interface QueueResponseData {
+  activeLaneCount: number;
   availableLaneCount: number;
   queue: QueueTicketDTO[];
 }
 
 export interface QueuePageData {
+  activeLaneCount: number;
   availableLaneCount: number;
-  activeLanes: QueueTicketDTO[]; // status === "IN_SERVICE"
+  activeLanes: QueueTicketDTO[]; // status === "WASHING"
   waitingPool: QueueTicketDTO[]; // status === "WAITING"
   completed: QueueTicketDTO[]; // status === "COMPLETED"
 }
@@ -116,16 +118,17 @@ export const getQueueData = async (): Promise<QueuePageData> => {
   const res = await axiosClient.get<ApiSuccessResponse<QueueResponseData>>(
     "/api/queue"
   );
-  const { availableLaneCount, queue } = res.data.data;
+  const { activeLaneCount, availableLaneCount, queue } = res.data.data;
   return {
+    activeLaneCount,
     availableLaneCount,
-    activeLanes: queue.filter((t) => t.status === "IN_SERVICE"),
+    activeLanes: queue.filter((t) => t.status === "WASHING"),
     waitingPool: queue.filter((t) => t.status === "WAITING"),
     completed: queue.filter((t) => t.status === "COMPLETED"),
   };
 };
 
-// author: Ngọc — gọi API thêm xe vào làn rửa (WAITING -> IN_SERVICE), BE mới thêm endpoint này
+// author: Ngọc — gọi API thêm xe vào làn rửa (WAITING -> WASHING), BE mới thêm endpoint này
 export const startService = async (ticketId: number): Promise<QueueTicketDTO> => {
   const res = await axiosClient.patch<ApiSuccessResponse<QueueTicketDTO>>(
     `/api/queue/${ticketId}/start`

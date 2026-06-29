@@ -1,415 +1,358 @@
 /*
  * @author: Bảo Ngọc
  * @version 3.0 — lấy dữ liệu thật từ GET /api/bookings/{bookingId} thay cho mock
+ * ported onto dev: bookingApi import path đổi sang ../../booking/api/bookingApi,
+ * type BookingDetailResponse -> BookingDetail (dev không có customerTier),
+ * formatVND -> alias từ utils/format (dev không có utils/currency.ts),
+ * handleConfirm nối thật vào processCashPayment (paymentApi.ts)
  */
 import { useNavigate, useParams, useLocation } from "react-router-dom";
 import { useEffect, useState } from "react";
 import { ArrowLeft, Car, User, Wrench } from "lucide-react";
-import { formatVND } from "../../../utils/currency";
-import { getBookingDetail } from "../../booking/services/bookingApi";
-import type { BookingDetailResponse } from "../../booking/services/bookingApi";
+import { formatCurrency as formatVND } from "../../../utils/format";
+import { getBookingDetail } from "../../booking/api/bookingApi";
+import type { BookingDetail } from "../../booking/api/bookingApi";
+import { processCashPayment } from "../services/paymentApi";
 
-// author: Bảo Ngọc — format "Jun 24, 2026 • 08:15 – 08:45" từ dữ liệu BE (LocalDate/LocalTime dạng string)
-const formatSchedule = (date: string, start: string, end: string): string => {
+function formatSchedule(date: string, start: string, end: string) {
+  if (!date) return "";
   const d = new Date(date);
-  const dateStr = d.toLocaleDateString("en-US", {
+  const dateStr = d.toLocaleDateString("en-GB", {
+    day: "2-digit",
     month: "short",
-    day: "numeric",
     year: "numeric",
   });
-  return `${dateStr} • ${start.slice(0, 5)} – ${end.slice(0, 5)}`;
-};
+  if (!start || !end) return dateStr;
+  return `${dateStr}, ${start} - ${end}`;
+}
 
 export default function PaymentPage() {
   const navigate = useNavigate();
-  const location = useLocation();
   const { bookingId: bookingIdParam } = useParams<{ bookingId: string }>();
-  // fallback: nếu vào trang qua navigate(state=...) mà thiếu param thì vẫn lấy được bookingId
-  const fallbackBookingId = (location.state as { bookingId?: number } | null)?.bookingId;
-  const bookingId = Number(bookingIdParam ?? fallbackBookingId);
+  const location = useLocation();
+  const state = (location.state as { bookingId?: number } | null) ?? null;
+  const bookingId = Number(bookingIdParam ?? state?.bookingId);
 
-  const [activeTab, setActiveTab] = useState<"detail" | "payment">("detail");
-  const [paymentMethod, setPaymentMethod] = useState<"cash" | "qr">("cash");
-  const [receivedAmount, setReceivedAmount] = useState("");
-  const [detail, setDetail] = useState<BookingDetailResponse | null>(null);
+  const [detail, setDetail] = useState<BookingDetail | null>(null);
   const [isLoading, setIsLoading] = useState(true);
-  const [loadError, setLoadError] = useState(false);
+  const [loadError, setLoadError] = useState("");
+  const [isPaying, setIsPaying] = useState(false);
 
-  // author: Bảo Ngọc — lấy chi tiết booking thật (dịch vụ, addon, ga, lịch hẹn, số tiền) từ BE
+  const [paymentMethod, setPaymentMethod] = useState<"cash" | "card">("cash");
+  const [received, setReceived] = useState(0);
+  const [payError, setPayError] = useState("");
+  const [paySuccess, setPaySuccess] = useState(false);
+
   useEffect(() => {
     if (!bookingId) {
+      setLoadError("Failed to find booking.");
       setIsLoading(false);
       return;
     }
-    setIsLoading(true);
-    setLoadError(false);
-    getBookingDetail(bookingId)
-      .then((data) => setDetail(data))
-      .catch(() => setLoadError(true))
-      .finally(() => setIsLoading(false));
+    const load = async () => {
+      try {
+        const data = await getBookingDetail(bookingId);
+        setDetail(data);
+      } catch {
+        setLoadError("Failed to load booking details.");
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    load();
   }, [bookingId]);
 
   const addOns = detail?.addons ?? [];
   const baseAmount = detail?.servicePrice ?? 0;
   const addOnTotal = detail?.addonTotal ?? 0;
   const subtotal = baseAmount + addOnTotal;
-  const voucher = detail?.voucherDiscountAmount ?? 0;
-  // tổng cần thu tại quầy: BE đã trừ sẵn tiền cọc đã thanh toán (nếu có)
-  const total = detail?.remainingAmount ?? 0;
-
-  const received = parseFloat(receivedAmount || "0");
+  const voucherDiscount = detail?.voucherDiscountAmount ?? 0;
+  const total =
+    detail?.remainingAmount ?? Math.max(subtotal - voucherDiscount, 0);
   const change = received - total;
-  const isInsufficient = receivedAmount !== "" && received < total;
-  const canConfirm = paymentMethod === "qr" || received >= total;
+  const isInsufficient = received > 0 && received < total;
+  const canConfirm = total === 0 || (received >= total && total > 0);
 
-  const handleConfirm = () => {
-    alert(`Payment successful! Booking #${bookingId} checked out.`);
-    navigate("/staff/queue");
+  const handleConfirm = async () => {
+    if (!canConfirm || !bookingId) return;
+    setPayError("");
+    setIsPaying(true);
+    try {
+      await processCashPayment({
+        bookingId,
+        receivedAmount: received,
+      });
+      setPaySuccess(true);
+    } catch {
+      setPayError("Payment failed. Please try again.");
+    } finally {
+      setIsPaying(false);
+    }
   };
-
-  if (!bookingId) {
-    return (
-      <div className="flex items-center justify-center min-h-screen">
-        <p style={{ color: "#747686" }}>No booking selected.</p>
-      </div>
-    );
-  }
 
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center min-h-screen">
-        <p style={{ color: "#747686" }}>Đang tải thông tin booking...</p>
+      <div className="min-h-screen flex items-center justify-center bg-background">
+        <p className="text-sm text-on-surface-variant">Loading...</p>
       </div>
     );
   }
 
   if (loadError || !detail) {
     return (
-      <div className="flex items-center justify-center min-h-screen">
-        <p style={{ color: "#ba1a1a" }}>Không tải được thông tin booking.</p>
+      <div className="min-h-screen flex flex-col items-center justify-center gap-3 bg-background">
+        <p className="text-sm text-error">
+          {loadError || "An error occurred."}
+        </p>
+        <button
+          onClick={() => navigate("/staff/queue")}
+          className="text-sm font-semibold text-primary"
+        >
+          Back to Queue
+        </button>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen" style={{ background: "#f9f9ff" }}>
+    <div className="min-h-screen bg-background">
       {/* Header */}
       <div className="flex items-center gap-3 mb-6">
         <button
           onClick={() => navigate("/staff/queue")}
-          className="w-8 h-8 flex items-center justify-center rounded-full transition"
-          style={{ background: "#e9edff", color: "#0037b0" }}
+          className="rounded-full p-1.5 hover:bg-surface-container transition"
         >
-          <ArrowLeft className="w-4 h-4" />
+          <ArrowLeft className="w-5 h-5 text-outline" />
         </button>
         <div>
-          <h1
-            className="text-xl font-bold"
-            style={{ color: "#141b2b", fontFamily: "Montserrat, sans-serif" }}
-          >
-            Booking Details — #BK-{bookingId}
+          <h1 className="text-2xl font-bold font-heading text-on-background">
+            Checkout & Payment
           </h1>
-          <p className="text-sm" style={{ color: "#434655" }}>
-            Manage scheduling, services, and billing
+          <p className="text-sm text-on-surface-variant mt-0.5">
+            Booking #{bookingId}
           </p>
         </div>
       </div>
 
-      <div className="flex gap-6">
-        {/* Left — Info */}
-        <div className="flex-1 flex flex-col gap-4">
-
-          {/* Customer Information */}
-          <div className="rounded-2xl p-5" style={{ background: "#ffffff", boxShadow: "0 1px 4px rgba(0,0,0,0.08)" }}>
-            <div className="flex items-center gap-2 mb-4">
-              <User className="w-4 h-4" style={{ color: "#0037b0" }} />
-              <h2 className="font-semibold text-sm" style={{ color: "#141b2b" }}>Customer Information</h2>
-            </div>
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <p className="text-xs uppercase mb-1" style={{ color: "#747686" }}>Membership Tier</p>
-                {detail.customerTier ? (
-                  <span className="text-xs px-2 py-0.5 rounded-full font-medium" style={{ background: "#dce1ff", color: "#001551" }}>
-                    {detail.customerTier}
-                  </span>
-                ) : (
-                  <p className="text-sm" style={{ color: "#747686" }}>Walk-in</p>
-                )}
-              </div>
-              <div>
-                <p className="text-xs uppercase mb-1" style={{ color: "#747686" }}>Technician</p>
-                <p className="text-sm" style={{ color: "#141b2b" }}>{detail.technicianName ?? "—"}</p>
-              </div>
-            </div>
-            {/* author: Bảo Ngọc — BE chưa trả tên/sđt/email khách trong booking detail, chờ bổ sung */}
-          </div>
-
-          {/* Vehicle Information */}
-          <div className="rounded-2xl p-5" style={{ background: "#ffffff", boxShadow: "0 1px 4px rgba(0,0,0,0.08)" }}>
-            <div className="flex items-center gap-2 mb-4">
-              <Car className="w-4 h-4" style={{ color: "#0037b0" }} />
-              <h2 className="font-semibold text-sm" style={{ color: "#141b2b" }}>Vehicle Information</h2>
-            </div>
-            <div className="flex gap-4">
-              <div
-                className="w-24 h-16 rounded-xl flex items-center justify-center shrink-0"
-                style={{ background: "#e9edff" }}
-              >
-                <Car className="w-8 h-8" style={{ color: "#0037b0" }} />
-              </div>
-              <div className="grid grid-cols-2 gap-3 flex-1">
-                <div>
-                  <p className="text-xs uppercase mb-1" style={{ color: "#747686" }}>Vehicle Model</p>
-                  <p className="text-sm font-semibold" style={{ color: "#141b2b" }}>{detail.brandName}</p>
-                </div>
-                <div>
-                  <p className="text-xs uppercase mb-1" style={{ color: "#747686" }}>License Plate</p>
-                  <p className="text-sm font-semibold" style={{ color: "#0037b0" }}>{detail.licensePlate}</p>
-                </div>
-                <div>
-                  <p className="text-xs uppercase mb-1" style={{ color: "#747686" }}>Color</p>
-                  <p className="text-sm" style={{ color: "#141b2b" }}>{detail.color}</p>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          {/* Service & Add-ons */}
-          <div className="rounded-2xl p-5" style={{ background: "#ffffff", boxShadow: "0 1px 4px rgba(0,0,0,0.08)" }}>
-            <div className="flex items-center justify-between mb-4">
-              <div className="flex items-center gap-2">
-                <Wrench className="w-4 h-4" style={{ color: "#0037b0" }} />
-                <h2 className="font-semibold text-sm" style={{ color: "#141b2b" }}>Service Selection</h2>
-              </div>
-            </div>
-
-            {/* Main service */}
-            <div
-              className="rounded-xl p-3 flex items-center justify-between mb-4"
-              style={{ background: "#e9edff", border: "2px solid #0037b0" }}
+      {paySuccess && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm">
+          <div className="relative rounded-2xl p-8 bg-surface-container-lowest border border-outline-variant/30 flex flex-col items-center gap-4 max-w-sm w-full mx-4 shadow-xl">
+            <button
+              onClick={() => navigate("/staff/queue", { state: { paidBookingId: bookingId } })}
+              className="absolute top-3 right-3 rounded-full p-1.5 hover:bg-surface-container transition text-outline"
             >
-              <div className="flex items-center gap-3">
-                <div className="w-5 h-5 rounded flex items-center justify-center" style={{ background: "#0037b0" }}>
-                  <span className="text-white text-xs">✓</span>
-                </div>
-                <span className="text-sm font-semibold" style={{ color: "#141b2b" }}>{detail.serviceName}</span>
-              </div>
-              <span className="text-sm font-bold" style={{ color: "#0037b0" }}>{formatVND(baseAmount)}</span>
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
+            <div className="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center">
+              <svg className="w-8 h-8 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+              </svg>
             </div>
-
-            {/* Add-ons — đã chốt từ lúc đặt lịch, chỉ hiển thị, không cho bật/tắt ở đây */}
-            {addOns.length > 0 && (
-              <>
-                <p className="text-xs font-semibold uppercase mb-2" style={{ color: "#747686" }}>Add-on Services</p>
-                <div className="flex flex-col gap-2">
-                  {addOns.map((addon, idx) => (
-                    <div
-                      key={`${addon.addonName}-${idx}`}
-                      className="rounded-xl p-3 flex items-center justify-between"
-                      style={{ background: "#e9edff", border: "2px solid #0037b0" }}
-                    >
-                      <div className="flex items-center gap-3">
-                        <div className="w-5 h-5 rounded flex items-center justify-center" style={{ background: "#0037b0" }}>
-                          <span className="text-white text-xs">✓</span>
-                        </div>
-                        <span className="text-sm" style={{ color: "#141b2b" }}>{addon.addonName}</span>
-                      </div>
-                      <span className="text-sm font-semibold" style={{ color: "#0037b0" }}>{formatVND(addon.addonPrice)}</span>
-                    </div>
-                  ))}
-                </div>
-              </>
-            )}
+            <div className="text-center">
+              <h2 className="text-xl font-bold text-on-surface mb-1">Payment Successful</h2>
+              <p className="text-sm text-on-surface-variant">Booking #{bookingId} has been completed.</p>
+            </div>
+            <button
+              onClick={() => navigate("/staff/queue", { state: { paidBookingId: bookingId } })}
+              className="w-full py-3 rounded-xl text-sm font-semibold bg-primary text-on-primary transition"
+            >
+              Back to Queue
+            </button>
           </div>
         </div>
+      )}
 
-        {/* Right — Order Summary + Payment */}
-        <div className="w-80 shrink-0">
-          <div className="rounded-2xl sticky top-6" style={{ background: "#ffffff", boxShadow: "0 1px 4px rgba(0,0,0,0.08)" }}>
-            {/* Tabs */}
-            <div className="flex border-b px-4 pt-4" style={{ borderColor: "#dce2f7" }}>
-              {(["detail", "payment"] as const).map((tab) => (
-                <button
-                  key={tab}
-                  onClick={() => setActiveTab(tab)}
-                  className="px-4 py-2 text-sm font-semibold capitalize transition"
-                  style={{
-                    color: activeTab === tab ? "#0037b0" : "#747686",
-                    borderBottom: activeTab === tab ? "2px solid #0037b0" : "2px solid transparent",
-                    marginBottom: "-1px",
-                  }}
-                >
-                  {tab === "detail" ? "Order Summary" : "Payment"}
-                </button>
-              ))}
+      <div className="grid grid-cols-3 gap-5">
+        {/* Left: booking info */}
+        <div className="col-span-2 space-y-4">
+          <div className="rounded-2xl p-5 bg-surface-container-lowest border border-outline-variant/30">
+            <div className="flex items-center gap-2 mb-3">
+              <Car className="w-4 h-4 text-primary" />
+              <p className="text-sm font-bold text-on-surface">Vehicle</p>
             </div>
+            <p className="text-lg font-bold text-on-surface tracking-wide">
+              {detail.licensePlate}
+            </p>
+            <p className="text-sm text-on-surface-variant">
+              {detail.brandName} • {detail.color}
+            </p>
+          </div>
 
-            <div className="p-5">
-              {/* Tab: Order Summary */}
-              {activeTab === "detail" && (
-                <div>
-                  {/* Service */}
-                  <div className="flex justify-between mb-1">
-                    <div>
-                      <p className="text-sm font-bold text-on-surface">{detail.serviceName}</p>
-                      <p className="text-xs text-on-surface-variant">{detail.brandName} • {detail.licensePlate}</p>
-                      <p className="text-xs font-semibold text-on-surface mt-0.5">{detail.stationName}</p>
-                      <p className="text-xs text-primary mt-0.5">{detail.stationAddress}</p>
-                    </div>
-                    <p className="text-sm font-bold text-on-surface whitespace-nowrap">{formatVND(baseAmount)}</p>
-                  </div>
-
-                  {/* Date */}
-                  <div className="flex items-center gap-2 rounded-xl px-3 py-2 my-3 bg-surface-container-low">
-                    <span className="text-xs text-on-surface-variant">
-                      📅 {formatSchedule(detail.appointmentDate, detail.startTime, detail.endTime)}
-                    </span>
-                  </div>
-
-                  {/* Divider */}
-                  <div className="border-t border-outline-variant my-3" />
-
-                  {/* Subtotal */}
-                  <div className="flex justify-between mb-2">
-                    <span className="text-sm text-on-surface-variant">Subtotal</span>
-                    <span className="text-sm font-semibold text-on-surface">{formatVND(subtotal)}</span>
-                  </div>
-
-                  {/* Discount */}
-                  {voucher > 0 && (
-                    <div className="flex justify-between mb-2">
-                      <span className="text-sm text-on-surface-variant">
-                        Discount{detail.voucherCode ? ` (${detail.voucherCode})` : ""}
-                      </span>
-                      <span className="text-sm font-semibold text-error">-{formatVND(voucher)}</span>
-                    </div>
-                  )}
-
-                  {detail.isDepositPaid && (
-                    <div className="flex justify-between mb-2">
-                      <span className="text-sm text-on-surface-variant">Deposit paid</span>
-                      <span className="text-sm font-semibold text-error">-{formatVND(detail.depositAmount)}</span>
-                    </div>
-                  )}
-
-                  {/* Divider */}
-                  <div className="border-t border-outline-variant my-3" />
-
-                  {/* Total */}
-                  <div className="flex justify-between items-center mb-5">
-                    <span className="text-base font-bold text-on-surface">Total due</span>
-                    <span className="text-2xl font-bold text-primary">{formatVND(total)}</span>
-                  </div>
-
-                  <button
-                    onClick={() => setActiveTab("payment")}
-                    className="w-full py-3 rounded-xl font-semibold text-sm transition bg-primary text-on-primary"
-                  >
-                    Proceed to Payment →
-                  </button>
-                </div>
-              )}
-
-              {/* Tab: Payment */}
-              {activeTab === "payment" && (
-                <div>
-                  {voucher > 0 && (
-                    <div className="flex justify-between mb-2">
-                      <div>
-                        <p className="text-sm font-medium" style={{ color: "#006591" }}>Applied Voucher</p>
-                        <p className="text-xs" style={{ color: "#747686" }}>{detail.voucherCode ?? ""}</p>
-                      </div>
-                      <span className="text-sm font-semibold" style={{ color: "#006591" }}>-{formatVND(voucher)}</span>
-                    </div>
-                  )}
-
-                  <div className="flex justify-between items-center mb-4 pb-3" style={{ borderBottom: "1px solid #dce2f7" }}>
-                    <span className="text-base font-semibold" style={{ color: "#141b2b" }}>Total</span>
-                    <span className="text-2xl font-bold" style={{ color: "#0037b0" }}>{formatVND(total)}</span>
-                  </div>
-
-                  {/* Payment Method */}
-                  <p className="text-xs font-semibold uppercase mb-2" style={{ color: "#747686" }}>
-                    Select Payment Method
-                  </p>
-                  <div className="flex gap-2 mb-4">
-                    {(["qr", "cash"] as const).map((method) => (
-                      <button
-                        key={method}
-                        onClick={() => setPaymentMethod(method)}
-                        className="flex-1 py-3 rounded-xl text-sm font-semibold transition"
-                        style={{
-                          border: paymentMethod === method ? "2px solid #0037b0" : "2px solid #dce2f7",
-                          background: paymentMethod === method ? "#e9edff" : "#ffffff",
-                          color: paymentMethod === method ? "#0037b0" : "#747686",
-                        }}
-                      >
-                        {method === "qr" ? "QR Code" : "Cash"}
-                      </button>
-                    ))}
-                  </div>
-
-                  {/* Cash input */}
-                  {paymentMethod === "cash" && (
-                    <div className="mb-4">
-                      <label className="text-xs font-semibold block mb-1" style={{ color: "#434655" }}>
-                        Received Amount
-                      </label>
-                      <input
-                        type="number"
-                        value={receivedAmount}
-                        onChange={(e) => setReceivedAmount(e.target.value)}
-                        placeholder="Enter amount..."
-                        className="w-full rounded-xl px-3 py-2 text-sm outline-none"
-                        style={{ border: "1px solid #c4c5d7", color: "#141b2b" }}
-                      />
-                      {receivedAmount && (
-                        <div className="flex justify-between mt-2">
-                          <span className="text-xs" style={{ color: "#747686" }}>Change</span>
-                          <span
-                            className="text-xs font-semibold"
-                            style={{ color: change >= 0 ? "#005020" : "#ba1a1a" }}
-                          >
-                            {change >= 0 ? formatVND(change) : "—"}
-                          </span>
-                        </div>
-                      )}
-                      {isInsufficient && (
-                        <p className="text-xs mt-1" style={{ color: "#ba1a1a" }}>
-                          Insufficient payment amount
-                        </p>
-                      )}
-                    </div>
-                  )}
-
-                  {/* QR placeholder */}
-                  {paymentMethod === "qr" && (
-                    <div
-                      className="rounded-xl p-6 text-center mb-4"
-                      style={{ background: "#f1f3ff", border: "1px dashed #c4c5d7" }}
-                    >
-                      <p className="text-sm font-semibold" style={{ color: "#0037b0" }}>QR Code</p>
-                      <p className="text-xs mt-1" style={{ color: "#747686" }}>Scan to pay {formatVND(total)}</p>
-                    </div>
-                  )}
-
-                  <button
-                    onClick={handleConfirm}
-                    disabled={!canConfirm}
-                    className="w-full py-3 rounded-xl font-semibold text-sm transition"
-                    style={{
-                      background: "#0037b0",
-                      color: "#ffffff",
-                      opacity: !canConfirm ? 0.5 : 1,
-                      cursor: !canConfirm ? "not-allowed" : "pointer",
-                    }}
-                  >
-                    Confirm Payment
-                  </button>
-                </div>
+          <div className="rounded-2xl p-5 bg-surface-container-lowest border border-outline-variant/30">
+            <div className="flex items-center gap-2 mb-3">
+              <User className="w-4 h-4 text-primary" />
+              <p className="text-sm font-bold text-on-surface">Customer</p>
+            </div>
+            <div className="flex items-center justify-between">
+              <div>
+                <p
+                  className="text-xs uppercase mb-1"
+                  style={{ color: "#747686" }}
+                >
+                  Membership Tier
+                </p>
+                {/* dev's BE booking-detail endpoint chưa trả customerTier, tạm hiển thị Walk-in */}
+                <p className="text-sm" style={{ color: "#747686" }}>
+                  Walk-in
+                </p>
+              </div>
+              {detail.voucherCode && (
+                <span className="text-xs px-2 py-0.5 rounded-full font-medium bg-secondary-fixed text-on-secondary-fixed">
+                  Voucher: {detail.voucherCode}
+                </span>
               )}
             </div>
           </div>
+
+          <div className="rounded-2xl p-5 bg-surface-container-lowest border border-outline-variant/30">
+            <div className="flex items-center gap-2 mb-3">
+              <Wrench className="w-4 h-4 text-primary" />
+              <p className="text-sm font-bold text-on-surface">
+                Service Details
+              </p>
+            </div>
+            <div className="space-y-2">
+              <div className="flex justify-between text-sm">
+                <span className="text-on-surface-variant">
+                  {detail.serviceName}
+                </span>
+                <span className="text-on-surface font-medium">
+                  {formatVND(baseAmount)}
+                </span>
+              </div>
+              {addOns.map((addon, idx) => (
+                <div key={idx} className="flex justify-between text-sm">
+                  <span className="text-on-surface-variant">
+                    + {addon.addonName}
+                  </span>
+                  <span className="text-on-surface font-medium">
+                    {formatVND(addon.addonPrice)}
+                  </span>
+                </div>
+              ))}
+              <div className="pt-2 mt-2 border-t border-outline-variant text-xs text-on-surface-variant space-y-1">
+                <p>Technician: {detail.technicianName ?? "—"}</p>
+                <p>
+                  Station: {detail.stationName} — {detail.stationAddress}
+                </p>
+                <p>
+                  📅{" "}
+                  {formatSchedule(
+                    detail.appointmentDate,
+                    detail.startTime ?? "",
+                    detail.endTime ?? "",
+                  )}
+                </p>
+              </div>
+            </div>
+          </div>
+
+          {detail.isDepositPaid && (
+            <div className="rounded-xl px-4 py-3 bg-surface-container-low border border-outline-variant/30">
+              <p className="text-xs text-on-surface-variant">
+                Deposit Paid:{" "}
+                <span className="font-semibold text-on-surface">
+                  {formatVND(detail.depositAmount)}
+                </span>
+              </p>
+            </div>
+          )}
+        </div>
+
+        {/* Right: payment panel */}
+        <div className="space-y-4">
+          <div className="rounded-2xl p-5 bg-surface-container-lowest border border-outline-variant/30">
+            <p className="text-sm font-bold text-on-surface mb-3">
+              Invoice Summary
+            </p>
+            <div className="space-y-2 text-sm">
+              <div className="flex justify-between">
+                <span className="text-on-surface-variant">Subtotal</span>
+                <span className="text-on-surface">{formatVND(subtotal)}</span>
+              </div>
+              {voucherDiscount > 0 && (
+                <div className="flex justify-between">
+                  <span className="text-on-surface-variant">
+                    Voucher Discount
+                  </span>
+                  <span className="text-green-600">
+                    - {formatVND(voucherDiscount)}
+                  </span>
+                </div>
+              )}
+              <div className="border-t border-outline-variant pt-2 flex justify-between font-bold">
+                <span className="text-on-surface">Total Due</span>
+                <span className="text-primary">{formatVND(total)}</span>
+              </div>
+            </div>
+          </div>
+
+          <div className="rounded-2xl p-5 bg-surface-container-lowest border border-outline-variant/30">
+            <p className="text-sm font-bold text-on-surface mb-3">
+              Payment Method
+            </p>
+            <div className="grid grid-cols-2 gap-2 mb-4">
+              <button
+                onClick={() => setPaymentMethod("cash")}
+                className={`py-2 rounded-xl text-sm font-semibold border-2 transition ${paymentMethod === "cash" ? "border-primary bg-primary-fixed/10 text-primary" : "border-outline-variant text-on-surface-variant"}`}
+              >
+                Cash
+              </button>
+              <button
+                onClick={() => setPaymentMethod("card")}
+                className={`py-2 rounded-xl text-sm font-semibold border-2 transition ${paymentMethod === "card" ? "border-primary bg-primary-fixed/10 text-primary" : "border-outline-variant text-on-surface-variant"}`}
+              >
+                Card
+              </button>
+            </div>
+
+            {paymentMethod === "cash" && (
+              <div className="space-y-2">
+                <label className="text-xs font-semibold uppercase text-outline block">
+                  Received Amount
+                </label>
+                <input
+                  type="number"
+                  value={received || ""}
+                  onChange={(e) => setReceived(Number(e.target.value))}
+                  placeholder="0"
+                  className="w-full rounded-xl px-3 py-2.5 text-sm border border-outline-variant outline-none focus:border-primary bg-surface-container-lowest text-on-surface"
+                />
+                {isInsufficient && (
+                  <p className="text-xs text-error">
+                    Received amount is insufficient.
+                  </p>
+                )}
+                {received >= total && total > 0 && (
+                  <p className="text-xs text-green-600">
+                    Change to return: {formatVND(change)}
+                  </p>
+                )}
+              </div>
+            )}
+
+            {paymentMethod === "card" && (
+              <p className="text-xs text-on-surface-variant">
+                Demo currently supports Cash payment only.
+              </p>
+            )}
+          </div>
+
+          {payError && (
+            <div className="rounded-xl px-4 py-3 bg-error/10 border border-error/30">
+              <p className="text-sm text-error">{payError}</p>
+            </div>
+          )}
+
+          <button
+            onClick={handleConfirm}
+            disabled={!canConfirm || isPaying}
+            className="w-full py-3 rounded-xl text-sm font-semibold bg-primary text-on-primary disabled:opacity-50 disabled:cursor-not-allowed transition"
+          >
+            {isPaying ? "Processing..." : "Confirm Payment"}
+          </button>
         </div>
       </div>
     </div>

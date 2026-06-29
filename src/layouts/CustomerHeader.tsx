@@ -1,6 +1,13 @@
 import { useState, useRef, useEffect } from "react";
 import { Link } from "react-router-dom";
-import { ChevronDown, User as UserIcon, LogOut, Settings } from "lucide-react";
+import {
+  ChevronDown,
+  User as UserIcon,
+  LogOut,
+  Settings,
+  Car,
+  Calendar,
+} from "lucide-react";
 import NotificationBell from "../features/crm/components/NotificationBell";
 
 /**
@@ -9,9 +16,8 @@ import NotificationBell from "../features/crm/components/NotificationBell";
  * Chưa có avatar trong DB nên header luôn dùng icon user mặc định.
  */
 export interface HeaderUser {
-  firstName: string;
-  lastName: string;
-  role?: string; // VD: "Manager", "Customer"
+  name?: string;
+  email?: string;
 }
 
 interface CustomerHeaderProps {
@@ -77,13 +83,13 @@ export default function CustomerHeader({
             <>
               <Link
                 to="/login"
-                className="rounded-lg border border-secondary-container px-4 py-2 font-body text-sm font-semibold text-secondary-container transition-colors hover:bg-surface-container-high"
+                className="rounded-lg bg-primary-container px-4 py-2 font-body text-sm font-semibold text-on-primary shadow-soft transition-colors hover:bg-primary"
               >
                 Login
               </Link>
               <Link
                 to="/register"
-                className="rounded-lg bg-primary-container px-4 py-2 font-body text-sm font-semibold text-on-primary shadow-soft transition-colors hover:bg-primary"
+                className="rounded-lg border border-secondary-container px-4 py-2 font-body text-sm font-semibold text-secondary-container transition-colors hover:bg-surface-container-high"
               >
                 Register
               </Link>
@@ -106,13 +112,10 @@ export default function CustomerHeader({
 
                   <span className="hidden flex-col items-start leading-tight sm:flex">
                     <span className="font-body text-sm font-semibold text-on-surface">
-                      {user ? `${user.firstName} ${user.lastName}` : "Account"}
+                      {user
+                        ? (user.name ?? user.email ?? "Account")
+                        : "Account"}
                     </span>
-                    {user?.role && (
-                      <span className="font-body text-xs text-outline">
-                        {user.role}
-                      </span>
-                    )}
                   </span>
 
                   <ChevronDown
@@ -138,6 +141,30 @@ export default function CustomerHeader({
                         strokeWidth={1.75}
                       />
                       My Profile
+                    </Link>
+                    <Link
+                      to="/vehicles/add"
+                      role="menuitem"
+                      className="flex items-center gap-2 px-4 py-2 font-body text-sm text-on-surface hover:bg-surface-container-low"
+                      onClick={() => setIsProfileOpen(false)}
+                    >
+                      <Car
+                        className="h-4 w-4 text-outline"
+                        strokeWidth={1.75}
+                      />
+                      Add Vehicle
+                    </Link>
+                    <Link
+                      to="/booking/history"
+                      role="menuitem"
+                      className="flex items-center gap-2 px-4 py-2 font-body text-sm text-on-surface hover:bg-surface-container-low"
+                      onClick={() => setIsProfileOpen(false)}
+                    >
+                      <Calendar
+                        className="h-4 w-4 text-outline"
+                        strokeWidth={1.75}
+                      />
+                      My Booking
                     </Link>
                     <button
                       type="button"

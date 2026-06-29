@@ -1,85 +1,88 @@
-import { createContext, useState, type ReactNode } from "react";
-// author: Ngọc — import thêm setToken, clearTokens để lưu token thật
-import { setToken, clearTokens } from "../utils/storage";
-// author: Ngọc — import axiosClient để gọi API login thật
-import axiosClient from "../lib/axiosClient";
+import { useState, type ReactNode } from "react";
+import { jwtDecode } from "jwt-decode";
+import {
+  getToken,
+  setToken,
+  clearTokens,
+  getUserName,
+  setUserName,
+} from "../utils/storage";
+import type { AuthUser, JwtPayload } from "../features/auth/types/auth";
+import { AuthContext } from "./AuthContextObject";
 
-/**
- * Shape user lưu trong AuthContext.
- * firstName/lastName khớp với bảng customer trong DB.
- */
-export interface AuthUser {
-  id: number;
-  firstName: string;
-  lastName: string;
-  email: string;
-  // author: Ngọc — thêm MANAGER, EMPLOYEE cho role staff
-  role: "CUSTOMER" | "STAFF" | "ADMIN" | "MANAGER" | "EMPLOYEE";
-}
+// Decode JWT token thành AuthUser, trả về null nếu token không hợp lệ/hết hạn
+const decodeUserFromToken = (token: string): AuthUser | null => {
+  try {
+    const payload = jwtDecode<JwtPayload>(token);
 
-export interface AuthContextValue {
-  isAuthenticated: boolean;
-  user: AuthUser | null;
-  // author: Ngọc — login nhận identity + password, trả về Promise
-  login: (identity: string, password: string) => Promise<void>;
-  logout: () => void;
-}
+    // Kiểm tra token hết hạn (exp tính bằng giây, Date.now() tính bằng ms)
+    if (payload.exp * 1000 < Date.now()) {
+      return null;
+    }
 
-// Mock user giả để test UI - chưa nối API/token thật
-// author: Ngọc — comment out MOCK_USER vì dùng API thật
-// const MOCK_USER: AuthUser = {
-//   id: 1,
-//   firstName: "Tấn",
-//   lastName: "Phong",
-//   email: "tanphong@example.com",
-//   role: "CUSTOMER",
-// };
+    return {
+      userId: Number(payload.sub),
+      email: payload.email,
+      name: payload.name,
+      role: payload.roles ?? "CUSTOMER",
+    };
+  } catch {
+    return null;
+  }
+};
 
-// eslint-disable-next-line react-refresh/only-export-components
-export const AuthContext = createContext<AuthContextValue | undefined>(
-  undefined,
-);
+// Tính state user ban đầu từ token đã lưu (nếu có), dùng làm lazy initializer cho useState.
+// Đặt ngoài component để không bị tạo lại mỗi lần render.
+const getInitialUser = (): AuthUser | null => {
+  const existingToken = getToken();
+  if (!existingToken) return null;
 
-interface AuthProviderProps {
-  children: ReactNode;
-}
+  const decodedUser = decodeUserFromToken(existingToken);
+  if (!decodedUser) {
+    // Token hỏng hoặc hết hạn -> dọn luôn, không giữ token rác trong storage
+    clearTokens();
+    return null;
+  }
 
-export function AuthProvider({ children }: AuthProviderProps) {
-  // TẠM: set sẵn MOCK_USER ngay khi load để test UI trạng thái đã login,
-  // không cần bấm nút gì. Khi nối API thật, đổi lại thành useState(null)
-  // và để login() thật set user sau khi gọi authApi.login() thành công.
-  // author: Ngọc — đổi từ useState(MOCK_USER) sang useState(null)
-  // const [user, setUser] = useState<AuthUser | null>(MOCK_USER);
-  const [user, setUser] = useState<AuthUser | null>(null);
+  const savedName = getUserName();
+  return savedName ? { ...decodedUser, name: savedName } : decodedUser;
+};
 
-  // TODO: thay bằng gọi authApi.login() thật khi nối backend
-  // author: Ngọc — login gọi API thật, lưu token vào localStorage
-  const login = async (identity: string, password: string) => {
-    const res = await axiosClient.post("/api/v1/auth/login", { identity, password });
-    const data = res.data.data;
-    setToken(data.token);
-    setUser({
-      id: 0,
-      firstName: data.name,
-      lastName: "",
-      email: data.email,
-      role: "STAFF",
-    });
+// CHỈ tạo AuthProvider (component) ở đây - Context object đã tách ra AuthContextObject.ts
+// KHÔNG export useAuth ở đây (đã chuyển sang hooks/useAuth.ts)
+export const AuthProvider = ({ children }: { children: ReactNode }) => {
+  // Lazy initializer: getInitialUser() chỉ chạy đúng 1 lần lúc mount, không cần useEffect
+  const [user, setUser] = useState<AuthUser | null>(getInitialUser);
+  const [isLoading] = useState(false);
+
+  // Gọi sau khi login API trả về token thành công
+  const loginWithToken = (token: string, name?: string) => {
+    setToken(token);
+    if (name) setUserName(name);
+    const decodedUser = decodeUserFromToken(token);
+    if (decodedUser && name) {
+      setUser({ ...decodedUser, name });
+    } else {
+      setUser(decodedUser);
+    }
   };
 
-  // TODO: thay bằng gọi authApi.logout() + clearTokens() thật khi nối backend
   const logout = () => {
-    // author: Ngọc — thêm clearTokens() để xóa token khỏi localStorage
     clearTokens();
     setUser(null);
   };
 
-  const value: AuthContextValue = {
-    isAuthenticated: !!user,
-    user,
-    login,
-    logout,
-  };
-
-  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
-}
+  return (
+    <AuthContext.Provider
+      value={{
+        user,
+        isAuthenticated: !!user,
+        isLoading,
+        loginWithToken,
+        logout,
+      }}
+    >
+      {children}
+    </AuthContext.Provider>
+  );
+};

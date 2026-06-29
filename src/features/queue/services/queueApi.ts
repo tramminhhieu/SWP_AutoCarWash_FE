@@ -112,7 +112,6 @@ export interface QueuePageData {
   completed: QueueTicketDTO[]; // status === "COMPLETED"
 }
 
-// author: Ngọc — lấy toàn bộ dữ liệu queue, group theo status ở FE
 export const getQueueData = async (): Promise<QueuePageData> => {
   const res = await axiosClient.get<ApiSuccessResponse<QueueResponseData>>(
     "/api/queue"

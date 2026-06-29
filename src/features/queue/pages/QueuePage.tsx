@@ -84,9 +84,6 @@ const mapTier = (tier: string | null): Vehicle["tier"] => {
   return tier as "PLATINUM" | "GOLD" | "SILVER";
 };
 
-// author: Ngọc — số lane tối thiểu luôn hiển thị (pad bằng Empty nếu IN_SERVICE ít hơn)
-const MIN_LANES = 3;
-
 const makeEmptyLane = (index: number): Lane => ({
   lane: String(index + 1).padStart(2, "0"),
   plate: "—",
@@ -109,9 +106,7 @@ const tierBadge: Record<string, string> = {
 
 export default function QueuePage() {
   const navigate = useNavigate();
-  const [lanes, setLanes] = useState<Lane[]>(
-    Array.from({ length: MIN_LANES }, (_, i) => makeEmptyLane(i))
-  );
+  const [lanes, setLanes] = useState<Lane[]>([]);
   // author: Ngọc — Waiting Pool bắt đầu rỗng, load thật từ API qua useEffect dưới
   const [waitingPool, setWaitingPool] = useState<Vehicle[]>([]);
   const [completed, setCompleted] = useState<Vehicle[]>([]);
@@ -124,6 +119,7 @@ export default function QueuePage() {
   // author: Ngọc — thêm state cho API thật
   const [scanResult, setScanResult] = useState<ScanVehicleResponse | null>(null);
   const [isLoading, setIsLoading] = useState(false);
+  const [totalLanes, setTotalLanes] = useState(0);
 
   // author: Ngọc — load toàn bộ queue thật từ GET /api/queue khi vào trang,
   // group theo status để đổ vào cả 3 cột (Active Lanes / Waiting Pool / Completed)
@@ -131,26 +127,23 @@ export default function QueuePage() {
     const loadQueue = async () => {
       try {
         const data = await getQueueData();
+        setTotalLanes(data.availableLaneCount);
 
-        // Waiting Pool: status WAITING
-        const waiting: Vehicle[] = data.waitingPool
-          .filter((t) => t.bookingId !== null)
-          .map((t) => ({
-            id: t.id,
-            bookingId: t.bookingId as number,
-            licensePlate: t.licensePlate ?? "—",
-            model: t.vehicleBrand ?? "",
-            color: t.vehicleColor ?? "",
-            service: t.serviceName ?? "",
-            tier: mapTier(t.customerTier),
-            finishedAt: "",
-            // ghi chú: QueueTicketResponse bên BE chưa có field totalAmount,
-            // cần xin Bình bổ sung nếu muốn hiện đúng số tiền ở Cancel modal
-            totalAmount: 0,
-          }));
+        // Waiting Pool: WAITING status
+        const waiting: Vehicle[] = data.waitingPool.map((t) => ({
+          id: t.id,
+          bookingId: t.bookingId ?? 0,
+          licensePlate: t.licensePlate ?? "—",
+          model: t.vehicleBrand ?? "",
+          color: t.vehicleColor ?? "",
+          service: t.serviceName ?? "",
+          tier: mapTier(t.customerTier),
+          finishedAt: "",
+          totalAmount: 0,
+        }));
         setWaitingPool(waiting);
 
-        // Active Lanes: status IN_SERVICE, pad đến MIN_LANES bằng Empty
+        // Active Lanes: IN_SERVICE status, padded to MIN_LANES with Empty
         const activeLanes: Lane[] = data.activeLanes.map((t, idx) => ({
           lane: String(idx + 1).padStart(2, "0"),
           plate: t.licensePlate ?? "—",
@@ -164,7 +157,7 @@ export default function QueuePage() {
           ticketId: t.id,
           tier: mapTier(t.customerTier),
         }));
-        const totalSlots = Math.max(MIN_LANES, activeLanes.length);
+        const totalSlots = Math.max(data.availableLaneCount, activeLanes.length);
         const paddedLanes: Lane[] = [
           ...activeLanes,
           ...Array.from({ length: totalSlots - activeLanes.length }, (_, i) =>
@@ -173,23 +166,21 @@ export default function QueuePage() {
         ];
         setLanes(paddedLanes);
 
-        // Completed: status COMPLETED
-        const done: Vehicle[] = data.completed
-          .filter((t) => t.bookingId !== null)
-          .map((t) => ({
-            id: t.id,
-            bookingId: t.bookingId as number,
-            licensePlate: t.licensePlate ?? "—",
-            model: t.vehicleBrand ?? "",
-            color: t.vehicleColor ?? "",
-            service: t.serviceName ?? "",
-            tier: mapTier(t.customerTier),
-            finishedAt: "",
-            totalAmount: 0,
-          }));
+        // Completed: COMPLETED status
+        const done: Vehicle[] = data.completed.map((t) => ({
+          id: t.id,
+          bookingId: t.bookingId ?? 0,
+          licensePlate: t.licensePlate ?? "—",
+          model: t.vehicleBrand ?? "",
+          color: t.vehicleColor ?? "",
+          service: t.serviceName ?? "",
+          tier: mapTier(t.customerTier),
+          finishedAt: "",
+          totalAmount: 0,
+        }));
         setCompleted(done);
-      } catch {
-        // load lỗi thì giữ state ban đầu, không chặn UI
+      } catch (e) {
+        console.error("[Queue] loadQueue error:", e);
       }
     };
     loadQueue();
@@ -349,13 +340,7 @@ export default function QueuePage() {
       };
       setCompleted((prev) => [...prev, newCompleted]);
       const updatedLanes = [...lanes];
-      if (waitingPool.length > 0) {
-        const next = waitingPool[0];
-        updatedLanes[index] = { ...updatedLanes[index], plate: next.licensePlate, model: next.model, color: next.color, service: next.service, status: "Washing", est: "20 mins left", bookingId: next.bookingId, totalAmount: next.totalAmount, ticketId: next.id };
-        setWaitingPool((prev) => prev.slice(1));
-      } else {
-        updatedLanes[index] = makeEmptyLane(index);
-      }
+      updatedLanes[index] = makeEmptyLane(index);
       setLanes(updatedLanes);
     } catch {
       // show nothing — isLoading will reset and button re-enables
@@ -405,7 +390,10 @@ export default function QueuePage() {
       <div className="flex gap-4">
         {/* Active Lanes */}
         <div className="w-90 shrink-0">
-          <p className="text-xs font-semibold uppercase mb-3 text-outline">Active Lanes</p>
+          <div className="mb-3">
+            <p className="text-xs font-semibold uppercase text-outline">Active Lanes</p>
+            <p className="text-xs text-outline">{lanes.filter(l => l.status === "Washing").length}/{totalLanes} lanes in use</p>
+          </div>
           <div className="flex flex-col gap-3">
             {lanes.map((lane, index) => (
               <div key={lane.lane} className="rounded-2xl p-3 flex items-center gap-3 bg-white shadow-sm border border-outline-variant/30">

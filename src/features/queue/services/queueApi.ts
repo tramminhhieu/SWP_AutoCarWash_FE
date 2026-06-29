@@ -72,13 +72,18 @@ export const confirmCheckIn = async (
 // hàm huỷ booking khi khách bỏ về
 // author: Ngọc — BE đã đổi path param từ bookingId sang ticketId (queue ticket id),
 // đổi tên param cho khớp; FE phải truyền ticket.id, KHÔNG phải booking.id nữa
-export const cancelGuestLeft = async (ticketId: number): Promise<void> => {
-  const res = await axiosClient.patch<ApiSuccessResponse<null>>(
-    `/api/queue/${ticketId}/cancel-guest-left`
+// BE nhận bookingId (KHÔNG phải ticketId) và check booking.status == CHECK_IN,
+// trả về board đầy đủ sau khi huỷ -> FE set lại state từ board này.
+export const cancelGuestLeft = async (
+  bookingId: number
+): Promise<QueuePageData> => {
+  const res = await axiosClient.patch<ApiSuccessResponse<QueueResponseData>>(
+    `/api/queue/${bookingId}/cancel-guest-left`
   );
   if (!res.data.success) {
     throw new Error(res.data.message || "Cancel guest left failed");
   }
+  return mapBoard(res.data.data);
 };
 
 // author: Ngọc — type cho 1 ticket hàng chờ, khớp với QueueTicketResponse bên BE
@@ -99,48 +104,74 @@ export interface QueueTicketDTO {
   stationName: string | null;
 }
 
-// BE trả về object có queue array và availableLaneCount
+// 1 làn rửa (chưa bị xoá) của station — BE: WashLaneResponse. status: "AVAILABLE" | "WASHING".
+export interface WashLaneDTO {
+  id: number;
+  laneName: string;
+  status: string;
+}
+
+// BE trả về object có queue array, lanes array và *LaneCount
 interface QueueResponseData {
   activeLaneCount: number;
   availableLaneCount: number;
+  lanes: WashLaneDTO[];
   queue: QueueTicketDTO[];
 }
 
 export interface QueuePageData {
   activeLaneCount: number;
   availableLaneCount: number;
-  activeLanes: QueueTicketDTO[]; // status === "WASHING"
-  waitingPool: QueueTicketDTO[]; // status === "WAITING"
+  lanes: WashLaneDTO[]; // tất cả làn chưa bị xoá của station (nguồn sự thật để render ô làn)
+  activeLanes: QueueTicketDTO[]; // status === "WASHING" (chi tiết xe trong làn)
+  waitingPool: QueueTicketDTO[]; // status === "CHECK_IN" (đã check-in, đang chờ vào làn)
   completed: QueueTicketDTO[]; // status === "COMPLETED"
 }
+
+// Map QueueBoardResponse thô của BE -> QueuePageData mà UI dùng. Dùng chung cho
+// cả lần load đầu (GET) lẫn các action start/complete (PATCH) vì BE trả về cùng
+// 1 shape board đầy đủ.
+// LƯU Ý: BE map ticket.status = booking.status (QueueMapper), nên ticket đang chờ
+// trả về status "CHECK_IN" (KHÔNG phải "WAITING"); query chỉ trả ticket có booking,
+// status ∈ {CHECK_IN, WASHING, COMPLETED}.
+const mapBoard = (data: QueueResponseData): QueuePageData => {
+  const { activeLaneCount, availableLaneCount, lanes, queue } = data;
+  return {
+    activeLaneCount,
+    availableLaneCount,
+    lanes: lanes ?? [],
+    activeLanes: queue.filter((t) => t.status === "WASHING"),
+    waitingPool: queue.filter((t) => t.status === "CHECK_IN"),
+    completed: queue.filter((t) => t.status === "COMPLETED"),
+  };
+};
 
 export const getQueueData = async (): Promise<QueuePageData> => {
   const res = await axiosClient.get<ApiSuccessResponse<QueueResponseData>>(
     "/api/queue"
   );
-  const { activeLaneCount, availableLaneCount, queue } = res.data.data;
-  return {
-    activeLaneCount,
-    availableLaneCount,
-    activeLanes: queue.filter((t) => t.status === "WASHING"),
-    waitingPool: queue.filter((t) => t.status === "WAITING"),
-    completed: queue.filter((t) => t.status === "COMPLETED"),
-  };
+  return mapBoard(res.data.data);
 };
 
-// author: Ngọc — gọi API thêm xe vào làn rửa (WAITING -> WASHING), BE mới thêm endpoint này
-export const startService = async (ticketId: number): Promise<QueueTicketDTO> => {
-  const res = await axiosClient.patch<ApiSuccessResponse<QueueTicketDTO>>(
-    `/api/queue/${ticketId}/start`
+// author: Ngọc — gọi API thêm xe vào làn rửa (booking CHECK_IN -> WASHING).
+// BE nhận bookingId và trả về board đầy đủ -> FE set lại state từ board này.
+export const startService = async (
+  bookingId: number
+): Promise<QueuePageData> => {
+  const res = await axiosClient.patch<ApiSuccessResponse<QueueResponseData>>(
+    `/api/queue/${bookingId}/start`
   );
-  return res.data.data;
+  return mapBoard(res.data.data);
 };
 
-export const completeService = async (ticketId: number): Promise<QueueTicketDTO> => {
-  const res = await axiosClient.patch<ApiSuccessResponse<QueueTicketDTO>>(
-    `/api/queue/${ticketId}/complete`
+// BE nhận bookingId (không phải ticketId) và trả về board đầy đủ sau khi hoàn tất.
+export const completeService = async (
+  bookingId: number
+): Promise<QueuePageData> => {
+  const res = await axiosClient.patch<ApiSuccessResponse<QueueResponseData>>(
+    `/api/queue/${bookingId}/complete`
   );
-  return res.data.data;
+  return mapBoard(res.data.data);
 };
 
 export const collectPenaltyDeposit = async (

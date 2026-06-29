@@ -1,10 +1,10 @@
 //author: Ngọc
 //version:2.0.1
 import { useNavigate } from "react-router-dom";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { Search, X, ChevronRight, ChevronUp, ChevronDown, Droplets, Check, CreditCard } from "lucide-react";
 // author: Ngọc — import API thật
-import { scanVehicle, confirmCheckIn, cancelGuestLeft, startService, completeService, getQueueData, type ScanVehicleResponse } from "../services/queueApi";
+import { scanVehicle, confirmCheckIn, cancelGuestLeft, startService, completeService, getQueueData, type ScanVehicleResponse, type QueuePageData } from "../services/queueApi";
 // ported onto dev: dev không có utils/currency.ts, dùng formatCurrency của dev thay formatVND
 import { formatCurrency as formatVND } from "../../../utils/format";
 
@@ -121,73 +121,74 @@ export default function QueuePage() {
   const [isLoading, setIsLoading] = useState(false);
   const [totalLanes, setTotalLanes] = useState(0);
 
-  // author: Ngọc — load toàn bộ queue thật từ GET /api/queue khi vào trang,
-  // group theo status để đổ vào cả 3 cột (Active Lanes / Waiting Pool / Completed)
-  useEffect(() => {
-    const loadQueue = async () => {
-      try {
-        const data = await getQueueData();
-        setTotalLanes(data.activeLaneCount);
+  // author: Ngọc — đổ board (GET /api/queue hoặc kết quả PATCH start/complete) vào
+  // cả 3 cột (Active Lanes / Waiting Pool / Completed). BE trả về cùng 1 shape board
+  // nên dùng chung cho cả lần load đầu lẫn sau mỗi action.
+  const applyBoard = useCallback((data: QueuePageData) => {
+    setTotalLanes(data.activeLaneCount);
 
-        // Waiting Pool: WAITING status
-        const waiting: Vehicle[] = data.waitingPool.map((t) => ({
-          id: t.id,
-          bookingId: t.bookingId ?? 0,
-          licensePlate: t.licensePlate ?? "—",
-          model: t.vehicleBrand ?? "",
-          color: t.vehicleColor ?? "",
-          service: t.serviceName ?? "",
-          tier: mapTier(t.customerTier),
-          finishedAt: "",
-          totalAmount: 0,
-        }));
-        setWaitingPool(waiting);
+    // Waiting Pool: WAITING status
+    const waiting: Vehicle[] = data.waitingPool.map((t) => ({
+      id: t.id,
+      bookingId: t.bookingId ?? 0,
+      licensePlate: t.licensePlate ?? "—",
+      model: t.vehicleBrand ?? "",
+      color: t.vehicleColor ?? "",
+      service: t.serviceName ?? "",
+      tier: mapTier(t.customerTier),
+      finishedAt: "",
+      totalAmount: 0,
+    }));
+    setWaitingPool(waiting);
 
-        // Active Lanes: IN_SERVICE status, padded to MIN_LANES with Empty
-        const activeLanes: Lane[] = data.activeLanes.map((t, idx) => ({
-          lane: String(idx + 1).padStart(2, "0"),
-          plate: t.licensePlate ?? "—",
-          model: t.vehicleBrand ?? "",
-          color: t.vehicleColor ?? "",
-          service: t.serviceName ?? "",
-          status: "Washing" as const,
-          est: "",
-          bookingId: t.bookingId ?? 0,
-          totalAmount: 0,
-          ticketId: t.id,
-          tier: mapTier(t.customerTier),
-        }));
-        const totalSlots = Math.max(data.activeLaneCount, activeLanes.length);
-        const paddedLanes: Lane[] = [
-          ...activeLanes,
-          ...Array.from({ length: totalSlots - activeLanes.length }, (_, i) =>
-            makeEmptyLane(activeLanes.length + i)
-          ),
-        ];
-        setLanes(paddedLanes);
-
-        // Completed: COMPLETED status
-        const done: Vehicle[] = data.completed.map((t) => ({
-          id: t.id,
-          bookingId: t.bookingId ?? 0,
-          licensePlate: t.licensePlate ?? "—",
-          model: t.vehicleBrand ?? "",
-          color: t.vehicleColor ?? "",
-          service: t.serviceName ?? "",
-          tier: mapTier(t.customerTier),
-          finishedAt: "",
-          totalAmount: 0,
-        }));
-        setCompleted(done);
-      } catch (e) {
-        console.error("[Queue] loadQueue error:", e);
+    // Active Lanes: render trực tiếp từ data.lanes — nguồn sự thật về các làn chưa
+    // bị xoá của station (hiện đủ mọi làn, kể cả làn trống). Làn WASHING ghép với
+    // ticket WASHING theo thứ tự; làn WASHING không có ticket tương ứng -> coi như trống.
+    const washingTickets = [...data.activeLanes];
+    const builtLanes: Lane[] = data.lanes.map((l, idx) => {
+      const label = l.laneName.replace(/\D/g, "") || String(idx + 1).padStart(2, "0");
+      const ticket = l.status === "WASHING" ? washingTickets.shift() : undefined;
+      if (!ticket) {
+        return { ...makeEmptyLane(idx), lane: label };
       }
-    };
-    loadQueue();
+      return {
+        lane: label,
+        plate: ticket.licensePlate ?? "—",
+        model: ticket.vehicleBrand ?? "",
+        color: ticket.vehicleColor ?? "",
+        service: ticket.serviceName ?? "",
+        status: "Washing" as const,
+        est: "",
+        bookingId: ticket.bookingId ?? 0,
+        totalAmount: 0,
+        ticketId: ticket.id,
+        tier: mapTier(ticket.customerTier),
+      };
+    });
+    setLanes(builtLanes);
+
+    // Completed: COMPLETED status
+    const done: Vehicle[] = data.completed.map((t) => ({
+      id: t.id,
+      bookingId: t.bookingId ?? 0,
+      licensePlate: t.licensePlate ?? "—",
+      model: t.vehicleBrand ?? "",
+      color: t.vehicleColor ?? "",
+      service: t.serviceName ?? "",
+      tier: mapTier(t.customerTier),
+      finishedAt: "",
+      totalAmount: 0,
+    }));
+    setCompleted(done);
   }, []);
 
-  const now = new Date();
-  const timeStr = `${now.getHours()}:${String(now.getMinutes()).padStart(2, "0")}`;
+  // author: Ngọc — load toàn bộ queue thật từ GET /api/queue khi vào trang
+  useEffect(() => {
+    getQueueData()
+      .then(applyBoard)
+      .catch((e) => console.error("[Queue] loadQueue error:", e));
+  }, [applyBoard]);
+
   const hasEmptyLane = lanes.some((l) => l.status === "Empty");
 
   const closeCheckinModal = () => {
@@ -262,21 +263,9 @@ export default function QueuePage() {
         navigate("/staff/walk-in", { state: { oldBookingId: result.oldBookingId } });
         return;
       }
-      const newVehicle: Vehicle = {
-        id: Date.now(),
-        bookingId: selectedBooking.id,
-        licensePlate: selectedBooking.licensePlate,
-        model: selectedBooking.vehicleModel,
-        color: selectedBooking.color,
-        service: selectedBooking.service,
-        tier: searchResult?.tier ?? "Guest",
-        finishedAt: "",
-        totalAmount: selectedBooking.totalAmount,
-        // author: Ngọc — lưu bookingType từ scan result để modal Cancel phân biệt đúng
-        bookingType: scanResult.bookingType,
-      };
-      setWaitingPool((prev) => [...prev, newVehicle]);
       closeCheckinModal();
+      const board = await getQueueData();
+      applyBoard(board);
     } catch {
       alert("Check-in thất bại, thử lại.");
     } finally {
@@ -294,8 +283,8 @@ export default function QueuePage() {
     });
   };
 
-  // author: Ngọc — gọi API PATCH /api/queue/{ticketId}/start để chuyển ticket
-  // WAITING -> IN_SERVICE, chỉ cập nhật UI sau khi BE xác nhận thành công
+  // author: Ngọc — gọi API PATCH /api/queue/{bookingId}/start (booking CHECK_IN -> WASHING).
+  // BE trả về board đầy đủ -> set lại toàn bộ state từ board, không cập nhật cục bộ.
   const handleAddToLane = async () => {
     if (waitingPool.length === 0) return;
     const emptyIndex = lanes.findIndex((l) => l.status === "Empty");
@@ -303,15 +292,8 @@ export default function QueuePage() {
     const next = waitingPool[0];
     setIsLoading(true);
     try {
-      await startService(next.id);
-      setLanes((prev) =>
-        prev.map((l, i) =>
-          i === emptyIndex
-            ? { ...l, plate: next.licensePlate, model: next.model, color: next.color, service: next.service, status: "Washing", est: "20 mins left", bookingId: next.bookingId, totalAmount: next.totalAmount, ticketId: next.id, tier: next.tier, voucherDiscount: next.voucherDiscount, pointDiscount: next.pointDiscount }
-            : l
-        )
-      );
-      setWaitingPool((prev) => prev.filter((v) => v.id !== next.id));
+      const board = await startService(next.bookingId);
+      applyBoard(board);
     } catch {
       alert("Thêm xe vào làn thất bại, thử lại.");
     } finally {
@@ -321,27 +303,11 @@ export default function QueuePage() {
 
   const handleCompleted = async (index: number) => {
     const lane = lanes[index];
-    if (!lane.ticketId) return;
+    if (!lane.bookingId) return;
     setIsLoading(true);
     try {
-      await completeService(lane.ticketId);
-      const newCompleted: Vehicle = {
-        id: Date.now(),
-        bookingId: lane.bookingId,
-        licensePlate: lane.plate,
-        model: lane.model,
-        color: lane.color,
-        service: lane.service,
-        tier: lane.tier ?? "Guest",
-        finishedAt: timeStr,
-        totalAmount: lane.totalAmount,
-        voucherDiscount: lane.voucherDiscount,
-        pointDiscount: lane.pointDiscount,
-      };
-      setCompleted((prev) => [...prev, newCompleted]);
-      const updatedLanes = [...lanes];
-      updatedLanes[index] = makeEmptyLane(index);
-      setLanes(updatedLanes);
+      const board = await completeService(lane.bookingId);
+      applyBoard(board);
     } catch {
       // show nothing — isLoading will reset and button re-enables
     } finally {
@@ -350,14 +316,14 @@ export default function QueuePage() {
   };
 
   // gọi API cancel guest left
-  // author: Ngọc — BE đổi path param sang ticketId, phải truyền cancelVehicle.id
-  // (= queue ticket id), KHÔNG truyền bookingId nữa
+  // author: Ngọc — BE huỷ theo bookingId (check booking.status == CHECK_IN) và trả
+  // về board đầy đủ -> set lại toàn bộ state từ board, không cập nhật cục bộ.
   const handleConfirmCancel = async () => {
-    if (!cancelVehicle) return;
+    if (!cancelVehicle?.bookingId) return;
     setIsLoading(true);
     try {
-      await cancelGuestLeft(cancelVehicle.id);
-      setWaitingPool((prev) => prev.filter((v) => v.id !== cancelVehicle.id));
+      const board = await cancelGuestLeft(cancelVehicle.bookingId);
+      applyBoard(board);
       setCancelVehicle(null);
     } catch {
       alert("Huỷ booking thất bại, thử lại.");

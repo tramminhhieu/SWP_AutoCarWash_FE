@@ -11,7 +11,7 @@ import { useEffect, useState } from "react";
 import { ArrowLeft, Car, User, Wrench } from "lucide-react";
 import { formatCurrency as formatVND } from "../../../utils/format";
 import { getBookingDetail } from "../../booking/api/bookingApi";
-import type { BookingDetail } from "../../booking/api/bookingApi";
+import type { BookingDetail } from "../../booking/types/booking";
 import { processCashPayment } from "../services/paymentApi";
 
 function formatSchedule(date: string, start: string, end: string) {
@@ -67,8 +67,18 @@ export default function PaymentPage() {
   const addOnTotal = detail?.addonTotal ?? 0;
   const subtotal = baseAmount + addOnTotal;
   const voucherDiscount = detail?.voucherDiscountAmount ?? 0;
+  const pointDiscount = detail?.pointDiscountAmount ?? 0;
+  const tierLabel = detail?.customerTier
+    ? detail.customerTier.charAt(0) + detail.customerTier.slice(1).toLowerCase()
+    : "Walk-in";
+  const bookingTypeLabel =
+    detail?.bookingType === "WALK_IN" ? "Walk-in" :
+    detail?.bookingType === "SUBSCRIPTION" ? "Subscription" :
+    detail?.bookingType === "ADVANCE" ? "Advance" :
+    null;
   const total =
-    detail?.remainingAmount ?? Math.max(subtotal - voucherDiscount, 0);
+    detail?.remainingAmount ??
+    Math.max(subtotal - voucherDiscount - pointDiscount, 0);
   const change = received - total;
   const isInsufficient = received > 0 && received < total;
   const canConfirm = total === 0 || (received >= total && total > 0);
@@ -185,6 +195,16 @@ export default function PaymentPage() {
               <User className="w-4 h-4 text-primary" />
               <p className="text-sm font-bold text-on-surface">Customer</p>
             </div>
+            <div className="flex items-center justify-between mb-2">
+              <p className="text-base font-bold text-on-surface">
+                {detail.customerName ?? "—"}
+              </p>
+              {bookingTypeLabel && (
+                <span className="text-xs px-2 py-0.5 rounded-full font-medium bg-primary-fixed/20 text-primary">
+                  {bookingTypeLabel}
+                </span>
+              )}
+            </div>
             <div className="flex items-center justify-between">
               <div>
                 <p
@@ -193,9 +213,8 @@ export default function PaymentPage() {
                 >
                   Membership Tier
                 </p>
-                {/* dev's BE booking-detail endpoint chưa trả customerTier, tạm hiển thị Walk-in */}
                 <p className="text-sm" style={{ color: "#747686" }}>
-                  Walk-in
+                  {tierLabel}
                 </p>
               </div>
               {detail.voucherCode && (
@@ -233,7 +252,9 @@ export default function PaymentPage() {
                 </div>
               ))}
               <div className="pt-2 mt-2 border-t border-outline-variant text-xs text-on-surface-variant space-y-1">
-                <p>Technician: {detail.technicianName ?? "—"}</p>
+                {detail.serviceCategoryName && (
+                  <p>Package: {detail.serviceCategoryName}</p>
+                )}
                 <p>
                   Station: {detail.stationName} — {detail.stationAddress}
                 </p>
@@ -279,6 +300,16 @@ export default function PaymentPage() {
                   </span>
                   <span className="text-green-600">
                     - {formatVND(voucherDiscount)}
+                  </span>
+                </div>
+              )}
+              {pointDiscount > 0 && (
+                <div className="flex justify-between">
+                  <span className="text-on-surface-variant">
+                    Point Discount
+                  </span>
+                  <span className="text-green-600">
+                    - {formatVND(pointDiscount)}
                   </span>
                 </div>
               )}

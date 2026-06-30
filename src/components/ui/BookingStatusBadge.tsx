@@ -1,5 +1,17 @@
-import { BOOKING_STATUS_STYLES } from "../../constants/bookingStatusStyles";
+import {
+  BOOKING_STATUS_STYLES,
+  type BookingStatusStyle,
+} from "../../constants/bookingStatusStyles";
 import type { BookingStatus } from "../../features/booking/types/booking";
+
+// Fallback trung tính khi backend trả status chưa khai báo trong map — tránh
+// crash cả trang (đọc bgClassName của undefined). Hiển thị nguyên chuỗi status.
+const FALLBACK_STATUS_STYLE: Omit<BookingStatusStyle, "label"> = {
+  dotClassName: "bg-outline",
+  textClassName: "text-on-surface-variant",
+  bgClassName: "bg-surface-container-high",
+  borderClassName: "border-outline-variant/30",
+};
 
 /**
  * Badge trạng thái booking dạng pill (chấm tròn + label), dùng chung mọi feature.
@@ -7,7 +19,8 @@ import type { BookingStatus } from "../../features/booking/types/booking";
  * constants/bookingStatusStyles, không tự định nghĩa màu ở đây.
  */
 function BookingStatusBadge({ status }: { status: BookingStatus }) {
-  const statusStyle = BOOKING_STATUS_STYLES[status];
+  const statusStyle =
+    BOOKING_STATUS_STYLES[status] ?? { ...FALLBACK_STATUS_STYLE, label: status };
 
   return (
     <div

@@ -182,6 +182,10 @@ export interface BookingDetail {
   voucherDiscountPercent: number | null;
   voucherDiscountAmount: number;
   customerTier: string | null;
+  customerName: string | null;
+  bookingType: string | null;
+  serviceCategoryName: string | null;
+  checkinStaffName: string | null;
   pointDiscountAmount: number;
   discountAmount: number;
   totalAmount: number;

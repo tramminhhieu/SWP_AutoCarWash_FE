@@ -60,7 +60,7 @@ export const previewPrice = async (
   return res.data.data;
 };
 /**
- * Fetches a customer's upcoming bookings (status CONFIRMED/CHECKED_IN/WASHING).
+ * Fetches a customer's upcoming bookings (status CONFIRMED/CHECK_IN/WASHING).
  *
  * @param customerId - ID of the customer whose bookings should be listed.
  * @returns The list of upcoming {@link BookingCard}s, unwrapped from the
@@ -79,7 +79,7 @@ export async function getUpcomingBookings(
 }
 
 /**
- * Fetches a customer's past bookings (status PAID/CANCELLED/NO_SHOW).
+ * Fetches a customer's past bookings (status PAID/CANCELED/NO_SHOW).
  *
  * @param customerId - ID of the customer whose bookings should be listed.
  * @returns The list of past {@link BookingCard}s, unwrapped from the
@@ -118,7 +118,7 @@ export async function getBookingDetail(
  * Cancels a booking.
  *
  * @param bookingId - ID of the booking to cancel.
- * @returns The updated {@link BookingDetail} (status `CANCELLED`), unwrapped
+ * @returns The updated {@link BookingDetail} (status `CANCELED`), unwrapped
  *   from the backend's `ApiResponse` envelope.
  */
 export async function cancelBooking(bookingId: number): Promise<BookingDetail> {

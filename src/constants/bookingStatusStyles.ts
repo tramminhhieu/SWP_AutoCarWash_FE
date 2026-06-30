@@ -43,7 +43,7 @@ export const BOOKING_STATUS_STYLES: Record<BookingStatus, BookingStatusStyle> =
       bgClassName: "bg-tertiary-fixed/20",
       borderClassName: "border-tertiary/10",
     },
-    CHECKED_IN: {
+    CHECK_IN: {
       label: "CHECKED IN",
       dotClassName: "bg-primary",
       textClassName: "text-primary",
@@ -51,14 +51,14 @@ export const BOOKING_STATUS_STYLES: Record<BookingStatus, BookingStatusStyle> =
       borderClassName: "border-primary/10",
     },
     WASHING: {
-      label: "IN PROGRESS",
+      label: "WASHING",
       dotClassName: "bg-primary",
       textClassName: "text-primary",
       bgClassName: "bg-primary/10",
       borderClassName: "border-primary/10",
     },
-    CANCELLED: {
-      label: "CANCELLED",
+    CANCELED: {
+      label: "CANCELED",
       dotClassName: "bg-error",
       textClassName: "text-error",
       bgClassName: "bg-error-container",
@@ -72,7 +72,7 @@ export const BOOKING_STATUS_STYLES: Record<BookingStatus, BookingStatusStyle> =
       borderClassName: "border-error/10",
     },
       CHECK_OUT: {
-          label: "COMPLETED",
+          label: "CHECK_OUT",
           dotClassName: "bg-[#22c55e]",
           textClassName: "text-[#22c55e]",
           bgClassName: "bg-tertiary-fixed/20",

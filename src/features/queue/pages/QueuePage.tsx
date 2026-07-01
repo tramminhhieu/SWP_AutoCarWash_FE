@@ -28,6 +28,7 @@ interface Vehicle {
 
 interface Lane {
   lane: string;
+  laneDbId: number;
   plate: string;
   model: string;
   color: string;
@@ -84,8 +85,9 @@ const mapTier = (tier: string | null): Vehicle["tier"] => {
   return tier as "PLATINUM" | "GOLD" | "SILVER";
 };
 
-const makeEmptyLane = (index: number): Lane => ({
+const makeEmptyLane = (index: number, laneDbId = 0): Lane => ({
   lane: String(index + 1).padStart(2, "0"),
+  laneDbId,
   plate: "—",
   model: "",
   color: "",
@@ -141,18 +143,20 @@ export default function QueuePage() {
     }));
     setWaitingPool(waiting);
 
-    // Active Lanes: render trực tiếp từ data.lanes — nguồn sự thật về các làn chưa
-    // bị xoá của station (hiện đủ mọi làn, kể cả làn trống). Làn WASHING ghép với
-    // ticket WASHING theo thứ tự; làn WASHING không có ticket tương ứng -> coi như trống.
-    const washingTickets = [...data.activeLanes];
+    // Active Lanes: render từ data.lanes — mỗi làn WASHING dùng currentBookingId
+    // (do BE tính sẵn) để lookup đúng ticket, tránh nhầm lane khi nhiều xe cùng rửa.
     const builtLanes: Lane[] = data.lanes.map((l, idx) => {
       const label = l.laneName.replace(/\D/g, "") || String(idx + 1).padStart(2, "0");
-      const ticket = l.status === "WASHING" ? washingTickets.shift() : undefined;
+      if (l.status !== "WASHING" || l.currentBookingId == null) {
+        return { ...makeEmptyLane(idx, l.id), lane: label };
+      }
+      const ticket = data.activeLanes.find(t => t.bookingId === l.currentBookingId);
       if (!ticket) {
-        return { ...makeEmptyLane(idx), lane: label };
+        return { ...makeEmptyLane(idx, l.id), lane: label };
       }
       return {
         lane: label,
+        laneDbId: l.id,
         plate: ticket.licensePlate ?? "—",
         model: ticket.vehicleBrand ?? "",
         color: ticket.vehicleColor ?? "",
@@ -306,7 +310,7 @@ export default function QueuePage() {
     if (!lane.bookingId) return;
     setIsLoading(true);
     try {
-      const board = await completeService(lane.bookingId);
+      const board = await completeService(lane.bookingId, lane.laneDbId);
       applyBoard(board);
     } catch {
       // show nothing — isLoading will reset and button re-enables

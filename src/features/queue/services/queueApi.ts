@@ -155,13 +155,15 @@ export const getQueueData = async (): Promise<QueuePageData> => {
 };
 
 // author: Ngọc — gọi API thêm xe vào làn rửa (booking CHECK_IN -> WASHING).
-// BE nhận bookingId và trả về board đầy đủ -> FE set lại state từ board này.
+// laneId: DB id của làn cụ thể (khi staff chọn thủ công); null = auto-assign làn đầu tiên.
 export const startService = async (
-  bookingId: number
+  bookingId: number,
+  laneId?: number
 ): Promise<QueuePageData> => {
-  const res = await axiosClient.patch<ApiSuccessResponse<QueueResponseData>>(
-    `/api/queue/${bookingId}/start`
-  );
+  const url = laneId != null
+    ? `/api/queue/${bookingId}/start?laneId=${laneId}`
+    : `/api/queue/${bookingId}/start`;
+  const res = await axiosClient.patch<ApiSuccessResponse<QueueResponseData>>(url);
   return mapBoard(res.data.data);
 };
 

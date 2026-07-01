@@ -122,6 +122,7 @@ export default function QueuePage() {
   const [scanResult, setScanResult] = useState<ScanVehicleResponse | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [totalLanes, setTotalLanes] = useState(0);
+  const [assignCar, setAssignCar] = useState<Vehicle | null>(null);
 
   // author: Ngọc — đổ board (GET /api/queue hoặc kết quả PATCH start/complete) vào
   // cả 3 cột (Active Lanes / Waiting Pool / Completed). BE trả về cùng 1 shape board
@@ -287,8 +288,7 @@ export default function QueuePage() {
     });
   };
 
-  // author: Ngọc — gọi API PATCH /api/queue/{bookingId}/start (booking CHECK_IN -> WASHING).
-  // BE trả về board đầy đủ -> set lại toàn bộ state từ board, không cập nhật cục bộ.
+  // "+" button — auto-assign xe đầu tiên trong waiting pool vào làn trống đầu tiên.
   const handleAddToLane = async () => {
     if (waitingPool.length === 0) return;
     const emptyIndex = lanes.findIndex((l) => l.status === "Empty");
@@ -297,6 +297,21 @@ export default function QueuePage() {
     setIsLoading(true);
     try {
       const board = await startService(next.bookingId);
+      applyBoard(board);
+    } catch {
+      alert("Thêm xe vào làn thất bại, thử lại.");
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // Click vào xe trong Waiting Pool — assign xe đó vào lane được chọn trong popup.
+  const handleAssignToLane = async (laneDbId: number) => {
+    if (!assignCar) return;
+    setIsLoading(true);
+    setAssignCar(null);
+    try {
+      const board = await startService(assignCar.bookingId, laneDbId);
       applyBoard(board);
     } catch {
       alert("Thêm xe vào làn thất bại, thử lại.");
@@ -416,7 +431,7 @@ export default function QueuePage() {
               <p className="text-xs text-center py-4 text-outline">No vehicles waiting</p>
             )}
             {waitingPool.map((v, idx) => (
-              <div key={v.id} className="rounded-xl px-3 py-2.5 flex items-center gap-2 bg-white border border-outline-variant/20">
+              <div key={v.id} onClick={() => hasEmptyLane && setAssignCar(v)} className={`rounded-xl px-3 py-2.5 flex items-center gap-2 bg-white border border-outline-variant/20 ${hasEmptyLane ? "cursor-pointer hover:bg-surface-container-low transition" : ""}`}>
                 <div className="flex flex-col justify-center gap-0.5 shrink-0">
                   <button onClick={() => moveVehicle(idx, -1)} disabled={idx === 0} className="text-outline transition hover:text-primary disabled:opacity-30">
                     <ChevronUp className="w-3 h-3" />
@@ -583,6 +598,40 @@ export default function QueuePage() {
                   </button>
                 </div>
               )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Lane Select Modal */}
+      {assignCar && (
+        <div className="fixed inset-0 flex items-center justify-center z-50 bg-inverse-surface/50" onClick={() => setAssignCar(null)}>
+          <div className="rounded-2xl shadow-xl w-full max-w-sm mx-4 bg-surface-container-lowest" onClick={(e) => e.stopPropagation()}>
+            <div className="flex items-center justify-between px-6 pt-6 pb-4 border-b border-outline-variant">
+              <div>
+                <h2 className="text-base font-bold font-heading text-on-surface">Chọn làn rửa</h2>
+                <p className="text-xs text-outline mt-0.5">{assignCar.licensePlate} • {assignCar.service}</p>
+              </div>
+              <button onClick={() => setAssignCar(null)} className="rounded-full p-1 hover:bg-surface-container transition">
+                <X className="w-5 h-5 text-outline" />
+              </button>
+            </div>
+            <div className="px-6 py-4 flex flex-col gap-2">
+              {lanes.filter(l => l.status === "Empty").map(l => (
+                <button
+                  key={l.laneDbId}
+                  onClick={() => handleAssignToLane(l.laneDbId)}
+                  disabled={isLoading}
+                  className="flex items-center gap-3 rounded-xl px-4 py-3 border-2 border-outline-variant hover:border-primary hover:bg-primary-fixed transition disabled:opacity-50"
+                >
+                  <div className="w-10 h-10 rounded-xl flex flex-col items-center justify-center bg-primary text-on-primary shrink-0">
+                    <span className="text-[9px] font-medium leading-none">LANE</span>
+                    <span className="text-sm font-bold leading-tight">{l.lane}</span>
+                  </div>
+                  <span className="text-sm font-semibold text-on-surface">Lane {l.lane}</span>
+                  <span className="ml-auto text-xs px-2 py-0.5 rounded-full bg-surface-container text-outline">Trống</span>
+                </button>
+              ))}
             </div>
           </div>
         </div>

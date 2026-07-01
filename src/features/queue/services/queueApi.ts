@@ -109,7 +109,6 @@ export interface WashLaneDTO {
   id: number;
   laneName: string;
   status: string;
-  currentBookingId?: number | null;
 }
 
 // BE trả về object có queue array, lanes array và *LaneCount
@@ -165,15 +164,13 @@ export const startService = async (
   return mapBoard(res.data.data);
 };
 
-// BE nhận bookingId và laneId (DB id của làn cần giải phóng) để tránh giải phóng nhầm làn.
+// BE nhận bookingId (không phải ticketId) và trả về board đầy đủ sau khi hoàn tất.
 export const completeService = async (
-  bookingId: number,
-  laneId?: number
+  bookingId: number
 ): Promise<QueuePageData> => {
-  const url = laneId != null
-    ? `/api/queue/${bookingId}/complete?laneId=${laneId}`
-    : `/api/queue/${bookingId}/complete`;
-  const res = await axiosClient.patch<ApiSuccessResponse<QueueResponseData>>(url);
+  const res = await axiosClient.patch<ApiSuccessResponse<QueueResponseData>>(
+    `/api/queue/${bookingId}/complete`
+  );
   return mapBoard(res.data.data);
 };
 

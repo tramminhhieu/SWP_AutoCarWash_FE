@@ -2,7 +2,7 @@
 //version:2.0.1
 import { useNavigate } from "react-router-dom";
 import { useState, useEffect, useCallback } from "react";
-import { Search, X, ChevronRight, ChevronUp, ChevronDown, Droplets, Check, CreditCard, ArrowRight } from "lucide-react";
+import { Search, X, ChevronRight, ChevronUp, ChevronDown, Droplets, Check, CreditCard } from "lucide-react";
 // author: Ngọc — import API thật
 import { scanVehicle, confirmCheckIn, cancelGuestLeft, startService, completeService, getQueueData, type ScanVehicleResponse, type QueuePageData } from "../services/queueApi";
 // ported onto dev: dev không có utils/currency.ts, dùng formatCurrency của dev thay formatVND
@@ -28,7 +28,6 @@ interface Vehicle {
 
 interface Lane {
   lane: string;
-  laneDbId: number;
   plate: string;
   model: string;
   color: string;
@@ -85,9 +84,8 @@ const mapTier = (tier: string | null): Vehicle["tier"] => {
   return tier as "PLATINUM" | "GOLD" | "SILVER";
 };
 
-const makeEmptyLane = (index: number, laneDbId = 0): Lane => ({
+const makeEmptyLane = (index: number): Lane => ({
   lane: String(index + 1).padStart(2, "0"),
-  laneDbId,
   plate: "—",
   model: "",
   color: "",
@@ -122,8 +120,6 @@ export default function QueuePage() {
   const [scanResult, setScanResult] = useState<ScanVehicleResponse | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [totalLanes, setTotalLanes] = useState(0);
-  const [assignVehicle, setAssignVehicle] = useState<Vehicle | null>(null);
-  const [selectedLaneId, setSelectedLaneId] = useState<string | null>(null);
 
   // author: Ngọc — đổ board (GET /api/queue hoặc kết quả PATCH start/complete) vào
   // cả 3 cột (Active Lanes / Waiting Pool / Completed). BE trả về cùng 1 shape board
@@ -145,20 +141,18 @@ export default function QueuePage() {
     }));
     setWaitingPool(waiting);
 
-    // Active Lanes: BE gửi currentBookingId trong mỗi lane → FE tìm đúng ticket theo bookingId.
-    // Không dùng shift() positional để tránh ghép sai khi nhiều xe đang rửa.
+    // Active Lanes: render trực tiếp từ data.lanes — nguồn sự thật về các làn chưa
+    // bị xoá của station (hiện đủ mọi làn, kể cả làn trống). Làn WASHING ghép với
+    // ticket WASHING theo thứ tự; làn WASHING không có ticket tương ứng -> coi như trống.
+    const washingTickets = [...data.activeLanes];
     const builtLanes: Lane[] = data.lanes.map((l, idx) => {
       const label = l.laneName.replace(/\D/g, "") || String(idx + 1).padStart(2, "0");
-      if (l.status !== "WASHING" || l.currentBookingId == null) {
-        return { ...makeEmptyLane(idx, l.id), lane: label };
-      }
-      const ticket = data.activeLanes.find(t => t.bookingId === l.currentBookingId);
+      const ticket = l.status === "WASHING" ? washingTickets.shift() : undefined;
       if (!ticket) {
-        return { ...makeEmptyLane(idx, l.id), lane: label };
+        return { ...makeEmptyLane(idx), lane: label };
       }
       return {
         lane: label,
-        laneDbId: l.id,
         plate: ticket.licensePlate ?? "—",
         model: ticket.vehicleBrand ?? "",
         color: ticket.vehicleColor ?? "",
@@ -194,6 +188,8 @@ export default function QueuePage() {
       .then(applyBoard)
       .catch((e) => console.error("[Queue] loadQueue error:", e));
   }, [applyBoard]);
+
+  const hasEmptyLane = lanes.some((l) => l.status === "Empty");
 
   const closeCheckinModal = () => {
     setShowCheckin(false);
@@ -287,25 +283,19 @@ export default function QueuePage() {
     });
   };
 
-  const handleOpenAssign = (v: Vehicle) => {
-    setAssignVehicle(v);
-    setSelectedLaneId(null);
-  };
-
-  const handleCloseAssign = () => {
-    setAssignVehicle(null);
-    setSelectedLaneId(null);
-  };
-
-  const handleMoveToLane = async () => {
-    if (!assignVehicle || !selectedLaneId) return;
+  // author: Ngọc — gọi API PATCH /api/queue/{bookingId}/start (booking CHECK_IN -> WASHING).
+  // BE trả về board đầy đủ -> set lại toàn bộ state từ board, không cập nhật cục bộ.
+  const handleAddToLane = async () => {
+    if (waitingPool.length === 0) return;
+    const emptyIndex = lanes.findIndex((l) => l.status === "Empty");
+    if (emptyIndex === -1) return;
+    const next = waitingPool[0];
     setIsLoading(true);
     try {
-      const board = await startService(assignVehicle.bookingId);
+      const board = await startService(next.bookingId);
       applyBoard(board);
-      handleCloseAssign();
     } catch {
-      alert("Failed to assign vehicle to lane, please try again.");
+      alert("Thêm xe vào làn thất bại, thử lại.");
     } finally {
       setIsLoading(false);
     }
@@ -316,7 +306,7 @@ export default function QueuePage() {
     if (!lane.bookingId) return;
     setIsLoading(true);
     try {
-      const board = await completeService(lane.bookingId, lane.laneDbId);
+      const board = await completeService(lane.bookingId);
       applyBoard(board);
     } catch {
       // show nothing — isLoading will reset and button re-enables
@@ -411,22 +401,23 @@ export default function QueuePage() {
               <p className="font-bold text-sm text-white">Waiting Pool</p>
               <p className="text-xs text-white/70">{waitingPool.length} VEHICLES IN QUEUE</p>
             </div>
+            <button
+              onClick={handleAddToLane}
+              disabled={!hasEmptyLane || waitingPool.length === 0 || isLoading}
+              className="w-6 h-6 rounded-full flex items-center justify-center text-sm bg-white/20 text-white transition hover:bg-white/30 disabled:opacity-40 disabled:cursor-not-allowed"
+            >+</button>
           </div>
           <div className="rounded-b-2xl p-2.5 flex flex-col gap-2 bg-surface-container-lowest shadow-sm">
             {waitingPool.length === 0 && (
               <p className="text-xs text-center py-4 text-outline">No vehicles waiting</p>
             )}
             {waitingPool.map((v, idx) => (
-              <div
-                key={v.id}
-                onClick={() => handleOpenAssign(v)}
-                className="rounded-xl px-3 py-2.5 flex items-center gap-2 bg-white border border-outline-variant/20 cursor-pointer hover:border-primary/40 hover:bg-surface-container-low transition"
-              >
+              <div key={v.id} className="rounded-xl px-3 py-2.5 flex items-center gap-2 bg-white border border-outline-variant/20">
                 <div className="flex flex-col justify-center gap-0.5 shrink-0">
-                  <button onClick={(e) => { e.stopPropagation(); moveVehicle(idx, -1); }} disabled={idx === 0} className="text-outline transition hover:text-primary disabled:opacity-30">
+                  <button onClick={() => moveVehicle(idx, -1)} disabled={idx === 0} className="text-outline transition hover:text-primary disabled:opacity-30">
                     <ChevronUp className="w-3 h-3" />
                   </button>
-                  <button onClick={(e) => { e.stopPropagation(); moveVehicle(idx, 1); }} disabled={idx === waitingPool.length - 1} className="text-outline transition hover:text-primary disabled:opacity-30">
+                  <button onClick={() => moveVehicle(idx, 1)} disabled={idx === waitingPool.length - 1} className="text-outline transition hover:text-primary disabled:opacity-30">
                     <ChevronDown className="w-3 h-3" />
                   </button>
                 </div>
@@ -440,15 +431,12 @@ export default function QueuePage() {
                     <Droplets className="w-2.5 h-2.5 shrink-0" /> {v.service}
                   </p>
                 </div>
-                <div className="flex items-center gap-1.5 shrink-0">
-                  <button
-                    onClick={(e) => { e.stopPropagation(); setCancelVehicle(v); }}
-                    className="text-xs px-3 py-1.5 rounded-full font-medium whitespace-nowrap bg-error-container text-on-error-container"
-                  >
-                    Cancel
-                  </button>
-                  <ArrowRight className="w-3.5 h-3.5 text-outline" />
-                </div>
+                <button
+                  onClick={(e) => { e.stopPropagation(); setCancelVehicle(v); }}
+                  className="text-xs px-4 py-1.5 rounded-full font-medium whitespace-nowrap bg-error-container text-on-error-container shrink-0"
+                >
+                  Cancel
+                </button>
               </div>
             ))}
           </div>
@@ -591,84 +579,6 @@ export default function QueuePage() {
                   </button>
                 </div>
               )}
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Assign Lane Modal */}
-      {assignVehicle && (
-        <div className="fixed inset-0 flex items-center justify-center z-50 bg-inverse-surface/50" onClick={handleCloseAssign}>
-          <div className="rounded-2xl shadow-xl w-full max-w-md mx-4 p-6 bg-surface-container-lowest" onClick={(e) => e.stopPropagation()}>
-            <div className="flex items-center justify-between mb-4">
-              <h2 className="text-base font-bold font-heading text-on-surface">Assign Vehicle</h2>
-              <button onClick={handleCloseAssign} className="rounded-full p-1 hover:bg-surface-container transition">
-                <X className="w-5 h-5 text-outline" />
-              </button>
-            </div>
-
-            <div className="rounded-xl px-4 py-3 mb-5 bg-surface-container-low flex items-center justify-between">
-              <div>
-                <p className="text-sm font-bold text-on-surface">{assignVehicle.licensePlate}</p>
-                <p className="text-xs text-on-surface-variant mt-0.5">{assignVehicle.model} • {assignVehicle.color}</p>
-                <p className="text-xs font-medium text-primary mt-0.5">{assignVehicle.service}</p>
-              </div>
-              <span className={`text-[10px] px-2 py-1 rounded-full font-semibold ${tierBadge[assignVehicle.tier]}`}>
-                {assignVehicle.tier}
-              </span>
-            </div>
-
-            <p className="text-xs font-semibold uppercase mb-2 text-outline">Select Lane</p>
-            <div className="flex flex-col gap-2 mb-6">
-              {lanes.length === 0 && (
-                <p className="text-xs text-center py-3 text-outline">No lanes available</p>
-              )}
-              {lanes.map((lane) => {
-                const busy = lane.status !== "Empty";
-                const isSelected = selectedLaneId === lane.lane;
-                return (
-                  <label
-                    key={lane.lane}
-                    className={`flex items-center gap-3 rounded-xl px-4 py-3 border transition ${
-                      busy
-                        ? "opacity-40 cursor-not-allowed border-outline-variant bg-surface-container-low"
-                        : isSelected
-                        ? "border-primary bg-primary-fixed cursor-pointer"
-                        : "border-outline-variant bg-surface-container-lowest hover:bg-surface-container-low cursor-pointer"
-                    }`}
-                  >
-                    <input
-                      type="radio"
-                      name="assignLane"
-                      value={lane.lane}
-                      disabled={busy}
-                      checked={isSelected}
-                      onChange={() => setSelectedLaneId(lane.lane)}
-                      className="accent-primary"
-                    />
-                    <span className="text-sm font-medium text-on-surface flex-1">Lane {lane.lane}</span>
-                    {busy && (
-                      <span className="text-xs text-outline font-medium">In Use</span>
-                    )}
-                  </label>
-                );
-              })}
-            </div>
-
-            <div className="flex gap-3">
-              <button
-                onClick={handleCloseAssign}
-                className="flex-1 py-2.5 rounded-xl text-sm font-semibold border border-outline-variant text-on-surface-variant bg-surface-container-lowest"
-              >
-                Cancel
-              </button>
-              <button
-                onClick={handleMoveToLane}
-                disabled={!selectedLaneId || isLoading}
-                className="flex-1 py-2.5 rounded-xl text-sm font-semibold bg-primary text-on-primary disabled:opacity-50 disabled:cursor-not-allowed transition"
-              >
-                {isLoading ? "Moving..." : "Move"}
-              </button>
             </div>
           </div>
         </div>

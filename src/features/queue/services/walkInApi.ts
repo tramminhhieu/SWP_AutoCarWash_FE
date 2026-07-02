@@ -63,6 +63,34 @@ export interface CreateWalkInResponse {
   message: string;
 }
 
+export interface WalkInServicePackageDTO {
+  id: number;
+  name: string;
+  basePrice: number;
+  requiredSlot: number;
+  description: string;
+}
+
+export interface WalkInAddonServiceDTO {
+  id: number;
+  name: string;
+  price: number;
+  description: string;
+  durationMinutes: number;
+}
+
+export interface WalkInFormDataResponse {
+  servicePackages: WalkInServicePackageDTO[];
+  addonServices: WalkInAddonServiceDTO[];
+}
+
+export const getWalkInFormData = async (): Promise<WalkInFormDataResponse> => {
+  const res = await axiosClient.get<ApiSuccessResponse<WalkInFormDataResponse>>(
+    "/api/v1/staff/create-walkin/form-data"
+  );
+  return res.data.data;
+};
+
 export const checkPhone = async (phone: string): Promise<CheckPhoneResponse> => {
   const res = await axiosClient.get<ApiSuccessResponse<CheckPhoneResponse>>(
     "/api/v1/staff/create-walkin/check-phone",

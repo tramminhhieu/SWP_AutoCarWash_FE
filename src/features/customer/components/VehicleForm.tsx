@@ -7,7 +7,7 @@ import { getApiErrorInfo } from "../../../lib/axiosClient";
 // Regex biển số VN: 2 số đầu (mã tỉnh) + 1-2 chữ (trừ I, O dễ nhầm số) + "-" + 4-5 số
 // Theo đúng AC đã chốt: ^[0-9]{2}[A-HJ-NP-Z]{1,2}-[0-9]{4,5}$
 const LICENSE_PLATE_REGEX = /^[0-9]{2}[A-HJ-NP-Z]{1,2}-[0-9]{4,5}$/;
-const TEXT_ONLY_REGEX = /^[a-zA-Z\s-]+$/;
+const UNICODE_TEXT_REGEX = /^[\p{L}\s-]+$/u;
 const MAX_FIELD_LENGTH = 20;
 
 interface VehicleFormProps {
@@ -54,7 +54,7 @@ const VehicleForm = ({ onSuccess, onCancel }: VehicleFormProps) => {
     if (!brand.trim()) {
       setBrandError("Brand is required");
       isValid = false;
-    } else if (!TEXT_ONLY_REGEX.test(brand.trim())) {
+    } else if (!UNICODE_TEXT_REGEX.test(brand.trim())) {
       setBrandError("Brand must contain only letters");
       isValid = false;
     } else if (brand.trim().length > MAX_FIELD_LENGTH) {
@@ -65,7 +65,7 @@ const VehicleForm = ({ onSuccess, onCancel }: VehicleFormProps) => {
     if (!color.trim()) {
       setColorError("Color is required");
       isValid = false;
-    } else if (!TEXT_ONLY_REGEX.test(color.trim())) {
+    } else if (!UNICODE_TEXT_REGEX.test(color.trim())) {
       setColorError("Color must contain only letters");
       isValid = false;
     } else if (color.trim().length > MAX_FIELD_LENGTH) {

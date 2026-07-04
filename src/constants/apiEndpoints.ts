@@ -42,4 +42,14 @@ export const API = {
   VEHICLE: {
     ADD: "/api/vehicles",
   },
+  LOYALTY: {
+    // GET loyalty profile (points, tier, spending)
+    PROFILE: "/api/loyalty/profile",
+    // GET loyalty history (?year=&month=)
+    HISTORY: "/api/loyalty/history",
+    // GET tier catalog
+    TIERS: "/api/loyalty/tiers",
+    // GET tier change history (upgrade/downgrade log)
+    TIER_HISTORY: "/api/loyalty/tier-history",
+  },
 };

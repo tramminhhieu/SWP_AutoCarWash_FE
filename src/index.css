@@ -167,3 +167,8 @@
     font-family: var(--font-heading);
   }
 }
+
+button,
+a {
+  cursor: pointer;
+}

@@ -130,7 +130,9 @@ function BookingCardItem({
 
       <Modal
         isOpen={showCancelModal}
-        onClose={() => { if (!isCancelling) setShowCancelModal(false); }}
+        onClose={() => {
+          if (!isCancelling) setShowCancelModal(false);
+        }}
         variant="danger"
         title="Cancel Booking"
         message="Are you sure you want to cancel this appointment? This action cannot be undone."
@@ -231,8 +233,8 @@ export default function BookingHistory() {
       ) : bookings.length === 0 ? (
         <div className="flex h-48 items-center justify-center text-base text-outline">
           {activeTab === "upcoming"
-            ? "Không có lịch hẹn sắp tới."
-            : "Chưa có lịch sử dịch vụ nào."}
+            ? "No upcoming appointments"
+            : "No past services available"}
         </div>
       ) : (
         <div className="flex flex-col gap-6">

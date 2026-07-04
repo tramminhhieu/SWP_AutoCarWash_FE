@@ -4,7 +4,7 @@ import {
   ChevronDown,
   User as UserIcon,
   LogOut,
-  Settings,
+  UserPen,
   Car,
   Calendar,
 } from "lucide-react";
@@ -131,12 +131,12 @@ export default function CustomerHeader({
                     className="absolute right-0 z-50 mt-2 w-56 rounded-lg border border-outline-variant bg-white/80 py-1 shadow-soft backdrop-blur-md"
                   >
                     <Link
-                      to="/profile"
+                      to="/customer/profile"
                       role="menuitem"
                       className="flex items-center gap-2 px-4 py-2 font-body text-sm text-on-surface hover:bg-surface-container-low"
                       onClick={() => setIsProfileOpen(false)}
                     >
-                      <Settings
+                      <UserPen
                         className="h-4 w-4 text-outline"
                         strokeWidth={1.75}
                       />

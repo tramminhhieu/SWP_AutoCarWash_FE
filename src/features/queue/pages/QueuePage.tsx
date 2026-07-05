@@ -2,9 +2,27 @@
 //version:2.0.1
 import { useNavigate } from "react-router-dom";
 import { useState, useEffect, useCallback } from "react";
-import { Search, X, ChevronRight, ChevronUp, ChevronDown, Droplets, Check, CreditCard } from "lucide-react";
+import {
+  Search,
+  X,
+  ChevronRight,
+  ChevronUp,
+  ChevronDown,
+  Droplets,
+  Check,
+  CreditCard,
+} from "lucide-react";
 // author: Ngọc — import API thật
-import { scanVehicle, confirmCheckIn, cancelGuestLeft, startService, completeService, getQueueData, type ScanVehicleResponse, type QueuePageData } from "../services/queueApi";
+import {
+  scanVehicle,
+  confirmCheckIn,
+  cancelGuestLeft,
+  startService,
+  completeService,
+  getQueueData,
+  type ScanVehicleResponse,
+  type QueuePageData,
+} from "../services/queueApi";
 // ported onto dev: dev không có utils/currency.ts, dùng formatCurrency của dev thay formatVND
 import { formatCurrency as formatVND } from "../../../utils/format";
 
@@ -116,10 +134,14 @@ export default function QueuePage() {
   const [showCheckin, setShowCheckin] = useState(false);
   const [searchPlate, setSearchPlate] = useState("");
   const [searchResult, setSearchResult] = useState<CustomerResult | null>(null);
-  const [selectedBooking, setSelectedBooking] = useState<BookingItem | null>(null);
+  const [selectedBooking, setSelectedBooking] = useState<BookingItem | null>(
+    null,
+  );
   const [isSearched, setIsSearched] = useState(false);
   // author: Ngọc — thêm state cho API thật
-  const [scanResult, setScanResult] = useState<ScanVehicleResponse | null>(null);
+  const [scanResult, setScanResult] = useState<ScanVehicleResponse | null>(
+    null,
+  );
   const [isLoading, setIsLoading] = useState(false);
   const [totalLanes, setTotalLanes] = useState(0);
   const [assignCar, setAssignCar] = useState<Vehicle | null>(null);
@@ -229,17 +251,19 @@ export default function QueuePage() {
           type: "booked",
           customerName: result.customerName ?? "",
           tier: mapTier(result.customerTier),
-          bookings: [{
-            id: result.bookingId!,
-            vehicleModel: result.brandName ?? searchPlate,
-            licensePlate: searchPlate,
-            washType: result.serviceName ?? "",
-            scheduledTime: `${result.slotStartTime} - ${result.slotEndTime}`,
-            totalAmount: result.totalAmount ?? 0,
-            color: result.color ?? "",
-            service: result.serviceName ?? "",
-            addOns: [],
-          }],
+          bookings: [
+            {
+              id: result.bookingId!,
+              vehicleModel: result.brandName ?? searchPlate,
+              licensePlate: searchPlate,
+              washType: result.serviceName ?? "",
+              scheduledTime: `${result.slotStartTime} - ${result.slotEndTime}`,
+              totalAmount: result.totalAmount ?? 0,
+              color: result.color ?? "",
+              service: result.serviceName ?? "",
+              addOns: [],
+            },
+          ],
         });
       } else {
         setSearchResult({ type: "not-found" });
@@ -265,7 +289,9 @@ export default function QueuePage() {
       const result = await confirmCheckIn(scanResult.bookingId);
       if (result.requiresWalkIn) {
         closeCheckinModal();
-        navigate("/staff/walk-in", { state: { oldBookingId: result.oldBookingId } });
+        navigate("/staff/walk-in", {
+          state: { oldBookingId: result.oldBookingId },
+        });
         return;
       }
       closeCheckinModal();
@@ -353,7 +379,16 @@ export default function QueuePage() {
 
   const handleSelectCompleted = (v: Vehicle) => {
     navigate(`/staff/payment/${v.bookingId}`, {
-      state: { bookingId: v.bookingId, licensePlate: v.licensePlate, model: v.model, color: v.color, service: v.service, totalAmount: v.totalAmount, voucherDiscount: v.voucherDiscount, pointDiscount: v.pointDiscount },
+      state: {
+        bookingId: v.bookingId,
+        licensePlate: v.licensePlate,
+        model: v.model,
+        color: v.color,
+        service: v.service,
+        totalAmount: v.totalAmount,
+        voucherDiscount: v.voucherDiscount,
+        pointDiscount: v.pointDiscount,
+      },
     });
   };
 
@@ -362,11 +397,18 @@ export default function QueuePage() {
       {/* Header */}
       <div className="flex items-center justify-between mb-6">
         <div>
-          <h1 className="text-2xl font-bold font-heading text-on-background">Live Queue Management</h1>
-          <p className="text-sm mt-1 text-on-surface-variant">Real-time status of active wash lanes and waiting vehicles.</p>
+          <h1 className="text-2xl font-bold font-heading text-on-background">
+            Live Queue Management
+          </h1>
+          <p className="text-sm mt-1 text-on-surface-variant">
+            Real-time status of active wash lanes and waiting vehicles.
+          </p>
         </div>
         <div className="flex gap-2">
-          <button onClick={() => setShowCheckin(true)} className="px-4 py-2 rounded-xl text-sm font-semibold transition bg-primary text-on-primary hover:opacity-90">
+          <button
+            onClick={() => setShowCheckin(true)}
+            className="px-4 py-2 rounded-xl text-sm font-semibold transition bg-primary text-on-primary hover:opacity-90"
+          >
             + Check-in
           </button>
         </div>
@@ -376,35 +418,64 @@ export default function QueuePage() {
         {/* Active Lanes */}
         <div className="w-90 shrink-0">
           <div className="mb-3">
-            <p className="text-xs font-semibold uppercase text-outline">Active Lanes</p>
-            <p className="text-xs text-outline">{lanes.filter(l => l.status === "Washing").length}/{totalLanes} lanes in use</p>
+            <p className="text-xs font-semibold uppercase text-outline">
+              Active Lanes
+            </p>
+            <p className="text-xs text-outline">
+              {lanes.filter((l) => l.status === "Washing").length}/{totalLanes}{" "}
+              lanes in use
+            </p>
           </div>
           <div className="flex flex-col gap-3">
             {lanes.map((lane, index) => (
-              <div key={lane.lane} className="rounded-2xl p-3 flex items-center gap-3 bg-white shadow-sm border border-outline-variant/30">
+              <div
+                key={lane.lane}
+                className="rounded-2xl p-3 flex items-center gap-3 bg-white shadow-sm border border-outline-variant/30"
+              >
                 <div className="w-12 h-12 rounded-xl flex flex-col items-center justify-center shrink-0 bg-primary text-on-primary">
-                  <span className="text-[10px] font-medium leading-none">LANE</span>
-                  <span className="text-base font-bold leading-tight">{lane.lane}</span>
+                  <span className="text-[10px] font-medium leading-none">
+                    LANE
+                  </span>
+                  <span className="text-base font-bold leading-tight">
+                    {lane.lane}
+                  </span>
                 </div>
                 {lane.status === "Empty" ? (
                   <div className="flex-1">
-                    <p className="text-xs italic text-outline">No vehicle assigned</p>
+                    <p className="text-xs italic text-outline">
+                      No vehicle assigned
+                    </p>
                   </div>
                 ) : (
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-1.5 mb-0.5">
-                      <span className={`text-[11px] px-1.5 py-0.5 rounded-full font-medium flex items-center gap-0.5 ${lane.status === "Washing" ? "bg-amber-100 text-amber-700" : "bg-green-100 text-green-700"}`}>
-                        {lane.status === "Washing" ? <Droplets className="w-2.5 h-2.5" /> : <Check className="w-2.5 h-2.5" />}
+                      <span
+                        className={`text-[11px] px-1.5 py-0.5 rounded-full font-medium flex items-center gap-0.5 ${lane.status === "Washing" ? "bg-amber-100 text-amber-700" : "bg-green-100 text-green-700"}`}
+                      >
+                        {lane.status === "Washing" ? (
+                          <Droplets className="w-2.5 h-2.5" />
+                        ) : (
+                          <Check className="w-2.5 h-2.5" />
+                        )}
                         {lane.status}
                       </span>
-                      <span className="text-[11px] text-outline truncate">{lane.model.split(" ")[0]} • {lane.color}</span>
+                      <span className="text-[11px] text-outline truncate">
+                        {lane.model.split(" ")[0]} • {lane.color}
+                      </span>
                     </div>
-                    <p className="text-base font-bold text-on-surface tracking-wide">{lane.plate}</p>
-                    <p className="text-[11px] font-medium text-primary truncate">{lane.service}</p>
+                    <p className="text-base font-bold text-on-surface tracking-wide">
+                      {lane.plate}
+                    </p>
+                    <p className="text-[11px] font-medium text-primary truncate">
+                      {lane.service}
+                    </p>
                   </div>
                 )}
                 {lane.status !== "Empty" && (
-                  <button onClick={() => handleCompleted(index)} className="px-3 py-1.5 rounded-xl text-xs font-semibold transition shrink-0 bg-primary text-on-primary hover:opacity-90">
+                  <button
+                    onClick={() => handleCompleted(index)}
+                    className="px-3 py-1.5 rounded-xl text-xs font-semibold transition shrink-0 bg-primary text-on-primary hover:opacity-90"
+                  >
                     Completed
                   </button>
                 )}
@@ -418,40 +489,65 @@ export default function QueuePage() {
           <div className="rounded-t-2xl px-4 py-3 flex items-center justify-between bg-primary">
             <div>
               <p className="font-bold text-sm text-white">Waiting Pool</p>
-              <p className="text-xs text-white/70">{waitingPool.length} VEHICLES IN QUEUE</p>
+              <p className="text-xs text-white/70">
+                {waitingPool.length} VEHICLES IN QUEUE
+              </p>
             </div>
             <button
               onClick={handleAddToLane}
               disabled={!hasEmptyLane || waitingPool.length === 0 || isLoading}
               className="w-6 h-6 rounded-full flex items-center justify-center text-sm bg-white/20 text-white transition hover:bg-white/30 disabled:opacity-40 disabled:cursor-not-allowed"
-            >+</button>
+            >
+              +
+            </button>
           </div>
           <div className="rounded-b-2xl p-2.5 flex flex-col gap-2 bg-surface-container-lowest shadow-sm">
             {waitingPool.length === 0 && (
-              <p className="text-xs text-center py-4 text-outline">No vehicles waiting</p>
+              <p className="text-xs text-center py-4 text-outline">
+                No vehicles waiting
+              </p>
             )}
             {waitingPool.map((v, idx) => (
               <div key={v.id} onClick={() => hasEmptyLane && setAssignCar(v)} className={`rounded-xl px-3 py-2.5 flex items-center gap-2 bg-white border border-outline-variant/20 ${hasEmptyLane ? "cursor-pointer hover:bg-surface-container-low transition" : ""}`}>
                 <div className="flex flex-col justify-center gap-0.5 shrink-0">
-                  <button onClick={() => moveVehicle(idx, -1)} disabled={idx === 0} className="text-outline transition hover:text-primary disabled:opacity-30">
+                  <button
+                    onClick={() => moveVehicle(idx, -1)}
+                    disabled={idx === 0}
+                    className="text-outline transition hover:text-primary disabled:opacity-30"
+                  >
                     <ChevronUp className="w-3 h-3" />
                   </button>
-                  <button onClick={() => moveVehicle(idx, 1)} disabled={idx === waitingPool.length - 1} className="text-outline transition hover:text-primary disabled:opacity-30">
+                  <button
+                    onClick={() => moveVehicle(idx, 1)}
+                    disabled={idx === waitingPool.length - 1}
+                    className="text-outline transition hover:text-primary disabled:opacity-30"
+                  >
                     <ChevronDown className="w-3 h-3" />
                   </button>
                 </div>
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-1.5 mb-0.5">
-                    <span className="text-xs font-bold text-on-surface">{v.licensePlate}</span>
-                    <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-medium ${tierBadge[v.tier]}`}>{v.tier}</span>
+                    <span className="text-xs font-bold text-on-surface">
+                      {v.licensePlate}
+                    </span>
+                    <span
+                      className={`text-[10px] px-1.5 py-0.5 rounded-full font-medium ${tierBadge[v.tier]}`}
+                    >
+                      {v.tier}
+                    </span>
                   </div>
-                  <p className="text-[11px] text-on-surface-variant truncate">{v.model.split(" ")[0]} • {v.color}</p>
+                  <p className="text-[11px] text-on-surface-variant truncate">
+                    {v.model.split(" ")[0]} • {v.color}
+                  </p>
                   <p className="text-[11px] font-medium text-primary flex items-center gap-0.5">
                     <Droplets className="w-2.5 h-2.5 shrink-0" /> {v.service}
                   </p>
                 </div>
                 <button
-                  onClick={(e) => { e.stopPropagation(); setCancelVehicle(v); }}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setCancelVehicle(v);
+                  }}
                   className="text-xs px-4 py-1.5 rounded-full font-medium whitespace-nowrap bg-error-container text-on-error-container shrink-0"
                 >
                   Cancel
@@ -472,18 +568,36 @@ export default function QueuePage() {
           </div>
           <div className="rounded-b-2xl p-2.5 flex flex-col gap-2 bg-surface-container-lowest shadow-sm">
             {completed.length === 0 && (
-              <p className="text-xs text-center py-4 text-outline">No completed vehicles</p>
+              <p className="text-xs text-center py-4 text-outline">
+                No completed vehicles
+              </p>
             )}
             {completed.map((v) => (
-              <div key={v.id} onClick={() => handleSelectCompleted(v)} className="rounded-xl px-3 py-2.5 cursor-pointer transition hover:bg-surface-container-low bg-white border border-outline-variant/20">
+              <div
+                key={v.id}
+                onClick={() => handleSelectCompleted(v)}
+                className="rounded-xl px-3 py-2.5 cursor-pointer transition hover:bg-surface-container-low bg-white border border-outline-variant/20"
+              >
                 <div className="flex items-center justify-between mb-0.5">
-                  <span className="text-xs font-bold text-on-surface">{v.licensePlate}</span>
-                  <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-medium ${tierBadge[v.tier]}`}>{v.tier}</span>
+                  <span className="text-xs font-bold text-on-surface">
+                    {v.licensePlate}
+                  </span>
+                  <span
+                    className={`text-[10px] px-1.5 py-0.5 rounded-full font-medium ${tierBadge[v.tier]}`}
+                  >
+                    {v.tier}
+                  </span>
                 </div>
-                <p className="text-[11px] text-on-surface-variant">{v.model.split(" ")[0]} • {v.color}</p>
-                <p className="text-[11px] font-medium text-primary">{v.service}</p>
+                <p className="text-[11px] text-on-surface-variant">
+                  {v.model.split(" ")[0]} • {v.color}
+                </p>
+                <p className="text-[11px] font-medium text-primary">
+                  {v.service}
+                </p>
                 <div className="flex justify-end mt-1.5">
-                  <span className="text-[10px] px-2 py-0.5 rounded-full font-medium bg-green-100 text-green-700">Completed</span>
+                  <span className="text-[10px] px-2 py-0.5 rounded-full font-medium bg-green-100 text-green-700">
+                    Completed
+                  </span>
                 </div>
               </div>
             ))}
@@ -493,11 +607,22 @@ export default function QueuePage() {
 
       {/* Check-in Modal */}
       {showCheckin && (
-        <div className="fixed inset-0 flex items-center justify-center z-50 bg-inverse-surface/50" onClick={closeCheckinModal}>
-          <div className="rounded-2xl shadow-xl w-full max-w-lg mx-4 bg-surface-container-lowest" onClick={(e) => e.stopPropagation()}>
+        <div
+          className="fixed inset-0 flex items-center justify-center z-50 bg-inverse-surface/50"
+          onClick={closeCheckinModal}
+        >
+          <div
+            className="rounded-2xl shadow-xl w-full max-w-lg mx-4 bg-surface-container-lowest"
+            onClick={(e) => e.stopPropagation()}
+          >
             <div className="flex items-center justify-between px-6 pt-6 pb-4 border-b border-outline-variant">
-              <h2 className="text-base font-bold font-heading text-on-surface">Vehicle Check-in</h2>
-              <button onClick={closeCheckinModal} className="rounded-full p-1 hover:bg-surface-container transition">
+              <h2 className="text-base font-bold font-heading text-on-surface">
+                Vehicle Check-in
+              </h2>
+              <button
+                onClick={closeCheckinModal}
+                className="rounded-full p-1 hover:bg-surface-container transition"
+              >
                 <X className="w-5 h-5 text-outline" />
               </button>
             </div>
@@ -515,12 +640,23 @@ export default function QueuePage() {
                     autoFocus
                   />
                   {searchPlate && (
-                    <button onClick={() => { setSearchPlate(""); setSearchResult(null); setIsSearched(false); setScanResult(null); }}>
+                    <button
+                      onClick={() => {
+                        setSearchPlate("");
+                        setSearchResult(null);
+                        setIsSearched(false);
+                        setScanResult(null);
+                      }}
+                    >
                       <X className="w-4 h-4 text-outline" />
                     </button>
                   )}
                 </div>
-                <button onClick={handleSearch} disabled={isLoading} className="px-4 py-2 rounded-xl text-sm font-semibold transition bg-primary text-on-primary disabled:opacity-50">
+                <button
+                  onClick={handleSearch}
+                  disabled={isLoading}
+                  className="px-4 py-2 rounded-xl text-sm font-semibold transition bg-primary text-on-primary disabled:opacity-50"
+                >
                   {isLoading ? "..." : "Search"}
                 </button>
               </div>
@@ -530,18 +666,34 @@ export default function QueuePage() {
                   <div className="w-12 h-12 rounded-full flex items-center justify-center mx-auto mb-3 bg-surface-container">
                     <Search className="w-6 h-6 text-primary" />
                   </div>
-                  <p className="text-sm font-medium text-on-surface">Search for a customer</p>
-                  <p className="text-xs mt-1 text-outline">Enter license plate to find booking</p>
+                  <p className="text-sm font-medium text-on-surface">
+                    Search for a customer
+                  </p>
+                  <p className="text-xs mt-1 text-outline">
+                    Enter license plate to find booking
+                  </p>
                 </div>
               )}
 
               {isSearched && searchResult?.type === "not-found" && (
                 <div className="py-4">
                   <div className="rounded-xl p-4 mb-4 bg-error-container border border-error">
-                    <p className="text-sm font-semibold text-on-error-container">No booking found</p>
-                    <p className="text-xs mt-1 text-on-error-container">No booking found for "{searchPlate}" today.</p>
+                    <p className="text-sm font-semibold text-on-error-container">
+                      No booking found
+                    </p>
+                    <p className="text-xs mt-1 text-on-error-container">
+                      No booking found for "{searchPlate}" today.
+                    </p>
                   </div>
-                  <button onClick={() => { closeCheckinModal(); navigate("/staff/walk-in"); }} className="w-full py-3 rounded-xl text-sm font-semibold bg-primary text-on-primary">+ Create Walk-in</button>
+                  <button
+                    onClick={() => {
+                      closeCheckinModal();
+                      navigate("/staff/walk-in");
+                    }}
+                    className="w-full py-3 rounded-xl text-sm font-semibold bg-primary text-on-primary"
+                  >
+                    + Create Walk-in
+                  </button>
                 </div>
               )}
 
@@ -549,23 +701,38 @@ export default function QueuePage() {
                 <div className="py-2">
                   {scanResult?.vehiclePenalized && (
                     <div className="rounded-xl px-4 py-3 mb-3 bg-error-container border border-error">
-                      <p className="text-xs font-semibold text-on-error-container">Xe bị hạn chế</p>
-                      <p className="text-xs text-on-error-container mt-0.5">Xe này có vi phạm. Cần thu cọc phạt 20,000đ trước khi check-in.</p>
+                      <p className="text-xs font-semibold text-on-error-container">
+                        Xe bị hạn chế
+                      </p>
+                      <p className="text-xs text-on-error-container mt-0.5">
+                        Xe này có vi phạm. Cần thu cọc phạt 20,000đ trước khi
+                        check-in.
+                      </p>
                     </div>
                   )}
                   <div className="rounded-xl p-3 mb-3 bg-surface-container-low">
-                    <p className="font-bold text-sm text-on-surface">{searchResult.customerName}</p>
+                    <p className="font-bold text-sm text-on-surface">
+                      {searchResult.customerName}
+                    </p>
                     {scanResult && (
                       <p className="text-xs text-outline mt-0.5">
-                        {scanResult.serviceName && <span className="text-primary font-medium">{scanResult.serviceName} • </span>}
-                        Slot: {scanResult.slotStartTime} - {scanResult.slotEndTime}
-                        {scanResult.totalAmount != null && scanResult.totalAmount > 0 && (
-                          <span> • {formatVND(scanResult.totalAmount!)}</span>
+                        {scanResult.serviceName && (
+                          <span className="text-primary font-medium">
+                            {scanResult.serviceName} •{" "}
+                          </span>
                         )}
+                        Slot: {scanResult.slotStartTime} -{" "}
+                        {scanResult.slotEndTime}
+                        {scanResult.totalAmount != null &&
+                          scanResult.totalAmount > 0 && (
+                            <span> • {formatVND(scanResult.totalAmount!)}</span>
+                          )}
                       </p>
                     )}
                   </div>
-                  <p className="text-xs font-semibold uppercase mb-2 text-outline">Select Booking</p>
+                  <p className="text-xs font-semibold uppercase mb-2 text-outline">
+                    Select Booking
+                  </p>
                   <div className="flex flex-col gap-2 max-h-64 overflow-y-auto mb-4">
                     {searchResult.bookings?.map((b) => (
                       <div
@@ -575,15 +742,23 @@ export default function QueuePage() {
                       >
                         <div className="flex items-center justify-between">
                           <div>
-                            <p className="text-sm font-semibold text-on-surface">{b.licensePlate}</p>
-                            <p className="text-xs font-medium mt-1 text-primary">{b.scheduledTime}</p>
+                            <p className="text-sm font-semibold text-on-surface">
+                              {b.licensePlate}
+                            </p>
+                            <p className="text-xs font-medium mt-1 text-primary">
+                              {b.scheduledTime}
+                            </p>
                           </div>
-                          <p className="text-sm font-bold text-on-surface">#{b.id}</p>
+                          <p className="text-sm font-bold text-on-surface">
+                            #{b.id}
+                          </p>
                         </div>
                         {selectedBooking?.id === b.id && (
                           <div className="flex items-center gap-1 mt-2 text-primary">
                             <ChevronRight className="w-3 h-3" />
-                            <span className="text-xs font-medium">Selected</span>
+                            <span className="text-xs font-medium">
+                              Selected
+                            </span>
                           </div>
                         )}
                       </div>
@@ -639,45 +814,82 @@ export default function QueuePage() {
 
       {/* Cancel Modal */}
       {cancelVehicle && (
-        <div className="fixed inset-0 flex items-center justify-center z-50 bg-inverse-surface/50" onClick={() => setCancelVehicle(null)}>
-          <div className="rounded-2xl shadow-xl w-full max-w-md mx-4 p-6 bg-surface-container-lowest" onClick={(e) => e.stopPropagation()}>
+        <div
+          className="fixed inset-0 flex items-center justify-center z-50 bg-inverse-surface/50"
+          onClick={() => setCancelVehicle(null)}
+        >
+          <div
+            className="rounded-2xl shadow-xl w-full max-w-md mx-4 p-6 bg-surface-container-lowest"
+            onClick={(e) => e.stopPropagation()}
+          >
             <div className="flex items-center justify-between mb-4">
-              <h2 className="text-base font-bold font-heading text-on-surface">Cancel Booking</h2>
-              <button onClick={() => setCancelVehicle(null)} className="rounded-full p-1 hover:bg-surface-container transition">
+              <h2 className="text-base font-bold font-heading text-on-surface">
+                Cancel Booking
+              </h2>
+              <button
+                onClick={() => setCancelVehicle(null)}
+                className="rounded-full p-1 hover:bg-surface-container transition"
+              >
                 <X className="w-5 h-5 text-outline" />
               </button>
             </div>
             <div className="rounded-2xl p-5 mb-4 bg-surface-container-low border border-outline-variant">
               <div className="flex items-start justify-between gap-3">
                 <div>
-                  <p className="text-xl font-bold text-on-surface tracking-wide">{cancelVehicle.licensePlate}</p>
-                  <p className="text-sm text-on-surface mt-0.5">{cancelVehicle.model} • {cancelVehicle.color}</p>
-                  <p className="text-sm font-semibold text-primary mt-1">{cancelVehicle.service}</p>
-                  <p className="text-sm font-bold text-on-surface mt-1">{formatVND(cancelVehicle.totalAmount)}</p>
+                  <p className="text-xl font-bold text-on-surface tracking-wide">
+                    {cancelVehicle.licensePlate}
+                  </p>
+                  <p className="text-sm text-on-surface mt-0.5">
+                    {cancelVehicle.model} • {cancelVehicle.color}
+                  </p>
+                  <p className="text-sm font-semibold text-primary mt-1">
+                    {cancelVehicle.service}
+                  </p>
+                  <p className="text-sm font-bold text-on-surface mt-1">
+                    {formatVND(cancelVehicle.totalAmount)}
+                  </p>
                 </div>
-                <span className={`text-xs px-3 py-1 rounded-full font-semibold shrink-0 ${tierBadge[cancelVehicle.tier]}`}>
+                <span
+                  className={`text-xs px-3 py-1 rounded-full font-semibold shrink-0 ${tierBadge[cancelVehicle.tier]}`}
+                >
                   {cancelVehicle.tier}
                 </span>
               </div>
             </div>
             {cancelVehicle.tier === "Guest" ? (
               <div className="rounded-xl px-4 py-3 mb-4 bg-error-container border border-error">
-                <p className="text-xs font-semibold mb-0.5 text-on-error-container">Walk-in Cancellation</p>
-                <p className="text-xs text-on-error-container">1 violation point will be added to <strong>{cancelVehicle.licensePlate}</strong>.</p>
+                <p className="text-xs font-semibold mb-0.5 text-on-error-container">
+                  Walk-in Cancellation
+                </p>
+                <p className="text-xs text-on-error-container">
+                  1 violation point will be added to{" "}
+                  <strong>{cancelVehicle.licensePlate}</strong>.
+                </p>
               </div>
             ) : cancelVehicle.bookingType === "SUBSCRIPTION" ? (
               <div className="rounded-xl px-4 py-3 mb-4 bg-secondary-fixed border border-secondary">
-                <p className="text-xs font-semibold mb-0.5 text-on-secondary-fixed">Unlimited / Family Package</p>
-                <p className="text-xs text-on-secondary-fixed-variant">No deposit collected. 1 violation point added.</p>
+                <p className="text-xs font-semibold mb-0.5 text-on-secondary-fixed">
+                  Unlimited / Family Package
+                </p>
+                <p className="text-xs text-on-secondary-fixed-variant">
+                  No deposit collected. 1 violation point added.
+                </p>
               </div>
             ) : (
               <div className="rounded-xl px-4 py-3 mb-4 bg-error-container border border-error">
-                <p className="text-xs font-semibold mb-0.5 text-on-error-container">Single Package — Deposit Required</p>
-                <p className="text-xs text-on-error-container">100% of the deposit amount will be collected.</p>
+                <p className="text-xs font-semibold mb-0.5 text-on-error-container">
+                  Single Package — Deposit Required
+                </p>
+                <p className="text-xs text-on-error-container">
+                  100% of the deposit amount will be collected.
+                </p>
               </div>
             )}
             <div className="flex gap-3">
-              <button onClick={() => setCancelVehicle(null)} className="flex-1 py-2.5 rounded-xl text-sm font-semibold border border-outline-variant text-on-surface-variant bg-surface-container-lowest">
+              <button
+                onClick={() => setCancelVehicle(null)}
+                className="flex-1 py-2.5 rounded-xl text-sm font-semibold border border-outline-variant text-on-surface-variant bg-surface-container-lowest"
+              >
                 Keep Booking
               </button>
               <button
@@ -685,7 +897,7 @@ export default function QueuePage() {
                 disabled={isLoading}
                 className="flex-1 py-2.5 rounded-xl text-sm font-semibold bg-error text-on-error disabled:opacity-50"
               >
-                {isLoading ? "Đang xử lý..." : "Confirm Cancel"}
+                {isLoading ? "Processing..." : "Confirm Cancel"}
               </button>
             </div>
           </div>

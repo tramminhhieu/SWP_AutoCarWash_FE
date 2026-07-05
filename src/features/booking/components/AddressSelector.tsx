@@ -26,7 +26,7 @@ interface ListColumnProps {
   disabledMessage: string;
 }
 
-// Cột chọn dạng list có chevron, dùng nội bộ cho 2 cột PROVINCE/CITY và DISTRICT
+// Cột chọn dạng list có chevron, dùng nội bộ cho 2 cột PROVINCE/CITY và COMMUNE
 // (chi tiết triển khai riêng của AddressSelector, không export ra ngoài)
 const ListColumn = ({
   title,
@@ -181,7 +181,7 @@ const AddressSelector = () => {
       const data = await getCommunesByProvince(provinceId);
       setCommunes(data);
     } catch {
-      setCommuneError("Failed to load districts. Please try again.");
+      setCommuneError("Failed to load communes. Please try again.");
     } finally {
       setIsLoadingCommunes(false);
     }
@@ -230,19 +230,19 @@ const AddressSelector = () => {
         onSelect={handleSelectProvince}
         isLoading={isLoadingProvinces}
         isDisabled={false}
-        emptyMessage={provinceError ?? "Chưa có dữ liệu tỉnh/thành."}
+        emptyMessage={provinceError ?? "No province data available."}
         disabledMessage=""
       />
 
       <ListColumn
-        title="District"
+        title="Commune"
         items={communeItems}
         selectedId={selectedCommuneId}
         onSelect={handleSelectCommune}
         isLoading={isLoadingCommunes}
         isDisabled={selectedProvinceId === null}
-        emptyMessage={communeError ?? "Khu vực này chưa có quận/huyện."}
-        disabledMessage="Chọn tỉnh/thành phố để xem quận/huyện."
+        emptyMessage={communeError ?? "No communes available."}
+        disabledMessage="Select a province/city to view communes."
       />
 
       {/* Cột Station: dùng StationCard cho từng item */}
@@ -266,7 +266,7 @@ const AddressSelector = () => {
         <div className="flex-1 overflow-y-auto">
           {selectedCommuneId === null ? (
             <p className="px-5 py-6 text-body-md text-on-surface-variant">
-              Chọn quận/huyện để xem các trung tâm dịch vụ.
+              Select a commune to view service centers.
             </p>
           ) : isLoadingStations ? (
             <Loading rows={3} />

@@ -31,6 +31,7 @@ import type {
 } from "../types/booking";
 import { NO_VEHICLE_REGISTERED } from "../types/booking";
 import type { BookingSlot } from "../types/bookingSlot";
+import { getSubscriptionStyle } from "../../../constants/subscriptionStyles";
 
 // Format số tiền VND, vd 110000 -> "110,000 VND"
 const formatCurrency = (amount: number) =>
@@ -397,7 +398,7 @@ const BookingCreate = () => {
       <main className="bg-background min-h-screen">
         <div className="mx-auto max-w-container-max px-4 py-16 md:px-12 text-center">
           <p className="text-body-lg text-error">
-            {contextError ?? "Không tìm thấy thông tin đặt lịch."}
+            {contextError ?? "Booking information not found."}
           </p>
           {isNoVehicleError && (
             <button
@@ -863,11 +864,17 @@ const VehicleOption = ({
         <p className="text-body-lg font-semibold text-on-surface">
           {vehicle.brandName}
         </p>
-        {subscriptionType && (
-          <span className="rounded-full bg-tertiary-fixed/20 px-2 py-0.5 text-label-sm font-semibold text-tertiary-fixed-dim">
-            {subscriptionType}
-          </span>
-        )}
+        {subscriptionType &&
+          (() => {
+            const style = getSubscriptionStyle(subscriptionType);
+            return (
+              <span
+                className={`rounded-full border px-2 py-0.5 text-label-sm font-semibold ${style.badge} ${style.border}`}
+              >
+                {subscriptionType}
+              </span>
+            );
+          })()}
       </div>
       <p className="text-body-md text-on-surface-variant">
         {vehicle.licensePlate}

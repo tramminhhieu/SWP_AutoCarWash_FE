@@ -1,57 +1,33 @@
 /*
  * @author: Bảo Ngọc
- * @version 5.0 — bám response phẳng mới của endpoint checkout (envelope { success, message, data })
- * - Hóa đơn theo form Order Summary của BookingCreate
- * - Dịch vụ = servicePrice + addons[]; không lặp lại service selection
- * - Đổi điểm tính hết ở FE: discount = điểm × 10, trần = loyaltyPoint, điểm nhận = total/1000 × hệ số hạng
- * - Confirm gửi POST /api/payments/cash kèm usedLoyaltyPoints
+ * @version 4.0 — khớp API GET /api/bookings/{id} mới (loyaltyPoint, customerTier...)
+ * - Thêm block đổi điểm thưởng phía trên Subtotal (staff nhập, 0 < điểm < điểm hiện có)
+ * - Thêm dòng Points Earned + Deposit Paid dưới Total Due trong Invoice Summary
+ * - Voucher chỉ hiện với booking web (ẩn khi WALK_IN), staff không sửa được
+ * - Tách toàn bộ API sang services/paymentApi.ts (fetch detail + processCashPayment)
  */
 import { useNavigate, useParams, useLocation } from "react-router-dom";
 import { useEffect, useState } from "react";
-import {
-  ArrowLeft,
-  Car,
-  User,
-  Wrench,
-  Receipt,
-  Calendar,
-  Coins,
-  MapPin,
-} from "lucide-react";
+import { ArrowLeft, Car, User, Wrench } from "lucide-react";
 import { formatCurrency as formatVND } from "../../../utils/format";
-import { getPaymentCheckout, processCashPayment } from "../api/paymentApi";
-import type { PaymentCheckoutResponse } from "../types/payment";
+import { getPaymentBookingDetail, processCashPayment } from "../api/paymentApi";
+import {
+  calcEarnedPoints,
+  POINT_TO_VND,
+  type PaymentBookingDetail,
+} from "../types/payment";
 
-// Quy đổi điểm: 1 điểm = 10 VND khi dùng để giảm giá
-const POINT_VALUE_VND = 10;
-
-// Hệ số nhân điểm thưởng theo hạng (khớp customer_tier.point_multiple trong DB.txt)
-// điểm nhận = total cuối / 1.000 × hệ số hạng
-const TIER_POINT_MULTIPLIER: Record<string, number> = {
-  MEMBER: 1,
-  SILVER: 1.2,
-  GOLD: 1.5,
-  PLATINUM: 2,
-  WALK_IN: 1, // khách vãng lai tính theo hệ số cơ bản
-};
-
-// "2026-07-05" + "21:00:00"/"21:15:00" -> "05 Jul 2026 • 21:00 - 21:15"
 function formatSchedule(date: string, start: string, end: string) {
   if (!date) return "";
-  const d = new Date(date).toLocaleDateString("en-GB", {
+  const d = new Date(date);
+  const dateStr = d.toLocaleDateString("en-GB", {
     day: "2-digit",
     month: "short",
     year: "numeric",
   });
-  const hm = (t?: string) => (t ? t.slice(0, 5) : "");
-  if (start && end) return `${d} • ${hm(start)} - ${hm(end)}`;
-  if (start) return `${d} • ${hm(start)}`;
-  return d;
+  if (!start || !end) return dateStr;
+  return `${dateStr}, ${start} - ${end}`;
 }
-
-// Viết hoa chữ đầu (GOLD -> Gold, WALK_IN -> Walk-in)
-const formatTier = (tier: string) =>
-  tier === "WALK_IN" ? "Walk-in" : tier.charAt(0) + tier.slice(1).toLowerCase();
 
 export default function PaymentPage() {
   const navigate = useNavigate();
@@ -60,9 +36,7 @@ export default function PaymentPage() {
   const state = (location.state as { bookingId?: number } | null) ?? null;
   const bookingId = Number(bookingIdParam ?? state?.bookingId);
 
-  const [checkout, setCheckout] = useState<PaymentCheckoutResponse | null>(
-    null,
-  );
+  const [detail, setDetail] = useState<PaymentBookingDetail | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [loadError, setLoadError] = useState(
     bookingId ? "" : "Failed to find booking.",
@@ -71,28 +45,84 @@ export default function PaymentPage() {
 
   const [paymentMethod, setPaymentMethod] = useState<"cash" | "card">("cash");
   const [received, setReceived] = useState(0);
-  const [usedPoints, setUsedPoints] = useState(0); // điểm staff nhập để đổi
+  const [redeemInput, setRedeemInput] = useState(""); // điểm staff nhập để đổi thưởng
   const [payError, setPayError] = useState("");
   const [paySuccess, setPaySuccess] = useState(false);
 
   useEffect(() => {
-    if (!bookingId) return;
+    if (!bookingId) return; // ← chỉ return sớm, không setState
     const load = async () => {
       try {
-        const data = await getPaymentCheckout(bookingId);
-        setCheckout(data);
-        // Khởi tạo ô điểm theo số điểm BE đã áp trước đó (nếu có), quy ngược từ tiền giảm
-        setUsedPoints(
-          Math.round((data.pointDiscountAmount ?? 0) / POINT_VALUE_VND),
-        );
+        const data = await getPaymentBookingDetail(bookingId);
+        setDetail(data);
       } catch {
-        setLoadError("Failed to load checkout details.");
+        setLoadError("Failed to load booking details.");
       } finally {
         setIsLoading(false);
       }
     };
     load();
   }, [bookingId]);
+
+  const addOns = detail?.addons ?? [];
+  const baseAmount = detail?.servicePrice ?? 0;
+  const addOnTotal = detail?.addonTotal ?? 0;
+  const subtotal = baseAmount + addOnTotal;
+  const voucherDiscount = detail?.voucherDiscountAmount ?? 0;
+  const pointDiscount = detail?.pointDiscountAmount ?? 0; // điểm đã đổi sẵn (nếu có)
+
+  // ── Đổi điểm thưởng tại quầy ──────────────────────────────────────────────
+  const currentPoints = detail?.loyaltyPoint ?? 0;
+  // Điểm hợp lệ khi: 0 < điểm nhập < điểm hiện có của khách
+  const redeemPoints = Math.floor(Number(redeemInput)) || 0;
+  const isRedeemInvalid =
+    redeemInput.trim() !== "" &&
+    (redeemPoints <= 0 || redeemPoints >= currentPoints);
+  const redeemDiscount = isRedeemInvalid ? 0 : redeemPoints * POINT_TO_VND;
+
+  // ── Điểm tích được sau đơn (trên subtotal, trước giảm giá) ─────────────────
+  const earnedPoints = calcEarnedPoints(subtotal, detail?.customerTier ?? null);
+
+  const tierLabel = detail?.customerTier
+    ? detail.customerTier.charAt(0) + detail.customerTier.slice(1).toLowerCase()
+    : "Walk-in";
+  const bookingTypeLabel =
+    detail?.bookingType === "WALK_IN"
+      ? "Walk-in"
+      : detail?.bookingType === "SUBSCRIPTION"
+        ? "Subscription"
+        : detail?.bookingType === "ADVANCE"
+          ? "Advance"
+          : null;
+
+  // Tổng trước khi trừ điểm staff đổi (ưu tiên số BE trả, fallback tự tính)
+  const baseTotal =
+    detail?.remainingAmount ??
+    Math.max(subtotal - voucherDiscount - pointDiscount, 0);
+  const total = Math.max(baseTotal - redeemDiscount, 0);
+  const change = received - total;
+  const isInsufficient = received > 0 && received < total;
+  const canConfirm =
+    !isRedeemInvalid && (total === 0 || (received >= total && total > 0));
+
+  const handleConfirm = async () => {
+    if (!canConfirm || !bookingId) return;
+    setPayError("");
+    setIsPaying(true);
+    try {
+      await processCashPayment({
+        bookingId,
+        receivedAmount: received,
+        // chỉ gửi điểm khi staff nhập hợp lệ và > 0
+        redeemPoints: redeemDiscount > 0 ? redeemPoints : undefined,
+      });
+      setPaySuccess(true);
+    } catch {
+      setPayError("Payment failed. Please try again.");
+    } finally {
+      setIsPaying(false);
+    }
+  };
 
   if (isLoading) {
     return (
@@ -102,7 +132,7 @@ export default function PaymentPage() {
     );
   }
 
-  if (loadError || !checkout) {
+  if (loadError || !detail) {
     return (
       <div className="min-h-screen flex flex-col items-center justify-center gap-3 bg-background">
         <p className="text-sm text-error">
@@ -117,68 +147,6 @@ export default function PaymentPage() {
       </div>
     );
   }
-
-  // ── Dữ liệu từ checkout ────────────────────────────────────────────────────
-  const c = checkout;
-  const isWalkIn = c.customerTier === "WALK_IN";
-  const tierLabel = formatTier(c.customerTier);
-  const multiplier = TIER_POINT_MULTIPLIER[c.customerTier] ?? 1;
-
-  // Voucher chỉ áp cho booking web; khách vãng lai không dùng voucher. Chỉ hiển thị, staff không sửa.
-  const showVoucher =
-    !isWalkIn && !!c.voucherCode && c.voucherDiscountAmount > 0;
-
-  const subtotal = c.servicePrice + c.addonTotal;
-  const depositDeducted = c.isDepositPaid ? c.depositAmount : 0;
-
-  // Số tiền phải trả TRƯỚC khi đổi điểm ở FE = remainingAmount cộng lại phần điểm BE đã áp
-  const amountBeforePoints = Math.max(
-    c.remainingAmount + c.pointDiscountAmount,
-    0,
-  );
-
-  // Trần điểm được dùng: không quá điểm đang có và không vượt số tiền phải trả
-  const maxRedeemable = Math.min(
-    c.loyaltyPoint,
-    Math.floor(amountBeforePoints / POINT_VALUE_VND),
-  );
-
-  // Giảm giá do đổi điểm — tính ngay ở FE (1 điểm = 10 VND)
-  const loyaltyDiscount = usedPoints * POINT_VALUE_VND;
-
-  // Tổng cuối sau khi trừ điểm (không âm)
-  const totalDue = Math.max(amountBeforePoints - loyaltyDiscount, 0);
-
-  // Điểm nhận sau thanh toán = (total cuối / 1.000) × hệ số hạng, làm tròn xuống
-  const earnedPoints = Math.floor((totalDue / 1000) * multiplier);
-
-  const change = received - totalDue;
-  const isInsufficient = received > 0 && received < totalDue;
-  const canConfirm = totalDue === 0 || received >= totalDue;
-
-  // Nhập điểm đổi: chặn số âm và không vượt trần được dùng
-  const handlePointsChange = (raw: string) => {
-    const n = Math.max(0, Math.floor(Number(raw) || 0));
-    setUsedPoints(Math.min(n, maxRedeemable));
-  };
-
-  const handleConfirm = async () => {
-    if (!canConfirm || !bookingId) return;
-    setPayError("");
-    setIsPaying(true);
-    try {
-      await processCashPayment({
-        bookingId,
-        usedLoyaltyPoints: usedPoints,
-        receivedAmount: received,
-      });
-      setPaySuccess(true);
-    } catch {
-      setPayError("Payment failed. Please try again.");
-    } finally {
-      setIsPaying(false);
-    }
-  };
 
   return (
     <div className="min-h-screen bg-background">
@@ -195,7 +163,7 @@ export default function PaymentPage() {
             Checkout & Payment
           </h1>
           <p className="text-sm text-on-surface-variant mt-0.5">
-            Booking #{c.bookingId}
+            Booking #{bookingId}
           </p>
         </div>
       </div>
@@ -206,7 +174,7 @@ export default function PaymentPage() {
             <button
               onClick={() =>
                 navigate("/staff/queue", {
-                  state: { paidBookingId: c.bookingId },
+                  state: { paidBookingId: bookingId },
                 })
               }
               className="absolute top-3 right-3 rounded-full p-1.5 hover:bg-surface-container transition text-outline"
@@ -245,13 +213,13 @@ export default function PaymentPage() {
                 Payment Successful
               </h2>
               <p className="text-sm text-on-surface-variant">
-                Booking #{c.bookingId} has been completed.
+                Booking #{bookingId} has been completed.
               </p>
             </div>
             <button
               onClick={() =>
                 navigate("/staff/queue", {
-                  state: { paidBookingId: c.bookingId },
+                  state: { paidBookingId: bookingId },
                 })
               }
               className="w-full py-3 rounded-xl text-sm font-semibold bg-primary text-on-primary transition"
@@ -263,230 +231,205 @@ export default function PaymentPage() {
       )}
 
       <div className="grid grid-cols-3 gap-5">
-        {/* ===== CỘT TRÁI: thông tin xe & khách ===== */}
+        {/* Left: booking info */}
         <div className="col-span-2 space-y-4">
-          {/* Vehicle */}
           <div className="rounded-2xl p-5 bg-surface-container-lowest border border-outline-variant/30">
             <div className="flex items-center gap-2 mb-3">
               <Car className="w-4 h-4 text-primary" />
               <p className="text-sm font-bold text-on-surface">Vehicle</p>
             </div>
             <p className="text-lg font-bold text-on-surface tracking-wide">
-              {c.licensePlate}
+              {detail.licensePlate}
             </p>
             <p className="text-sm text-on-surface-variant">
-              {c.brandName} • {c.color}
+              {detail.brandName} • {detail.color}
             </p>
           </div>
 
-          {/* Customer */}
           <div className="rounded-2xl p-5 bg-surface-container-lowest border border-outline-variant/30">
             <div className="flex items-center gap-2 mb-3">
               <User className="w-4 h-4 text-primary" />
               <p className="text-sm font-bold text-on-surface">Customer</p>
             </div>
-            <div className="flex items-center justify-between">
+            <div className="flex items-center justify-between mb-2">
               <p className="text-base font-bold text-on-surface">
-                {c.customerName}
+                {detail.customerName ?? "—"}
               </p>
-              <span className="text-xs px-2 py-0.5 rounded-full font-medium bg-primary-fixed/20 text-primary">
-                {tierLabel}
-              </span>
+              {bookingTypeLabel && (
+                <span className="text-xs px-2 py-0.5 rounded-full font-medium bg-primary-fixed/20 text-primary">
+                  {bookingTypeLabel}
+                </span>
+              )}
+            </div>
+            <div className="flex items-center justify-between">
+              <div>
+                <p
+                  className="text-xs uppercase mb-1"
+                  style={{ color: "#747686" }}
+                >
+                  Membership Tier
+                </p>
+                <p className="text-sm" style={{ color: "#747686" }}>
+                  {tierLabel}
+                </p>
+              </div>
+              {/* Voucher chỉ hiện với booking web; walk-in không dùng voucher. Staff không sửa được (chỉ hiển thị) */}
+              {detail.bookingType !== "WALK_IN" && detail.voucherCode && (
+                <span className="text-xs px-2 py-0.5 rounded-full font-medium bg-secondary-fixed text-on-secondary-fixed">
+                  Voucher: {detail.voucherCode}
+                </span>
+              )}
+            </div>
+          </div>
+
+          <div className="rounded-2xl p-5 bg-surface-container-lowest border border-outline-variant/30">
+            <div className="flex items-center gap-2 mb-3">
+              <Wrench className="w-4 h-4 text-primary" />
+              <p className="text-sm font-bold text-on-surface">
+                Service Details
+              </p>
+            </div>
+            <div className="space-y-2">
+              <div className="flex justify-between text-sm">
+                <span className="text-on-surface-variant">
+                  {detail.serviceName}
+                </span>
+                <span className="text-on-surface font-medium">
+                  {formatVND(baseAmount)}
+                </span>
+              </div>
+              {addOns.map((addon, idx) => (
+                <div key={idx} className="flex justify-between text-sm">
+                  <span className="text-on-surface-variant">
+                    + {addon.addonName}
+                  </span>
+                  <span className="text-on-surface font-medium">
+                    {formatVND(addon.addonPrice)}
+                  </span>
+                </div>
+              ))}
+              <div className="pt-2 mt-2 border-t border-outline-variant text-xs text-on-surface-variant space-y-1">
+                {detail.serviceCategoryName && (
+                  <p>Package: {detail.serviceCategoryName}</p>
+                )}
+                <p>
+                  Station: {detail.stationName} — {detail.stationAddress}
+                </p>
+                <p>
+                  📅{" "}
+                  {formatSchedule(
+                    detail.appointmentDate,
+                    detail.startTime ?? "",
+                    detail.endTime ?? "",
+                  )}
+                </p>
+              </div>
             </div>
           </div>
         </div>
 
-        {/* ===== CỘT PHẢI: hóa đơn + thanh toán ===== */}
+        {/* Right: payment panel */}
         <div className="space-y-4">
-          {/* Hóa đơn — form Order Summary của BookingCreate */}
-          <aside className="h-fit rounded-2xl border border-outline-variant bg-surface-container-lowest p-6 shadow-[0_10px_25px_-5px_rgba(29,78,216,0.05)]">
-            <div className="flex items-center gap-2 pb-5">
-              <Receipt size={18} className="text-primary" />
-              <h2 className="text-headline-md text-on-surface">Invoice</h2>
-            </div>
-
-            {/* Dịch vụ chính */}
-            <div className="flex items-start justify-between gap-2 pb-1">
-              <div>
-                <p className="text-body-md font-medium text-on-surface">
-                  {c.serviceName}
-                </p>
-                <p className="text-body-sm text-on-surface-variant">
-                  {c.serviceCategoryName}
-                </p>
-              </div>
-              <span className="shrink-0 text-body-md font-medium text-on-surface">
-                {formatVND(c.servicePrice)}
-              </span>
-            </div>
-
-            {/* Gói subscription (nếu booking thuộc gói) */}
-            {c.subscriptionPlanName && (
-              <p className="mb-2 text-body-sm text-primary">
-                Thuộc gói: {c.subscriptionPlanName}
-              </p>
-            )}
-
-            {/* Add-on đã đặt */}
-            {c.addons.map((a, i) => (
-              <div
-                key={a.addonServiceId ?? i}
-                className="flex items-start justify-between gap-2 pb-1 pt-2"
-              >
-                <p className="text-body-sm text-on-surface-variant">
-                  + {a.name}
-                </p>
-                <span className="shrink-0 text-body-sm text-on-surface-variant">
-                  {formatVND(a.price)}
-                </span>
-              </div>
-            ))}
-
-            {/* Kỹ thuật viên phục vụ + chi nhánh + lịch hẹn */}
-            <div className="mt-3 space-y-2">
-              <div className="flex items-center gap-2 text-body-sm text-on-surface-variant">
-                <Wrench size={14} className="shrink-0 text-primary" />
-                <span>
-                  Technician:{" "}
-                  <span className="font-medium text-on-surface">
-                    {c.technicianName ?? "Chưa phân công"}
-                  </span>
-                </span>
-              </div>
-              <div className="flex items-center gap-2 text-body-sm text-on-surface-variant">
-                <MapPin size={14} className="shrink-0 text-primary" />
-                <span>{c.stationName}</span>
-              </div>
-              <div className="flex items-center gap-2 rounded-lg bg-surface-container-low px-3 py-2.5 text-body-md text-on-surface">
-                <Calendar size={16} className="text-on-surface-variant" />
-                <span>
-                  {formatSchedule(c.appointmentDate, c.startTime, c.endTime)}
-                </span>
-              </div>
-            </div>
-
-            <div className="my-5 border-t border-outline-variant" />
-
-            {/* Subtotal */}
-            <div className="flex items-center justify-between pb-2">
-              <span className="text-body-md text-on-surface-variant">
-                Subtotal
-              </span>
-              <span className="text-body-md text-on-surface">
-                {formatVND(subtotal)}
-              </span>
-            </div>
-
-            {/* Đặt cọc đã thanh toán (nếu có) */}
-            {depositDeducted > 0 && (
-              <div className="flex items-center justify-between pb-2">
-                <span className="text-body-md text-on-surface-variant">
-                  Deposit Paid
-                </span>
-                <span className="text-body-md text-tertiary">
-                  -{formatVND(depositDeducted)}
-                </span>
-              </div>
-            )}
-
-            {/* Giảm giá khác (nếu có) */}
-            {c.discountAmount > 0 && (
-              <div className="flex items-center justify-between pb-2">
-                <span className="text-body-md text-on-surface-variant">
-                  Discount
-                </span>
-                <span className="text-body-md text-tertiary">
-                  -{formatVND(c.discountAmount)}
-                </span>
-              </div>
-            )}
-
-            {/* Voucher — chỉ hiển thị, staff không chỉnh sửa */}
-            {showVoucher && (
-              <div className="flex items-center justify-between pb-2">
-                <span className="text-body-md text-on-surface-variant">
-                  Voucher ({c.voucherCode}
-                  {c.voucherDiscountPercent
-                    ? ` • ${c.voucherDiscountPercent}%`
-                    : ""}
-                  )
-                </span>
-                <span className="text-body-md text-tertiary">
-                  -{formatVND(c.voucherDiscountAmount)}
-                </span>
-              </div>
-            )}
-
-            {/* Giảm giá do đổi điểm (theo ô nhập bên dưới) */}
-            {loyaltyDiscount > 0 && (
-              <div className="flex items-center justify-between pb-2">
-                <span className="text-body-md text-on-surface-variant">
-                  Points Discount ({usedPoints} pts)
-                </span>
-                <span className="text-body-md text-tertiary">
-                  -{formatVND(loyaltyDiscount)}
-                </span>
-              </div>
-            )}
-
-            <div className="mt-3 mb-4 border-t border-outline-variant" />
-
-            {/* Total Due */}
-            <div className="flex items-center justify-between">
-              <span className="text-body-lg font-semibold text-on-surface">
-                Total Due
-              </span>
-              <span className="text-headline-md text-primary">
-                {formatVND(totalDue)}
-              </span>
-            </div>
-
-            {/* Điểm nhận sau thanh toán — ngay dưới Total Due */}
-            <p className="mt-1 text-label-md font-semibold text-tertiary">
-              Earns {earnedPoints} points after payment
+          <div className="rounded-2xl p-5 bg-surface-container-lowest border border-outline-variant/30">
+            <p className="text-sm font-bold text-on-surface mb-3">
+              Invoice Summary
             </p>
 
-            <div className="my-5 border-t border-outline-variant" />
-
-            {/* Đổi điểm loyalty: tổng điểm hiện có + ô nhập điểm để đổi */}
-            <div className="rounded-xl bg-surface-container-low p-4">
-              <div className="flex items-center gap-2 mb-3">
-                <Coins size={16} className="text-primary" />
-                <p className="text-body-md font-semibold text-on-surface">
+            {/* Đổi điểm thưởng — đặt PHÍA TRÊN Subtotal theo yêu cầu */}
+            <div className="mb-3 rounded-xl p-3 bg-surface-container-low border border-outline-variant/30">
+              <div className="flex items-center justify-between mb-2">
+                <span className="text-xs font-semibold uppercase text-outline">
                   Loyalty Points
-                </p>
-              </div>
-              <div className="flex items-center justify-between pb-3">
-                <span className="text-body-md text-on-surface-variant">
-                  Available
                 </span>
-                <span className="text-body-md font-semibold text-on-surface">
-                  {c.loyaltyPoint} pts{" "}
-                  <span className="font-normal text-on-surface-variant">
-                    ({formatVND(c.loyaltyPoint * POINT_VALUE_VND)})
-                  </span>
+                <span className="text-sm font-semibold text-on-surface">
+                  {currentPoints.toLocaleString("en-US")} pts
                 </span>
               </div>
-              <label className="text-xs font-semibold uppercase text-outline block mb-1">
-                Redeem Points
-              </label>
               <input
                 type="number"
-                min={0}
-                max={maxRedeemable}
-                value={usedPoints || ""}
-                onChange={(e) => handlePointsChange(e.target.value)}
-                placeholder="0"
-                className="w-full rounded-lg px-3 py-2.5 text-sm border border-outline-variant outline-none focus:border-primary bg-surface-container-lowest text-on-surface"
+                value={redeemInput}
+                onChange={(e) => setRedeemInput(e.target.value)}
+                placeholder="Points to redeem"
+                min={1}
+                max={currentPoints > 0 ? currentPoints - 1 : 0}
+                disabled={currentPoints <= 0}
+                className="w-full rounded-lg px-3 py-2 text-sm border border-outline-variant outline-none focus:border-primary bg-surface-container-lowest text-on-surface disabled:opacity-50 disabled:cursor-not-allowed"
               />
-              <p className="mt-1.5 text-label-sm text-on-surface-variant">
-                1 point = {formatVND(POINT_VALUE_VND)} • Max {maxRedeemable} pts
-                → -{formatVND(loyaltyDiscount)}
-              </p>
+              {isRedeemInvalid ? (
+                <p className="text-xs text-error mt-1">
+                  Points must be greater than 0 and less than {currentPoints}.
+                </p>
+              ) : redeemDiscount > 0 ? (
+                <p className="text-xs text-green-600 mt-1">
+                  Redeeming {redeemPoints} pts = -{formatVND(redeemDiscount)}
+                </p>
+              ) : (
+                <p className="text-xs text-on-surface-variant mt-1">
+                  1 point = {formatVND(POINT_TO_VND)}
+                </p>
+              )}
             </div>
-          </aside>
 
-          {/* Phương thức thanh toán */}
+            <div className="space-y-2 text-sm">
+              <div className="flex justify-between">
+                <span className="text-on-surface-variant">Subtotal</span>
+                <span className="text-on-surface">{formatVND(subtotal)}</span>
+              </div>
+              {voucherDiscount > 0 && (
+                <div className="flex justify-between">
+                  <span className="text-on-surface-variant">
+                    Voucher Discount
+                  </span>
+                  <span className="text-green-600">
+                    - {formatVND(voucherDiscount)}
+                  </span>
+                </div>
+              )}
+              {pointDiscount > 0 && (
+                <div className="flex justify-between">
+                  <span className="text-on-surface-variant">
+                    Point Discount
+                  </span>
+                  <span className="text-green-600">
+                    - {formatVND(pointDiscount)}
+                  </span>
+                </div>
+              )}
+              {redeemDiscount > 0 && (
+                <div className="flex justify-between">
+                  <span className="text-on-surface-variant">
+                    Points Redeemed
+                  </span>
+                  <span className="text-green-600">
+                    - {formatVND(redeemDiscount)}
+                  </span>
+                </div>
+              )}
+              <div className="border-t border-outline-variant pt-2 flex justify-between font-bold">
+                <span className="text-on-surface">Total Due</span>
+                <span className="text-primary">{formatVND(total)}</span>
+              </div>
+
+              {/* Điểm tích được sau khi hoàn tất — dưới Total Due */}
+              <div className="flex justify-between">
+                <span className="text-on-surface-variant">Points Earned</span>
+                <span className="text-green-600 font-semibold">
+                  +{earnedPoints} pts
+                </span>
+              </div>
+
+              {/* Đã cọc trước (nếu có) */}
+              {detail.isDepositPaid && (
+                <div className="flex justify-between">
+                  <span className="text-on-surface-variant">Deposit Paid</span>
+                  <span className="text-on-surface">
+                    {formatVND(detail.depositAmount ?? 0)}
+                  </span>
+                </div>
+              )}
+            </div>
+          </div>
+
           <div className="rounded-2xl p-5 bg-surface-container-lowest border border-outline-variant/30">
             <p className="text-sm font-bold text-on-surface mb-3">
               Payment Method
@@ -523,8 +466,8 @@ export default function PaymentPage() {
                     Received amount is insufficient.
                   </p>
                 )}
-                {received >= totalDue && totalDue > 0 && (
-                  <p className="text-xs text-tertiary">
+                {received >= total && total > 0 && (
+                  <p className="text-xs text-green-600">
                     Change to return: {formatVND(change)}
                   </p>
                 )}

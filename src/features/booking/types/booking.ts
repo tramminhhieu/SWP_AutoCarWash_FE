@@ -19,6 +19,7 @@ export interface BookingServicePackage {
   name: string;
   basePrice: number;
   durationMinutes: number;
+  addonServiceIds: number[];
 }
 
 export interface BookingAddonService {

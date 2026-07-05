@@ -84,8 +84,8 @@ const SlotPicker = ({
         </div>
       ) : filteredSlots.length === 0 ? (
         <p className="py-6 text-center text-body-md text-on-surface-variant">
-          Không có khung giờ trống trong buổi này. Vui lòng đổi buổi hoặc đổi
-          ngày.
+          No available slots for this period. Please switch to a different time
+          or date.
         </p>
       ) : (
         <div className="grid grid-cols-4 gap-3">

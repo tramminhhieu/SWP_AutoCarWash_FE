@@ -8,6 +8,7 @@ import BookingCreate from "../features/booking/pages/BookingCreate";
 import BookingHistory from "../features/booking/pages/BookingHistory";
 import BookingDetail from "../features/booking/pages/BookingDetail";
 import VehicleAdd from "../features/customer/pages/VehicleAdd";
+import CustomerProfile from "../features/customer/pages/Profile";
 import PrivateRoute from "./PrivateRoute";
 import RoleRoute from "./RoleRoute";
 import ServicePackageList from "../features/servicepackage/pages/ServicePackageList";
@@ -16,6 +17,7 @@ import StaffLayout from "../layouts/StaffLayout";
 import QueuePage from "../features/queue/pages/QueuePage";
 import WalkInPage from "../features/queue/pages/WalkInPage";
 import PaymentPage from "../features/payment/pages/PaymentPage";
+import ChangePassword from "../features/customer/pages/ChangePassword";
 
 export default function AppRouter() {
   return (
@@ -40,6 +42,11 @@ export default function AppRouter() {
               element={<BookingDetail />}
             />
             <Route path="/vehicles/add" element={<VehicleAdd />} />
+            <Route path="/customer/profile" element={<CustomerProfile />} />
+            <Route
+              path="/customer/profile/change-password"
+              element={<ChangePassword />}
+            />
           </Route>
         </Route>
       </Route>
@@ -47,7 +54,10 @@ export default function AppRouter() {
       <Route element={<PrivateRoute />}>
         <Route element={<RoleRoute allowedRoles={["STAFF"]} />}>
           {/* Staff login về thẳng Queue, không qua dashboard placeholder nữa */}
-          <Route path="/staff" element={<Navigate to="/staff/queue" replace />} />
+          <Route
+            path="/staff"
+            element={<Navigate to="/staff/queue" replace />}
+          />
           {/* ported from feature/FE-queue-management (working-tree only) */}
           <Route element={<StaffLayout />}>
             <Route path="/staff/queue" element={<QueuePage />} />

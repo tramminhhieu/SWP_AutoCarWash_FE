@@ -85,7 +85,7 @@ const Login = () => {
       // AC-01.4: tài khoản Inactive - BE trả message riêng, hiện đúng message đó
       // AC-01.2 + AC-01.3: sai mật khẩu hoặc tài khoản không tồn tại - dùng CHUNG 1 message
       // để không tiết lộ tài khoản có tồn tại hay không, đúng yêu cầu AC-01.3
-      if (errorCode === "ACCOUNT_INACTIVE") {
+      if (errorCode === "AUTH_002") {
         setFormError(message ?? "Your account has been disabled.");
       } else {
         setFormError("Incorrect email/phone or password");

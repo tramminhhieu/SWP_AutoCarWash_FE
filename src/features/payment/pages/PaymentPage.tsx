@@ -12,6 +12,7 @@ import { ArrowLeft, Car, User, Wrench } from "lucide-react";
 import { formatCurrency as formatVND } from "../../../utils/format";
 import { getBookingDetail } from "../../booking/api/bookingApi";
 import type { BookingDetail } from "../../booking/types/booking";
+import { formatCheckInTime } from "../../booking/utils/bookingFormatters";
 import { processCashPayment } from "../services/paymentApi";
 import { useAuth } from "../../../hooks/useAuth";
 
@@ -274,6 +275,12 @@ export default function PaymentPage() {
                 <p>
                   Station: {detail.stationName} — {detail.stationAddress}
                 </p>
+                {detail.checkInAt && (
+                  <p>Checked in: {formatCheckInTime(detail.checkInAt)}</p>
+                )}
+                {detail.checkOutAt && (
+                  <p>Checked out: {formatCheckInTime(detail.checkOutAt)}</p>
+                )}
                 <p>
                   📅{" "}
                   {formatSchedule(

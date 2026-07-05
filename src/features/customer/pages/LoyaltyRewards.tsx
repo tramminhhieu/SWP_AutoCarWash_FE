@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import {
   Award,
   Check,
@@ -39,6 +39,7 @@ const TIER_ICONS: Record<string, typeof Shield> = {
 const PAGE_SIZE = 5;
 
 export default function LoyaltyRewards() {
+  const navigate = useNavigate();
   const [profile, setProfile] = useState<LoyaltyProfile | null>(null);
   const [tiers, setTiers] = useState<LoyaltyTier[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -587,9 +588,18 @@ export default function LoyaltyRewards() {
                     {paginatedActivity.map((row, i) => (
                       <tr
                         key={`${row.createdAt}-${i}`}
-                        className={
-                          i > 0 ? "border-t border-outline-variant" : undefined
+                        onClick={
+                          row.bookingId != null
+                            ? () => navigate(`/booking/history/${row.bookingId}`)
+                            : undefined
                         }
+                        className={`${
+                          i > 0 ? "border-t border-outline-variant" : ""
+                        } ${
+                          row.bookingId != null
+                            ? "cursor-pointer hover:bg-surface-container-low"
+                            : ""
+                        }`}
                       >
                         <td className="px-6 py-6 text-base text-on-surface">
                           {formatAppointmentDate(row.createdAt.slice(0, 10))}

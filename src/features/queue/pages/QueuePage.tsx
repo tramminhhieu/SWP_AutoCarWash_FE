@@ -25,6 +25,9 @@ import {
 } from "../services/queueApi";
 // ported onto dev: dev không có utils/currency.ts, dùng formatCurrency của dev thay formatVND
 import { formatCurrency as formatVND } from "../../../utils/format";
+import { getApiErrorInfo } from "../../../lib/axiosClient";
+import { QUEUE_MESSAGES } from "../../../constants/queueMessages";
+import Modal from "../../../components/ui/Modal";
 
 interface Vehicle {
   id: number;
@@ -145,6 +148,11 @@ export default function QueuePage() {
   const [isLoading, setIsLoading] = useState(false);
   const [totalLanes, setTotalLanes] = useState(0);
   const [assignCar, setAssignCar] = useState<Vehicle | null>(null);
+  const [notice, setNotice] = useState<{
+    variant: "success" | "danger";
+    message: string;
+    onDismiss?: () => void;
+  } | null>(null);
 
   // author: Ngọc — đổ board (GET /api/queue hoặc kết quả PATCH start/complete) vào
   // cả 3 cột (Active Lanes / Waiting Pool / Completed). BE trả về cùng 1 shape board
@@ -289,16 +297,26 @@ export default function QueuePage() {
       const result = await confirmCheckIn(scanResult.bookingId);
       if (result.requiresWalkIn) {
         closeCheckinModal();
-        navigate("/staff/walk-in", {
-          state: { oldBookingId: result.oldBookingId },
+        setNotice({
+          variant: "success",
+          message: result.message,
+          onDismiss: () =>
+            navigate("/staff/walk-in", {
+              state: { oldBookingId: result.oldBookingId },
+            }),
         });
         return;
       }
       closeCheckinModal();
       const board = await getQueueData();
       applyBoard(board);
-    } catch {
-      alert("Check-in thất bại, thử lại.");
+      setNotice({ variant: "success", message: result.message });
+    } catch (error) {
+      const { message } = getApiErrorInfo(error);
+      setNotice({
+        variant: "danger",
+        message: message ?? QUEUE_MESSAGES.CHECK_IN_FAILED,
+      });
     } finally {
       setIsLoading(false);
     }
@@ -325,7 +343,7 @@ export default function QueuePage() {
       const board = await startService(next.bookingId);
       applyBoard(board);
     } catch {
-      alert("Thêm xe vào làn thất bại, thử lại.");
+      setNotice({ variant: "danger", message: QUEUE_MESSAGES.ADD_TO_LANE_FAILED });
     } finally {
       setIsLoading(false);
     }
@@ -340,7 +358,7 @@ export default function QueuePage() {
       const board = await startService(assignCar.bookingId, laneDbId);
       applyBoard(board);
     } catch {
-      alert("Thêm xe vào làn thất bại, thử lại.");
+      setNotice({ variant: "danger", message: QUEUE_MESSAGES.ADD_TO_LANE_FAILED });
     } finally {
       setIsLoading(false);
     }
@@ -370,8 +388,13 @@ export default function QueuePage() {
       const board = await cancelGuestLeft(cancelVehicle.bookingId);
       applyBoard(board);
       setCancelVehicle(null);
-    } catch {
-      alert("Huỷ booking thất bại, thử lại.");
+      setNotice({ variant: "success", message: QUEUE_MESSAGES.CANCEL_SUCCESS });
+    } catch (error) {
+      const { message } = getApiErrorInfo(error);
+      setNotice({
+        variant: "danger",
+        message: message ?? QUEUE_MESSAGES.CANCEL_FAILED,
+      });
     } finally {
       setIsLoading(false);
     }
@@ -903,6 +926,19 @@ export default function QueuePage() {
           </div>
         </div>
       )}
+
+      <Modal
+        isOpen={!!notice}
+        onClose={() => {
+          const onDismiss = notice?.onDismiss;
+          setNotice(null);
+          onDismiss?.();
+        }}
+        variant={notice?.variant ?? "success"}
+        title={notice?.variant === "danger" ? "Error" : "Notice"}
+        message={notice?.message}
+        confirmText={notice?.variant === "danger" ? "OK" : undefined}
+      />
     </div>
   );
 }

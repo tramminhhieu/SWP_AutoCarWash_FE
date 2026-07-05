@@ -28,6 +28,7 @@ export interface LoyaltyTransaction {
   createdAt: string;
   servicePackageName: string;
   points: number;
+  bookingId: number | null;
 }
 
 export interface LoyaltyHistory {
@@ -44,4 +45,5 @@ export interface TierHistoryEntry {
   pointsAtTransition: number;
   changeType: "UPGRADE" | "DOWNGRADE" | "INITIAL";
   createdAt: string;
+  bookingId: number | null;
 }

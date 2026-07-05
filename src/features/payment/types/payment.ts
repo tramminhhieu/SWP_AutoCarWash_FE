@@ -1,88 +1,72 @@
 /* @author: BaoNgoc */
-// Types cho luồng checkout & thanh toán tiền mặt của feature payment
+import type { BookingDetail } from "../../booking/types/booking";
 
-// Hạng thành viên (khớp tier trong DB.txt)
-export type MembershipTier =
-  | "WALK_IN"
-  | "MEMBER"
-  | "SILVER"
-  | "GOLD"
-  | "PLATINUM";
+// ── Domain constants ─────────────────────────────────────────────────────────
 
-export type VoucherDiscountType = "PERCENTAGE" | "FIXED";
+/** Hạng thành viên (customer_tier.tier_name). */
+export type CustomerTier = "MEMBER" | "SILVER" | "GOLD" | "PLATINUM";
 
-// ── Checkout: GET /api/payment/checkout/{bookingId} ──────────────────────────
+/** Loại booking. */
+export type BookingType = "WALK_IN" | "ADVANCE" | "SUBSCRIPTION";
 
-export interface CheckoutVehicle {
-  licensePlate: string;
-  brandName: string;
-  color: string;
+/** Đổi điểm: 1 điểm = 10 VND khi trừ vào hóa đơn. */
+export const POINT_TO_VND = 10;
+
+/** 1.000 VND chi tiêu = 1 điểm (trước khi nhân hệ số hạng). */
+export const VND_PER_EARN_POINT = 1000;
+
+/**
+ * Hệ số nhân điểm theo hạng (customer_tier.point_multiple).
+ * API detail chỉ trả `customerTier` (tên hạng) chứ không trả số nhân,
+ * nên map cứng ở FE theo quy định nghiệp vụ.
+ */
+export const TIER_POINT_MULTIPLIER: Record<CustomerTier, number> = {
+  MEMBER: 1, // < 3tr chi tiêu
+  SILVER: 1.2, // >= 3tr
+  GOLD: 1.5, // >= 8tr
+  PLATINUM: 2, // >= 20tr
+};
+
+/**
+ * Điểm khách tích được sau đơn này.
+ * Tính trên subtotal (TRƯỚC mọi giảm giá): floor(subtotal / 1000) * hệ số hạng.
+ */
+export function calcEarnedPoints(
+  subtotal: number,
+  tier: CustomerTier | null,
+): number {
+  const basePoints = Math.floor(subtotal / VND_PER_EARN_POINT);
+  const multiplier = tier ? TIER_POINT_MULTIPLIER[tier] : 1;
+  return Math.floor(basePoints * multiplier);
 }
 
-export interface CheckoutCustomer {
-  userId: number;
-  fullName: string;
-  membershipTier: MembershipTier;
-}
+// ── Types ──────────────────────────────────────────────────────────────────
 
-export interface CheckoutServiceItem {
-  serviceId: number;
-  serviceName: string;
-  price: number;
-}
-
-export interface CheckoutServiceDetails {
-  // Đã bao gồm cả gói dịch vụ và add-on -> hóa đơn không cần chọn lại service
-  items: CheckoutServiceItem[];
-  technicianName: string;
-  stationName: string;
-  startTime: string;
-  endTime: string;
-}
-
-export interface CheckoutLoyaltyPoints {
-  availablePoints: number; // tổng điểm khách đang có
-  availablePointsValue: number; // quy ra tiền của số điểm đang có
-  pointsApplied: number; // điểm đã áp trước đó (nếu khách chọn khi đặt web)
-  pointsAppliedDiscount: number;
-  pointsEarnedAfterPayment: number;
-  maxApplicablePoints: number; // trần điểm được phép dùng cho hóa đơn này
-}
-
-export interface CheckoutVoucher {
-  voucherCode: string;
-  discountType: VoucherDiscountType;
-  discountValue: number;
+/**
+ * Booking detail dùng riêng cho màn thanh toán — mở rộng {@link BookingDetail}
+ * với các field mà API `GET /api/bookings/{id}` mới bổ sung (điểm hiện có, hạng
+ * khách, loại booking, thông tin gói subscription...).
+ */
+export interface PaymentBookingDetail extends BookingDetail {
+  customerName: string | null;
+  customerTier: CustomerTier | null;
+  bookingType: BookingType | null;
+  loyaltyPoint: number; // điểm hiện có của khách (loyalty_point_balance.total_points)
+  pointDiscountAmount: number; // tiền đã giảm bằng điểm sẵn có (nếu đơn web đã đổi trước)
   discountAmount: number;
-  isValid: boolean;
-  errorMessage: string | null;
+  serviceCategoryName: string | null;
+  subscriptionPlanName: string | null;
+  subscriptionPlanType: string | null;
+  subscriptionDurationDays: number | null;
+  checkInAt: string | null;
+  checkOutAt: string | null;
 }
-
-export interface CheckoutInvoiceSummary {
-  subtotal: number;
-  depositPaid: number;
-  loyaltyDiscount: number;
-  voucherDiscount: number;
-  totalDue: number;
-}
-
-export interface PaymentCheckoutResponse {
-  bookingId: number;
-  vehicle: CheckoutVehicle;
-  customer: CheckoutCustomer;
-  serviceDetails: CheckoutServiceDetails;
-  depositPaid: number;
-  loyaltyPoints: CheckoutLoyaltyPoints;
-  voucher: CheckoutVoucher | null;
-  invoiceSummary: CheckoutInvoiceSummary;
-}
-
-// ── Cash payment: POST /api/payments/cash ────────────────────────────────────
 
 export interface CashPaymentRequest {
   bookingId: number;
-  usedLoyaltyPoints: number; // số điểm staff đã đổi trên màn thanh toán
   receivedAmount: number;
+  /** Số điểm khách đổi tại quầy; BE tự tính point_discount = redeemPoints * 10. */
+  redeemPoints?: number;
 }
 
 export interface CashPaymentResponse {

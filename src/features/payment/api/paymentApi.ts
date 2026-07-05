@@ -1,28 +1,31 @@
 /* @author: BaoNgoc */
 import axiosClient from "../../../lib/axiosClient";
+import { API } from "../../../constants/apiEndpoints";
 import type { ApiSuccessResponse } from "../../../types/apiResponse";
 import type {
-  PaymentCheckoutResponse,
+  PaymentBookingDetail,
   CashPaymentRequest,
   CashPaymentResponse,
 } from "../types/payment";
 
-// Lấy dữ liệu hóa đơn để thanh toán (thông tin xe, khách, dịch vụ, điểm, voucher)
-export const getPaymentCheckout = async (
+// ── API calls ──────────────────────────────────────────────────────────────
+
+/** Lấy chi tiết booking phục vụ màn thanh toán (kèm điểm, hạng khách). */
+export const getPaymentBookingDetail = async (
   bookingId: number,
-): Promise<PaymentCheckoutResponse> => {
-  const res = await axiosClient.get<
-    ApiSuccessResponse<PaymentCheckoutResponse>
-  >(`/api/payment/checkout/${bookingId}`);
+): Promise<PaymentBookingDetail> => {
+  const res = await axiosClient.get<ApiSuccessResponse<PaymentBookingDetail>>(
+    API.BOOKINGS.DETAIL(bookingId),
+  );
   return res.data.data;
 };
 
-// Thanh toán tiền mặt: gửi kèm số điểm đã đổi (usedLoyaltyPoints)
+/** Thanh toán tiền mặt (kèm đổi điểm nếu có). */
 export const processCashPayment = async (
   data: CashPaymentRequest,
 ): Promise<CashPaymentResponse> => {
   const res = await axiosClient.post<ApiSuccessResponse<CashPaymentResponse>>(
-    "/api/payments/cash",
+    API.PAYMENTS.CASH,
     data,
   );
   return res.data.data;

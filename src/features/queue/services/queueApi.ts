@@ -44,6 +44,7 @@ export interface CheckInResultResponse {
   message: string;
   requiresWalkIn: boolean;
   oldBookingId: number | null;
+  checkInAt: string | null;
 }
 
 // ── API calls ──────────────────────────────────────────────────────────────

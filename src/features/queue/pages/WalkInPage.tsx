@@ -16,8 +16,9 @@ import {
 // ported onto dev: dev không có utils/currency.ts, dùng formatCurrency của dev thay formatVND
 import { formatCurrency as formatVND } from "../../../utils/format";
 import { getApiErrorInfo } from "../../../lib/axiosClient";
+import { getSubscriptionStyle } from "../../../constants/subscriptionStyles";
+import { useAuth } from "../../../hooks/useAuth";
 
-const STATION_ID = 1; // hardcode tạm — thay bằng AuthContext khi có stationId
 const SLOT_DURATION_MINUTES = 15; // 1 requiredSlot = 15 phút, theo comment BE WalkInFormDataResponse
 
 type CustomerType = "GUEST" | "MEMBER";
@@ -33,40 +34,20 @@ interface VehicleInfo {
   tierName?: string;
 }
 
-// Khối giờ được gộp từ N slot 15 phút liên tiếp, đúng bằng tổng thời gian service + addon đã chọn
+// Khối giờ đúng bằng tổng thời gian service + addon đã chọn — BE (calculate-invoice) đã tự
+// gộp các slot 15 phút liên tiếp thành từng khối rồi (sliding window theo capacity thực tế),
+// mỗi phần tử trong summary.availableSlots đã là 1 khối sẵn sàng chọn, kèm associatedSlotIds
+// là danh sách slotId đầy đủ cần gửi lên khi confirm. FE không tự gộp lại nữa.
 interface SlotWindow {
   slotIds: number[];
   startTime: string;
   endTime: string;
 }
 
-// Gộp các slot 15 phút liên tiếp (đã sort theo startTime) thành các khối đúng requiredSlotCount slot,
-// chỉ giữ khối có các slot liền kề nhau về thời gian (endTime của slot trước == startTime slot sau)
-const buildSlotWindows = (
-  slots: { slotId: number; startTime: string; endTime: string }[],
-  requiredSlotCount: number
-): SlotWindow[] => {
-  if (requiredSlotCount <= 0) return [];
-  const sorted = [...slots].sort((a, b) => a.startTime.localeCompare(b.startTime));
-  const windows: SlotWindow[] = [];
-  for (let i = 0; i <= sorted.length - requiredSlotCount; i++) {
-    const window = sorted.slice(i, i + requiredSlotCount);
-    const isContinuous = window.every(
-      (slot, idx) => idx === 0 || window[idx - 1].endTime === slot.startTime
-    );
-    if (isContinuous) {
-      windows.push({
-        slotIds: window.map((s) => s.slotId),
-        startTime: window[0].startTime,
-        endTime: window[window.length - 1].endTime,
-      });
-    }
-  }
-  return windows;
-};
-
 export default function WalkInPage() {
   const navigate = useNavigate();
+  const { user } = useAuth();
+  const stationId = user?.stationId;
   const [customerType, setCustomerType] = useState<CustomerType | null>(null);
   const [step, setStep] = useState<Step>("select-type");
 
@@ -114,7 +95,24 @@ export default function WalkInPage() {
       .finally(() => setIsLoadingOptions(false));
   }, []);
 
+  // vehicleInfo/service/schedule state dùng chung cho cả GUEST và MEMBER -> phải dọn sạch
+  // mỗi khi đổi loại khách hàng, nếu không giá trị của loại trước sẽ còn sót lại.
+  const resetBookingForm = () => {
+    setPhone("");
+    setPhoneResult(null);
+    setPhoneError("");
+    setVehicleInfo({ licensePlate: "", brandName: "", color: "" });
+    setSelectedSavedVehicle(null);
+    setSelectedServiceId(null);
+    setSelectedAddonIds([]);
+    setSummary(null);
+    setSelectedSlot(null);
+    setConfirmError(null);
+    setPeriod("AM");
+  };
+
   const handleSelectType = (type: CustomerType) => {
+    resetBookingForm();
     setCustomerType(type);
     setStep("booking-form");
   };
@@ -158,7 +156,7 @@ export default function WalkInPage() {
   const recalcInvoice = async (serviceId: number, addonIds: number[]) => {
     setSelectedSlot(null);
     setSummary(null);
-    if (!vehicleInfo.licensePlate.trim()) return;
+    if (!vehicleInfo.licensePlate.trim() || !stationId) return;
     setIsCalculating(true);
     try {
       const result = await calculateInvoice({
@@ -166,7 +164,7 @@ export default function WalkInPage() {
         licensePlate: vehicleInfo.licensePlate,
         servicePackageId: serviceId,
         addonIds,
-        stationId: STATION_ID,
+        stationId,
       });
       setSummary(result);
     } catch {
@@ -192,7 +190,7 @@ export default function WalkInPage() {
   };
 
   const handleConfirm = async () => {
-    if (!selectedServiceId || !selectedSlot) return;
+    if (!selectedServiceId || !selectedSlot || !stationId) return;
     setIsSubmitting(true);
     setConfirmError(null);
     try {
@@ -205,7 +203,7 @@ export default function WalkInPage() {
         servicePackageId: selectedServiceId,
         addonIds: selectedAddonIds,
         chosenSlotIds: selectedSlot.slotIds,
-        stationId: STATION_ID,
+        stationId,
         penaltyDepositCollected: false,
       });
       setTicketNumber(result.ticketNumber);
@@ -226,17 +224,21 @@ export default function WalkInPage() {
     (selectedService?.basePrice ?? 0) + selectedAddons.reduce((sum, a) => sum + a.price, 0);
   const displayTotal = summary?.remainingBalance ?? computedSubTotal;
 
-  // Tổng thời gian = thời lượng gói dịch vụ + tổng thời lượng các addon đã chọn
+  // Tổng thời gian = thời lượng gói dịch vụ + tổng thời lượng các addon đã chọn (chỉ để hiển thị)
   const totalDurationMinutes =
     (selectedService ? selectedService.requiredSlot * SLOT_DURATION_MINUTES : 0) +
     selectedAddons.reduce((sum, a) => sum + a.durationMinutes, 0);
-  const requiredSlotCount = Math.ceil(totalDurationMinutes / SLOT_DURATION_MINUTES);
 
-  // Gộp các slot 15 phút trả về từ BE thành khối đúng bằng tổng thời gian service + addon,
-  // để mỗi lựa chọn ở FE luôn khớp đúng thời lượng cần đặt (không còn chọn lẻ 1 slot 15 phút)
-  const slotWindows = useMemo(
-    () => buildSlotWindows(summary?.availableSlots ?? [], requiredSlotCount),
-    [summary?.availableSlots, requiredSlotCount]
+  // summary.availableSlots đã là khối giờ hoàn chỉnh từ BE — map sang SlotWindow, dùng
+  // associatedSlotIds làm slotIds thật để gửi lên khi confirm (không tự gộp lại ở FE).
+  const slotWindows: SlotWindow[] = useMemo(
+    () =>
+      (summary?.availableSlots ?? []).map((s) => ({
+        slotIds: s.associatedSlotIds,
+        startTime: s.startTime,
+        endTime: s.endTime,
+      })),
+    [summary?.availableSlots]
   );
 
   // Lọc khối giờ theo buổi sáng (AM, trước 12h) / chiều (PM, từ 12h)
@@ -246,6 +248,7 @@ export default function WalkInPage() {
   });
 
   const canConfirm =
+    !!stationId &&
     vehicleInfo.licensePlate.trim() !== "" &&
     (customerType === "GUEST" || !!phoneResult?.existed) &&
     !!selectedServiceId &&
@@ -274,7 +277,10 @@ export default function WalkInPage() {
           <div className="flex items-center gap-3">
             {step !== "select-type" && step !== "done" && (
               <button
-                onClick={() => setStep("select-type")}
+                onClick={() => {
+                  resetBookingForm();
+                  setStep("select-type");
+                }}
                 className="rounded-full p-1.5 hover:bg-surface-container transition"
               >
                 <ChevronLeft className="w-5 h-5 text-outline" />
@@ -391,30 +397,48 @@ export default function WalkInPage() {
                 <div className="flex flex-col gap-4 rounded-2xl border border-outline-variant bg-surface-container-lowest p-5">
                   {customerType === "MEMBER" && phoneResult?.savedVehicles && phoneResult.savedVehicles.length > 0 && (
                     <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-                      {phoneResult.savedVehicles.map((v) => (
-                        <button
-                          key={v.id}
-                          type="button"
-                          onClick={() => handleSelectSavedVehicle(v)}
-                          className={`flex items-center gap-3 rounded-xl p-4 text-left transition-colors
-                            ${
-                              selectedSavedVehicle?.id === v.id
-                                ? "border-2 border-primary bg-primary-container/10"
-                                : "border border-outline-variant bg-surface-container-lowest hover:border-primary/40"
-                            }`}
-                        >
-                          <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-primary text-on-primary">
-                            <Car size={18} />
-                          </span>
-                          <div className="flex-1">
-                            <p className="text-body-lg font-semibold text-on-surface">{v.brandName}</p>
-                            <p className="text-body-md text-on-surface-variant">{v.licensePlate}</p>
-                          </div>
-                          {selectedSavedVehicle?.id === v.id && (
-                            <Check size={18} className="text-primary shrink-0" />
-                          )}
-                        </button>
-                      ))}
+                      {phoneResult.savedVehicles.map((v) => {
+                        // BE (check-phone) chỉ trả subscriptionInfo gồm các gói Unlimited/Family đang
+                        // ACTIVE và chưa hết hạn tính đến hôm nay -> có phần tử là xe đang được miễn phí.
+                        const activeSubscriptions = v.subscriptionInfo ?? [];
+                        return (
+                          <button
+                            key={v.id}
+                            type="button"
+                            onClick={() => handleSelectSavedVehicle(v)}
+                            className={`flex items-center gap-3 rounded-xl p-4 text-left transition-colors
+                              ${
+                                selectedSavedVehicle?.id === v.id
+                                  ? "border-2 border-primary bg-primary-container/10"
+                                  : "border border-outline-variant bg-surface-container-lowest hover:border-primary/40"
+                              }`}
+                          >
+                            <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-primary text-on-primary">
+                              <Car size={18} />
+                            </span>
+                            <div className="flex-1">
+                              <div className="flex flex-wrap items-center gap-1.5">
+                                <p className="text-body-lg font-semibold text-on-surface">{v.brandName}</p>
+                                {activeSubscriptions.map((sub) => {
+                                  const style = getSubscriptionStyle(sub.planType);
+                                  return (
+                                    <span
+                                      key={sub.subscriptionId}
+                                      className={`rounded-full border px-2 py-0.5 text-label-sm font-semibold ${style.badge} ${style.border}`}
+                                    >
+                                      {sub.planName}
+                                    </span>
+                                  );
+                                })}
+                              </div>
+                              <p className="text-body-md text-on-surface-variant">{v.licensePlate}</p>
+                            </div>
+                            {selectedSavedVehicle?.id === v.id && (
+                              <Check size={18} className="text-primary shrink-0" />
+                            )}
+                          </button>
+                        );
+                      })}
                     </div>
                   )}
                   {customerType === "MEMBER" && phoneResult?.savedVehicles && phoneResult.savedVehicles.length > 0 && (
@@ -435,16 +459,18 @@ export default function WalkInPage() {
                       className="w-full rounded-xl px-3 py-2.5 text-body-md border border-outline-variant outline-none focus:border-primary bg-surface-container-lowest text-on-surface"
                     />
                   </div>
-                  <div>
-                    <label className="text-label-md font-semibold text-on-surface-variant mb-1.5 block">Brand</label>
-                    <input
-                      type="text"
-                      value={vehicleInfo.brandName}
-                      onChange={(e) => setVehicleInfo((prev) => ({ ...prev, brandName: e.target.value }))}
-                      placeholder="e.g. Toyota"
-                      className="w-full rounded-xl px-3 py-2.5 text-body-md border border-outline-variant outline-none focus:border-primary bg-surface-container-lowest text-on-surface"
-                    />
-                  </div>
+                  {customerType === "MEMBER" && (
+                    <div>
+                      <label className="text-label-md font-semibold text-on-surface-variant mb-1.5 block">Brand</label>
+                      <input
+                        type="text"
+                        value={vehicleInfo.brandName}
+                        onChange={(e) => setVehicleInfo((prev) => ({ ...prev, brandName: e.target.value }))}
+                        placeholder="e.g. Toyota"
+                        className="w-full rounded-xl px-3 py-2.5 text-body-md border border-outline-variant outline-none focus:border-primary bg-surface-container-lowest text-on-surface"
+                      />
+                    </div>
+                  )}
                   {customerType === "GUEST" && (
                     <div className="rounded-xl px-4 py-3 bg-surface-container border border-outline-variant/30">
                       <p className="text-body-md text-on-surface-variant">

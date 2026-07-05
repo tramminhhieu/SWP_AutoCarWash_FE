@@ -6,6 +6,8 @@ import {
   clearTokens,
   getUserName,
   setUserName,
+  getStationId,
+  setStationId,
 } from "../utils/storage";
 import type { AuthUser, JwtPayload } from "../features/auth/types/auth";
 import { AuthContext } from "./AuthContextObject";
@@ -45,7 +47,12 @@ const getInitialUser = (): AuthUser | null => {
   }
 
   const savedName = getUserName();
-  return savedName ? { ...decodedUser, name: savedName } : decodedUser;
+  const savedStationId = getStationId();
+  return {
+    ...decodedUser,
+    ...(savedName ? { name: savedName } : {}),
+    ...(savedStationId != null ? { stationId: savedStationId } : {}),
+  };
 };
 
 // CHỈ tạo AuthProvider (component) ở đây - Context object đã tách ra AuthContextObject.ts
@@ -56,15 +63,18 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [isLoading] = useState(false);
 
   // Gọi sau khi login API trả về token thành công
-  const loginWithToken = (token: string, name?: string) => {
+  const loginWithToken = (token: string, name?: string, stationId?: number) => {
     setToken(token);
     if (name) setUserName(name);
+    if (stationId != null) setStationId(stationId);
     const decodedUser = decodeUserFromToken(token);
-    if (decodedUser && name) {
-      setUser({ ...decodedUser, name });
-    } else {
-      setUser(decodedUser);
-    }
+    setUser(
+      decodedUser && {
+        ...decodedUser,
+        ...(name ? { name } : {}),
+        ...(stationId != null ? { stationId } : {}),
+      },
+    );
   };
 
   const logout = () => {

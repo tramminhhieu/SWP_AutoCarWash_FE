@@ -48,8 +48,6 @@ export interface UpdateProfileRequest {
   firstName: string;
   lastName: string;
   birthday: string; // "YYYY-MM-DD"
-  email: string;
-  phone: string;
 }
 
 export interface UpdateProfileResponse {
@@ -63,4 +61,17 @@ export interface ProfileFieldError {
   field: string;
   errorCode: string;
   message: string;
+}
+
+// Request cho POST /api/auth/change-password (API-05-03)
+export interface ChangePasswordRequest {
+  currentPassword: string;
+  newPassword: string;
+  confirmNewPassword: string;
+}
+
+// Request cho POST /api/subscriptions/transfer (API-06-01)
+export interface TransferPlanRequest {
+  sourceVehicleId: number;
+  targetVehicleId: number;
 }

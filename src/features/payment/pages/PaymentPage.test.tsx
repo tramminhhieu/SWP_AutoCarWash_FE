@@ -36,9 +36,9 @@ vi.mock("../services/paymentApi", () => ({
 import PaymentPage from "./PaymentPage";
 import { useParams, useLocation } from "react-router-dom";
 import { getBookingDetail } from "../../booking/api/bookingApi";
-import { processCashPayment } from "../services/paymentApi";
+import { processCashPayment } from "../api/paymentApi";
 import type { BookingDetail } from "../../booking/types/booking";
-import type { CashPaymentResponse } from "../services/paymentApi";
+import type { CashPaymentResponse } from "../api/paymentApi";
 
 // ── Fixtures ───────────────────────────────────────────────────────────────────
 
@@ -103,8 +103,12 @@ describe("PaymentPage – unsuccessful payment scenarios", () => {
     vi.clearAllMocks();
 
     // Default happy-path mocks; individual tests override as needed.
-    vi.mocked(useParams).mockReturnValue({ bookingId: "42" } as ReturnType<typeof useParams>);
-    vi.mocked(useLocation).mockReturnValue(defaultLocation as ReturnType<typeof useLocation>);
+    vi.mocked(useParams).mockReturnValue({ bookingId: "42" } as ReturnType<
+      typeof useParams
+    >);
+    vi.mocked(useLocation).mockReturnValue(
+      defaultLocation as ReturnType<typeof useLocation>,
+    );
     vi.mocked(getBookingDetail).mockResolvedValue(mockDetail);
     vi.mocked(processCashPayment).mockResolvedValue(mockPaymentSuccess);
   });
@@ -146,7 +150,9 @@ describe("PaymentPage – unsuccessful payment scenarios", () => {
     render(<PaymentPage />);
     await waitForPaymentForm();
 
-    expect(screen.getByRole("button", { name: "Confirm Payment" })).toBeDisabled();
+    expect(
+      screen.getByRole("button", { name: "Confirm Payment" }),
+    ).toBeDisabled();
   });
 
   it("TC-PAY-F04: shows insufficient warning and keeps button disabled when received < total", async () => {
@@ -161,7 +167,9 @@ describe("PaymentPage – unsuccessful payment scenarios", () => {
     expect(
       screen.getByText("Received amount is insufficient."),
     ).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Confirm Payment" })).toBeDisabled();
+    expect(
+      screen.getByRole("button", { name: "Confirm Payment" }),
+    ).toBeDisabled();
   });
 
   // ── Payment API failures ───────────────────────────────────────────────────
@@ -175,7 +183,9 @@ describe("PaymentPage – unsuccessful payment scenarios", () => {
     fireEvent.change(screen.getByPlaceholderText("0"), {
       target: { value: "150000" },
     });
-    await userEvent.click(screen.getByRole("button", { name: "Confirm Payment" }));
+    await userEvent.click(
+      screen.getByRole("button", { name: "Confirm Payment" }),
+    );
 
     await waitFor(() =>
       expect(
@@ -185,9 +195,12 @@ describe("PaymentPage – unsuccessful payment scenarios", () => {
   });
 
   it("TC-PAY-F06: shows inline error when payment API returns HTTP 500", async () => {
-    const err = Object.assign(new Error("Request failed with status code 500"), {
-      response: { status: 500 },
-    });
+    const err = Object.assign(
+      new Error("Request failed with status code 500"),
+      {
+        response: { status: 500 },
+      },
+    );
     vi.mocked(processCashPayment).mockRejectedValue(err);
 
     render(<PaymentPage />);
@@ -196,7 +209,9 @@ describe("PaymentPage – unsuccessful payment scenarios", () => {
     fireEvent.change(screen.getByPlaceholderText("0"), {
       target: { value: "200000" },
     });
-    await userEvent.click(screen.getByRole("button", { name: "Confirm Payment" }));
+    await userEvent.click(
+      screen.getByRole("button", { name: "Confirm Payment" }),
+    );
 
     await waitFor(() =>
       expect(
@@ -210,7 +225,9 @@ describe("PaymentPage – unsuccessful payment scenarios", () => {
   it("TC-PAY-F07: shows error when Apply Points is clicked with 0 points entered", async () => {
     render(<PaymentPage />);
     await waitFor(() =>
-      expect(screen.getByRole("button", { name: "Apply Points" })).toBeInTheDocument(),
+      expect(
+        screen.getByRole("button", { name: "Apply Points" }),
+      ).toBeInTheDocument(),
     );
 
     // pointsToApply defaults to 0, click Apply immediately
@@ -224,7 +241,9 @@ describe("PaymentPage – unsuccessful payment scenarios", () => {
   it("TC-PAY-F08: shows error when entered points exceed available balance (max 500 pts)", async () => {
     render(<PaymentPage />);
     await waitFor(() =>
-      expect(screen.getByRole("button", { name: "Apply Points" })).toBeInTheDocument(),
+      expect(
+        screen.getByRole("button", { name: "Apply Points" }),
+      ).toBeInTheDocument(),
     );
 
     fireEvent.change(screen.getByPlaceholderText("Enter points"), {
@@ -238,7 +257,9 @@ describe("PaymentPage – unsuccessful payment scenarios", () => {
   it("TC-PAY-F09: shows error when points would over-cover the total amount (150,000 VNĐ needs max 150 pts)", async () => {
     render(<PaymentPage />);
     await waitFor(() =>
-      expect(screen.getByRole("button", { name: "Apply Points" })).toBeInTheDocument(),
+      expect(
+        screen.getByRole("button", { name: "Apply Points" }),
+      ).toBeInTheDocument(),
     );
 
     // 200 pts × 1,000 = 200,000 VNĐ > 150,000 VNĐ remaining

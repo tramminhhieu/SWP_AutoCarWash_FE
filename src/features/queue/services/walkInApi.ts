@@ -95,6 +95,9 @@ export interface WalkInAddonServiceDTO {
   price: number;
   description: string;
   durationMinutes: number;
+  // service_package ids this addon is already bundled into (package_addon_mapping) —
+  // hide it from selection once one of those packages is chosen.
+  includedInPackageIds: number[];
 }
 
 export interface WalkInFormDataResponse {

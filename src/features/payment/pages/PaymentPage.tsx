@@ -1,33 +1,21 @@
 /*
  * @author: Bảo Ngọc
- * @version 3.0 — lấy dữ liệu thật từ GET /api/bookings/{bookingId} thay cho mock
- * ported onto dev: bookingApi import path đổi sang ../../booking/api/bookingApi,
- * type BookingDetailResponse -> BookingDetail (dev không có customerTier),
- * formatVND -> alias từ utils/format (dev không có utils/currency.ts),
- * handleConfirm nối thật vào processCashPayment (paymentApi.ts)
+ * @version 4.0 — khớp API GET /api/bookings/{id} mới (loyaltyPoint, customerTier...)
+ * - Thêm block đổi điểm thưởng phía trên Subtotal (staff nhập, 0 < điểm < điểm hiện có)
+ * - Thêm dòng Points Earned + Deposit Paid dưới Total Due trong Invoice Summary
+ * - Voucher chỉ hiện với booking web (ẩn khi WALK_IN), staff không sửa được
+ * - Tách toàn bộ API sang services/paymentApi.ts (fetch detail + processCashPayment)
  */
 import { useNavigate, useParams, useLocation } from "react-router-dom";
 import { useEffect, useState } from "react";
 import { ArrowLeft, Car, User, Wrench } from "lucide-react";
 import { formatCurrency as formatVND } from "../../../utils/format";
-import { getBookingDetail } from "../../booking/api/bookingApi";
-import type { BookingDetail } from "../../booking/types/booking";
-import { formatCheckInTime } from "../../booking/utils/bookingFormatters";
-import { processCashPayment } from "../services/paymentApi";
-import { useAuth } from "../../../hooks/useAuth";
-
-// BE trả checkInAt dạng "yyyy-MM-dd HH:mm:ss" (spring.jackson.date-format) — hiện lại dễ đọc hơn
-function formatCheckInAt(checkInAt: string) {
-  const d = new Date(checkInAt.replace(" ", "T"));
-  if (isNaN(d.getTime())) return checkInAt;
-  return d.toLocaleString("en-GB", {
-    day: "2-digit",
-    month: "short",
-    year: "numeric",
-    hour: "2-digit",
-    minute: "2-digit",
-  });
-}
+import { getPaymentBookingDetail, processCashPayment } from "../api/paymentApi";
+import {
+  calcEarnedPoints,
+  POINT_TO_VND,
+  type PaymentBookingDetail,
+} from "../types/payment";
 
 function formatSchedule(date: string, start: string, end: string) {
   if (!date) return "";
@@ -43,32 +31,29 @@ function formatSchedule(date: string, start: string, end: string) {
 
 export default function PaymentPage() {
   const navigate = useNavigate();
-  const { user } = useAuth();
   const { bookingId: bookingIdParam } = useParams<{ bookingId: string }>();
   const location = useLocation();
   const state = (location.state as { bookingId?: number } | null) ?? null;
   const bookingId = Number(bookingIdParam ?? state?.bookingId);
 
-  const [detail, setDetail] = useState<BookingDetail | null>(null);
+  const [detail, setDetail] = useState<PaymentBookingDetail | null>(null);
   const [isLoading, setIsLoading] = useState(true);
-  const [loadError, setLoadError] = useState("");
+  const [loadError, setLoadError] = useState(
+    bookingId ? "" : "Failed to find booking.",
+  );
   const [isPaying, setIsPaying] = useState(false);
 
   const [paymentMethod, setPaymentMethod] = useState<"cash" | "card">("cash");
   const [received, setReceived] = useState(0);
-  const [receivedInput, setReceivedInput] = useState("");
+  const [redeemInput, setRedeemInput] = useState(""); // điểm staff nhập để đổi thưởng
   const [payError, setPayError] = useState("");
   const [paySuccess, setPaySuccess] = useState(false);
 
   useEffect(() => {
-    if (!bookingId) {
-      setLoadError("Failed to find booking.");
-      setIsLoading(false);
-      return;
-    }
+    if (!bookingId) return; // ← chỉ return sớm, không setState
     const load = async () => {
       try {
-        const data = await getBookingDetail(bookingId);
+        const data = await getPaymentBookingDetail(bookingId);
         setDetail(data);
       } catch {
         setLoadError("Failed to load booking details.");
@@ -84,21 +69,41 @@ export default function PaymentPage() {
   const addOnTotal = detail?.addonTotal ?? 0;
   const subtotal = baseAmount + addOnTotal;
   const voucherDiscount = detail?.voucherDiscountAmount ?? 0;
-  const pointDiscount = detail?.pointDiscountAmount ?? 0;
+  const pointDiscount = detail?.pointDiscountAmount ?? 0; // điểm đã đổi sẵn (nếu có)
+
+  // ── Đổi điểm thưởng tại quầy ──────────────────────────────────────────────
+  const currentPoints = detail?.loyaltyPoint ?? 0;
+  // Điểm hợp lệ khi: 0 < điểm nhập < điểm hiện có của khách
+  const redeemPoints = Math.floor(Number(redeemInput)) || 0;
+  const isRedeemInvalid =
+    redeemInput.trim() !== "" &&
+    (redeemPoints <= 0 || redeemPoints >= currentPoints);
+  const redeemDiscount = isRedeemInvalid ? 0 : redeemPoints * POINT_TO_VND;
+
+  // ── Điểm tích được sau đơn (trên subtotal, trước giảm giá) ─────────────────
+  const earnedPoints = calcEarnedPoints(subtotal, detail?.customerTier ?? null);
+
   const tierLabel = detail?.customerTier
     ? detail.customerTier.charAt(0) + detail.customerTier.slice(1).toLowerCase()
     : "Walk-in";
   const bookingTypeLabel =
-    detail?.bookingType === "WALK_IN" ? "Walk-in" :
-    detail?.bookingType === "SUBSCRIPTION" ? "Subscription" :
-    detail?.bookingType === "ADVANCE" ? "Advance" :
-    null;
-  const total =
+    detail?.bookingType === "WALK_IN"
+      ? "Walk-in"
+      : detail?.bookingType === "SUBSCRIPTION"
+        ? "Subscription"
+        : detail?.bookingType === "ADVANCE"
+          ? "Advance"
+          : null;
+
+  // Tổng trước khi trừ điểm staff đổi (ưu tiên số BE trả, fallback tự tính)
+  const baseTotal =
     detail?.remainingAmount ??
     Math.max(subtotal - voucherDiscount - pointDiscount, 0);
+  const total = Math.max(baseTotal - redeemDiscount, 0);
   const change = received - total;
   const isInsufficient = received > 0 && received < total;
-  const canConfirm = total === 0 || (received >= total && total > 0);
+  const canConfirm =
+    !isRedeemInvalid && (total === 0 || (received >= total && total > 0));
 
   const handleConfirm = async () => {
     if (!canConfirm || !bookingId) return;
@@ -107,6 +112,9 @@ export default function PaymentPage() {
     try {
       await processCashPayment({
         bookingId,
+        // điểm khách dùng để đổi (0 nếu không nhập hoặc nhập không hợp lệ)
+        usedLoyaltyPoints: isRedeemInvalid ? 0 : redeemPoints,
+        // số tiền mặt staff nhận từ khách
         receivedAmount: received,
       });
       setPaySuccess(true);
@@ -165,24 +173,56 @@ export default function PaymentPage() {
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm">
           <div className="relative rounded-2xl p-8 bg-surface-container-lowest border border-outline-variant/30 flex flex-col items-center gap-4 max-w-sm w-full mx-4 shadow-xl">
             <button
-              onClick={() => navigate("/staff/queue", { state: { paidBookingId: bookingId } })}
+              onClick={() =>
+                navigate("/staff/queue", {
+                  state: { paidBookingId: bookingId },
+                })
+              }
               className="absolute top-3 right-3 rounded-full p-1.5 hover:bg-surface-container transition text-outline"
             >
-              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+              <svg
+                className="w-4 h-4"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M6 18L18 6M6 6l12 12"
+                />
               </svg>
             </button>
             <div className="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center">
-              <svg className="w-8 h-8 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+              <svg
+                className="w-8 h-8 text-primary"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M5 13l4 4L19 7"
+                />
               </svg>
             </div>
             <div className="text-center">
-              <h2 className="text-xl font-bold text-on-surface mb-1">Payment Successful</h2>
-              <p className="text-sm text-on-surface-variant">Booking #{bookingId} has been completed.</p>
+              <h2 className="text-xl font-bold text-on-surface mb-1">
+                Payment Successful
+              </h2>
+              <p className="text-sm text-on-surface-variant">
+                Booking #{bookingId} has been completed.
+              </p>
             </div>
             <button
-              onClick={() => navigate("/staff/queue", { state: { paidBookingId: bookingId } })}
+              onClick={() =>
+                navigate("/staff/queue", {
+                  state: { paidBookingId: bookingId },
+                })
+              }
               className="w-full py-3 rounded-xl text-sm font-semibold bg-primary text-on-primary transition"
             >
               Back to Queue
@@ -234,7 +274,8 @@ export default function PaymentPage() {
                   {tierLabel}
                 </p>
               </div>
-              {detail.voucherCode && (
+              {/* Voucher chỉ hiện với booking web; walk-in không dùng voucher. Staff không sửa được (chỉ hiển thị) */}
+              {detail.bookingType !== "WALK_IN" && detail.voucherCode && (
                 <span className="text-xs px-2 py-0.5 rounded-full font-medium bg-secondary-fixed text-on-secondary-fixed">
                   Voucher: {detail.voucherCode}
                 </span>
@@ -275,12 +316,6 @@ export default function PaymentPage() {
                 <p>
                   Station: {detail.stationName} — {detail.stationAddress}
                 </p>
-                {detail.checkInAt && (
-                  <p>Checked in: {formatCheckInTime(detail.checkInAt)}</p>
-                )}
-                {detail.checkOutAt && (
-                  <p>Checked out: {formatCheckInTime(detail.checkOutAt)}</p>
-                )}
                 <p>
                   📅{" "}
                   {formatSchedule(
@@ -289,26 +324,12 @@ export default function PaymentPage() {
                     detail.endTime ?? "",
                   )}
                 </p>
-                {user?.name && (
-                  <p>Served by: {user.name}</p>
-                )}
-                {detail.checkInAt && (
-                  <p>Checked in: {formatCheckInAt(detail.checkInAt)}</p>
+                {detail.technicianName && (
+                  <p>👤 Technician: {detail.technicianName}</p>
                 )}
               </div>
             </div>
           </div>
-
-          {detail.isDepositPaid && (
-            <div className="rounded-xl px-4 py-3 bg-surface-container-low border border-outline-variant/30">
-              <p className="text-xs text-on-surface-variant">
-                Deposit Paid:{" "}
-                <span className="font-semibold text-on-surface">
-                  {formatVND(detail.depositAmount)}
-                </span>
-              </p>
-            </div>
-          )}
         </div>
 
         {/* Right: payment panel */}
@@ -317,6 +338,42 @@ export default function PaymentPage() {
             <p className="text-sm font-bold text-on-surface mb-3">
               Invoice Summary
             </p>
+
+            {/* Đổi điểm thưởng — đặt PHÍA TRÊN Subtotal theo yêu cầu */}
+            <div className="mb-3 rounded-xl p-3 bg-surface-container-low border border-outline-variant/30">
+              <div className="flex items-center justify-between mb-2">
+                <span className="text-xs font-semibold uppercase text-outline">
+                  Loyalty Points
+                </span>
+                <span className="text-sm font-semibold text-on-surface">
+                  {currentPoints.toLocaleString("en-US")} pts
+                </span>
+              </div>
+              <input
+                type="number"
+                value={redeemInput}
+                onChange={(e) => setRedeemInput(e.target.value)}
+                placeholder="Points to redeem"
+                min={1}
+                max={currentPoints > 0 ? currentPoints - 1 : 0}
+                disabled={currentPoints <= 0}
+                className="w-full rounded-lg px-3 py-2 text-sm border border-outline-variant outline-none focus:border-primary bg-surface-container-lowest text-on-surface disabled:opacity-50 disabled:cursor-not-allowed"
+              />
+              {isRedeemInvalid ? (
+                <p className="text-xs text-error mt-1">
+                  Points must be greater than 0 and less than {currentPoints}.
+                </p>
+              ) : redeemDiscount > 0 ? (
+                <p className="text-xs text-green-600 mt-1">
+                  Redeeming {redeemPoints} pts = -{formatVND(redeemDiscount)}
+                </p>
+              ) : (
+                <p className="text-xs text-on-surface-variant mt-1">
+                  1 point = {formatVND(POINT_TO_VND)}
+                </p>
+              )}
+            </div>
+
             <div className="space-y-2 text-sm">
               <div className="flex justify-between">
                 <span className="text-on-surface-variant">Subtotal</span>
@@ -342,10 +399,38 @@ export default function PaymentPage() {
                   </span>
                 </div>
               )}
+              {redeemDiscount > 0 && (
+                <div className="flex justify-between">
+                  <span className="text-on-surface-variant">
+                    Points Redeemed
+                  </span>
+                  <span className="text-green-600">
+                    - {formatVND(redeemDiscount)}
+                  </span>
+                </div>
+              )}
               <div className="border-t border-outline-variant pt-2 flex justify-between font-bold">
                 <span className="text-on-surface">Total Due</span>
                 <span className="text-primary">{formatVND(total)}</span>
               </div>
+
+              {/* Điểm tích được sau khi hoàn tất — dưới Total Due */}
+              <div className="flex justify-between">
+                <span className="text-on-surface-variant">Points Earned</span>
+                <span className="text-green-600 font-semibold">
+                  +{earnedPoints} pts
+                </span>
+              </div>
+
+              {/* Đã cọc trước (nếu có) */}
+              {detail.isDepositPaid && (
+                <div className="flex justify-between">
+                  <span className="text-on-surface-variant">Deposit Paid</span>
+                  <span className="text-on-surface">
+                    {formatVND(detail.depositAmount ?? 0)}
+                  </span>
+                </div>
+              )}
             </div>
           </div>
 
@@ -375,12 +460,8 @@ export default function PaymentPage() {
                 </label>
                 <input
                   type="number"
-                  value={receivedInput}
-                  onChange={(e) => {
-                    const v = e.target.value;
-                    setReceivedInput(v);
-                    setReceived(v === "" ? 0 : Number(v));
-                  }}
+                  value={received || ""}
+                  onChange={(e) => setReceived(Number(e.target.value))}
                   placeholder="0"
                   className="w-full rounded-xl px-3 py-2.5 text-sm border border-outline-variant outline-none focus:border-primary bg-surface-container-lowest text-on-surface"
                 />

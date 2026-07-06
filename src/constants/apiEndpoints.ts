@@ -1,6 +1,7 @@
 /**
  * Centralised REST endpoint paths for the AutoCarWash backend.
- * Paths are relative to `axiosClient`'s `baseURL` (`/api`).
+ * Mọi path ở đây đã bao gồm sẵn tiền tố `/api` → `axiosClient.baseURL` để rỗng (root),
+ * KHÔNG set baseURL = "/api" (nếu set sẽ bị lặp thành `/api/api/...`).
  */
 export const API = {
   AUTH: {
@@ -20,12 +21,12 @@ export const API = {
   },
   BOOKINGS: {
     /** `GET` — list of a customer's upcoming bookings (CONFIRMED/CHECK_IN/WASHING). */
-    UPCOMING: "api/bookings/upcoming",
+    UPCOMING: "/api/bookings/upcoming",
     /** `GET` — list of a customer's past bookings (PAID/CANCELED/NO_SHOW). */
     PAST: "/api/bookings/past",
     /** `GET` — full detail of a single booking. */
     DETAIL: (bookingId: number | string) => `/api/bookings/${bookingId}`,
-    CANCEL: (bookingId: string | number) => `api/bookings/${bookingId}/cancel`,
+    CANCEL: (bookingId: string | number) => `/api/bookings/${bookingId}/cancel`,
   },
   BOOKING: {
     // API-02-01: GET BOOKING CONTEXT
@@ -41,5 +42,19 @@ export const API = {
   },
   VEHICLE: {
     ADD: "/api/vehicles",
+    DELETE: (vehicleId: number | string) => `/api/vehicles/${vehicleId}`,
+  },
+  CUSTOMER: {
+    // API-05-02: GET CUSTOMER PROFILE
+    PROFILE: "/api/customers/profile",
+    // API-05-01: UPDATE PROFILE
+    UPDATE_PROFILE: "/api/customers/profile",
+    // API-05-03: CHANGE PASSWORD — endpoint nằm trong namespace /auth, KHÔNG phải /customers
+    CHANGE_PASSWORD: "/api/auth/change-password",
+    // API-06-01:: TRANSFER SUBSCRIPTION PLAN
+    TRANSFER_SUBSCRIPTION: "/api/subscriptions/transfer",
+  },
+  PAYMENTS: {
+    CASH: "/api/payments/cash",
   },
 };

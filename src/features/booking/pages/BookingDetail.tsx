@@ -3,6 +3,7 @@ import { useParams } from "react-router-dom";
 import {
   Calendar,
   Car,
+  Clock,
   MapPin,
   User,
 } from "lucide-react";
@@ -11,6 +12,7 @@ import type { BookingDetail as BookingDetailData } from "../types/booking";
 import BookingStatusBadge from "../../../components/ui/BookingStatusBadge";
 import {
   formatAppointmentDate,
+  formatCheckInTime,
   formatCurrency,
   formatTimeRange,
 } from "../utils/bookingFormatters";
@@ -127,11 +129,33 @@ export default function BookingDetail() {
                 {booking.technicianName && (
                   <div className="flex flex-col gap-1">
                     <span className="text-xs font-semibold uppercase tracking-[1.2px] text-outline">
-                      Technician
+                      Checked In By
                     </span>
                     <span className="flex items-center gap-2 text-lg font-semibold text-on-surface">
                       <User className="size-4 text-on-surface-variant" />
                       {booking.technicianName}
+                    </span>
+                  </div>
+                )}
+                {booking.checkInAt && (
+                  <div className="flex flex-col gap-1">
+                    <span className="text-xs font-semibold uppercase tracking-[1.2px] text-outline">
+                      Checked In At
+                    </span>
+                    <span className="flex items-center gap-2 text-lg font-semibold text-on-surface">
+                      <Clock className="size-4 text-on-surface-variant" />
+                      {formatCheckInTime(booking.checkInAt)}
+                    </span>
+                  </div>
+                )}
+                {booking.checkOutAt && (
+                  <div className="flex flex-col gap-1">
+                    <span className="text-xs font-semibold uppercase tracking-[1.2px] text-outline">
+                      Checked Out At
+                    </span>
+                    <span className="flex items-center gap-2 text-lg font-semibold text-on-surface">
+                      <Clock className="size-4 text-on-surface-variant" />
+                      {formatCheckInTime(booking.checkOutAt)}
                     </span>
                   </div>
                 )}

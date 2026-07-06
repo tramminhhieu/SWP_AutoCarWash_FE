@@ -185,7 +185,8 @@ export interface BookingDetail {
   customerName: string | null;
   bookingType: string | null;
   serviceCategoryName: string | null;
-  checkinStaffName: string | null;
+  checkInAt: string | null;
+  checkOutAt: string | null;
   pointDiscountAmount: number;
   discountAmount: number;
   totalAmount: number;

@@ -26,6 +26,18 @@ export function formatTimeRange(startTime: string, endTime: string): string {
   return `${formatTime(startTime)} - ${formatTime(endTime)}`;
 }
 
+/**
+ * Formats a backend naive ISO-8601 `LocalDateTime` string (no timezone) into
+ * a display datetime, e.g. `"2026-07-02T14:30:00"` -> `"Jul 2, 2026, 02:30 PM"`.
+ */
+export function formatCheckInTime(isoDateTime: string): string {
+  const date = new Date(isoDateTime);
+  return date.toLocaleString("en-US", {
+    year: "numeric", month: "short", day: "numeric",
+    hour: "2-digit", minute: "2-digit",
+  });
+}
+
 /** Formats a VND amount, e.g. `150000` -> `"150.000 ₫"`. */
 export function formatCurrency(amount: number): string {
   return new Intl.NumberFormat("vi-VN", { style: "currency", currency: "VND" }).format(amount);

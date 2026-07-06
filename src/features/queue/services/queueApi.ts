@@ -103,6 +103,7 @@ export interface QueueTicketDTO {
   serviceName: string | null;
   stationId: number | null;
   stationName: string | null;
+  totalAmount: number | null;
 }
 
 // 1 làn rửa (chưa bị xoá) của station — BE: WashLaneResponse. status: "AVAILABLE" | "WASHING".

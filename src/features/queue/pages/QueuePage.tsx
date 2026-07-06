@@ -170,7 +170,7 @@ export default function QueuePage() {
       service: t.serviceName ?? "",
       tier: mapTier(t.customerTier),
       finishedAt: "",
-      totalAmount: 0,
+      totalAmount: t.totalAmount ?? 0,
     }));
     setWaitingPool(waiting);
 
@@ -195,7 +195,7 @@ export default function QueuePage() {
         status: "Washing" as const,
         est: "",
         bookingId: ticket.bookingId ?? 0,
-        totalAmount: 0,
+        totalAmount: ticket.totalAmount ?? 0,
         ticketId: ticket.id,
         tier: mapTier(ticket.customerTier),
       };
@@ -212,7 +212,7 @@ export default function QueuePage() {
       service: t.serviceName ?? "",
       tier: mapTier(t.customerTier),
       finishedAt: "",
-      totalAmount: 0,
+      totalAmount: t.totalAmount ?? 0,
     }));
     setCompleted(done);
   }, []);

@@ -752,7 +752,7 @@ export default function WalkInPage() {
                   {summary.penaltyDeposit > 0 && (
                     <div className="flex items-center justify-between pb-2">
                       <span className="text-body-md text-error">Penalty Deposit</span>
-                      <span className="text-body-md text-error">{formatVND(summary.penaltyDeposit)}</span>
+                      <span className="text-body-md text-error">-{formatVND(summary.penaltyDeposit)}</span>
                     </div>
                   )}
                   {summary.transferredCredit > 0 && (
@@ -778,7 +778,7 @@ export default function WalkInPage() {
                 <span className="text-headline-md text-primary">{formatVND(displayTotal)}</span>
               </div>
 
-              {summary?.systemNotice && (
+              {summary?.systemNotice && summary.systemNotice !== "Provisional invoice valid" && (
                 <p className="mb-3 rounded-lg bg-amber-50 px-3 py-2 text-body-md text-amber-700">
                   {summary.systemNotice}
                 </p>

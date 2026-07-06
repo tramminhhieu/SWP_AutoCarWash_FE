@@ -1,5 +1,6 @@
+import { isAxiosError } from "axios";
 import { useEffect, useRef, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
 import {
   ArrowLeftRight,
   Car,
@@ -14,7 +15,11 @@ import {
   X,
   Check,
 } from "lucide-react";
-import { getCustomerProfile, updateCustomerProfile } from "../api/customerApi";
+import {
+  getCustomerProfile,
+  transferSubscription,
+  updateCustomerProfile,
+} from "../api/profileApi";
 import type {
   CustomerProfileData,
   CustomerTier,
@@ -22,8 +27,9 @@ import type {
   UpdateProfileRequest,
 } from "../types/profile";
 import Modal from "../../../components/ui/Modal";
-import { getTierStyle } from "../../../constants/tierStyles";
+import { getTierStyle, normalizeTierName } from "../../../constants/tierStyles";
 import { getSubscriptionStyle } from "../../../constants/subscriptionStyles";
+import { deleteVehicle } from "../api/vehicleApi";
 
 // "1985-12-06" → "12/06/1985" để hiển thị trong view mode
 function formatBirthday(iso: string): string {
@@ -51,7 +57,7 @@ function TierCard({ tier }: { tier: CustomerTier }) {
           </span>
         </div>
         <span className={`text-sm font-bold ${style.label}`}>
-          {tier.currentTierName}
+          {normalizeTierName(tier.currentTierName)}
         </span>
       </div>
 
@@ -98,10 +104,31 @@ function VehicleItem({
   isOnlyVehicle: boolean;
   openMenuId: number | null;
   onMenuToggle: (id: number) => void;
-  onDelete: (id: number) => void;
+  onDelete: (id: number) => Promise<void>;
   onTransfer: (vehicle: CustomerVehicle) => void;
 }) {
   const navigate = useNavigate();
+  const [confirmOpen, setConfirmOpen] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
+
+  const handleDelete = async () => {
+    setIsDeleting(true);
+    try {
+      await onDelete(vehicle.id);
+    } catch (err) {
+      setConfirmOpen(false);
+      setDeleteError(
+        isAxiosError(err)
+          ? (err.response?.data?.message ??
+              "Failed to delete vehicle. Please try again.")
+          : "Failed to delete vehicle. Please try again.",
+      );
+    } finally {
+      setIsDeleting(false);
+    }
+  };
+
   const isMenuOpen = openMenuId === vehicle.id;
   const sub = vehicle.activeSubscription;
   const subStyle = sub ? getSubscriptionStyle(sub.type) : null;
@@ -179,13 +206,8 @@ function VehicleItem({
           {/* Delete vehicle */}
           <button
             onClick={() => {
-              if (
-                window.confirm(
-                  `Delete ${vehicle.brandName} (${vehicle.licensePlate})?\nThis action cannot be undone.`,
-                )
-              ) {
-                onDelete(vehicle.id);
-              }
+              onMenuToggle(vehicle.id); // đóng dropdown
+              setConfirmOpen(true);
             }}
             className="flex w-full items-center gap-2 px-4 py-2.5 text-left text-sm text-error transition-colors hover:bg-error/5"
           >
@@ -194,6 +216,25 @@ function VehicleItem({
           </button>
         </div>
       )}
+      {/* Delete confirmation */}
+      <Modal
+        isOpen={confirmOpen}
+        onClose={() => setConfirmOpen(false)}
+        variant="danger"
+        title="Delete Vehicle"
+        message={`Are you sure you want to delete ${vehicle.brandName}? This action cannot be undone.`}
+        onConfirm={handleDelete}
+        isConfirmLoading={isDeleting}
+      />
+      <Modal
+        isOpen={!!deleteError}
+        onClose={() => setDeleteError(null)}
+        variant="danger"
+        title="Cannot Delete Vehicle"
+        message={deleteError ?? ""}
+        confirmText="Got it"
+        onConfirm={() => setDeleteError(null)}
+      />
     </div>
   );
 }
@@ -204,6 +245,7 @@ function TransferPlanModal({
   targetVehicles,
   selectedTargetId,
   isTransferring,
+  errorMessage,
   onSelectTarget,
   onClose,
   onConfirm,
@@ -212,6 +254,7 @@ function TransferPlanModal({
   targetVehicles: CustomerVehicle[];
   selectedTargetId: number | null;
   isTransferring: boolean;
+  errorMessage?: string | null;
   onSelectTarget: (id: number) => void;
   onClose: () => void;
   onConfirm: () => void;
@@ -319,6 +362,13 @@ function TransferPlanModal({
           Transfers are limited to once per month. Activation is immediate.
         </div>
 
+        {/* Lỗi từ BE (AC07: đang có booking dở, AC06: xe đích có gói...) — giữ modal mở */}
+        {errorMessage && (
+          <div className="mt-3 rounded-lg border border-error/30 bg-error/5 px-4 py-2.5 text-xs text-error">
+            {errorMessage}
+          </div>
+        )}
+
         {/* Action buttons */}
         <div className="mt-5 flex justify-end gap-3">
           <button
@@ -347,6 +397,7 @@ function TransferPlanModal({
 // ─── Main page ────────────────────────────────────────────────────────────────
 export default function CustomerProfile() {
   const navigate = useNavigate();
+  const location = useLocation();
 
   // Data từ API
   const [profile, setProfile] = useState<CustomerProfileData | null>(null);
@@ -370,7 +421,9 @@ export default function CustomerProfile() {
     Partial<Record<keyof UpdateProfileRequest, string>>
   >({});
   const [isSaving, setIsSaving] = useState(false);
-  const [saveSuccess, setSaveSuccess] = useState(false);
+  const [saveSuccess, setSaveSuccess] = useState(
+    !!location.state?.passwordChangedSuccess,
+  );
 
   // Menu 3 chấm của xe
   const [openMenuId, setOpenMenuId] = useState<number | null>(null);
@@ -381,6 +434,7 @@ export default function CustomerProfile() {
     useState<CustomerVehicle | null>(null);
   const [selectedTargetId, setSelectedTargetId] = useState<number | null>(null);
   const [isTransferring, setIsTransferring] = useState(false);
+  const [transferError, setTransferError] = useState<string | null>(null);
 
   // Load profile khi vào trang
   useEffect(() => {
@@ -477,6 +531,7 @@ export default function CustomerProfile() {
     setIsSaving(true);
     try {
       const res = await updateCustomerProfile(formData);
+      console.log("update res:", res); // xem cấu trúc thật
       setProfile((prev) => (prev ? { ...prev, customer: res.data } : prev));
       setOriginalData(formData);
       setIsEditing(false);
@@ -489,53 +544,50 @@ export default function CustomerProfile() {
     }
   };
 
-  // Xoá xe khỏi local state (mock delete — gọi API-04-03 khi có BE)
-  const handleDeleteVehicle = (vehicleId: number) => {
+  const handleDeleteVehicle = async (vehicleId: number) => {
+    setOpenMenuId(null);
+    await deleteVehicle(vehicleId);
     setProfile((prev) =>
       prev
-        ? { ...prev, vehicles: prev.vehicles.filter((v) => v.id !== vehicleId) }
+        ? {
+            ...prev,
+            vehicles: prev.vehicles.filter((v) => v.id !== vehicleId),
+          }
         : prev,
     );
-    setOpenMenuId(null);
   };
 
   // Mở Transfer Plan modal cho xe nguồn được chọn
   const handleOpenTransfer = (vehicle: CustomerVehicle) => {
     setTransferSourceVehicle(vehicle);
     setSelectedTargetId(null);
+    setTransferError(null);
     setOpenMenuId(null);
   };
 
   // Confirm Transfer — mock: chuyển subscription từ xe nguồn sang xe đích trong local state
   // Thay bằng gọi POST /api/subscriptions/transfer (API-06-01) khi có BE
   const handleConfirmTransfer = async () => {
-    if (!transferSourceVehicle || !selectedTargetId || !profile) return;
+    if (!transferSourceVehicle || !selectedTargetId) return;
     setIsTransferring(true);
+    setTransferError(null);
     try {
-      // Giả lập network delay
-      await new Promise((resolve) => setTimeout(resolve, 800));
-      // Cập nhật local state: chuyển subscription sang xe đích, đánh dấu xe nguồn đã transfer
-      setProfile((prev) => {
-        if (!prev) return prev;
-        return {
-          ...prev,
-          vehicles: prev.vehicles.map((v) => {
-            if (v.id === transferSourceVehicle.id) {
-              // Xe nguồn: xoá subscription
-              return { ...v, activeSubscription: undefined };
-            }
-            if (v.id === selectedTargetId) {
-              // Xe đích: nhận subscription từ xe nguồn
-              return {
-                ...v,
-                activeSubscription: transferSourceVehicle.activeSubscription,
-              };
-            }
-            return v;
-          }),
-        };
+      await transferSubscription({
+        sourceVehicleId: transferSourceVehicle.id,
+        targetVehicleId: selectedTargetId,
       });
+      // Thành công: đóng modal + gọi lại GET profile để refresh cả 2 xe cùng lúc
       setTransferSourceVehicle(null);
+      const res = await getCustomerProfile();
+      setProfile(res.data);
+    } catch (err) {
+      // Lỗi BE (AC06: xe đích có gói, AC07: đang có booking dở...) — giữ modal mở
+      if (isAxiosError(err)) {
+        const msg = err.response?.data?.message;
+        setTransferError(msg ?? "Transfer failed. Please try again.");
+      } else {
+        setTransferError("Transfer failed. Please try again.");
+      }
     } finally {
       setIsTransferring(false);
     }
@@ -600,7 +652,7 @@ export default function CustomerProfile() {
                     <span
                       className={`rounded-full px-3 py-1 text-sm font-semibold ${tierStyle.badge}`}
                     >
-                      {tier.currentTierName}
+                      {normalizeTierName(tier.currentTierName)}
                     </span>
                   )}
                 </div>
@@ -794,7 +846,7 @@ export default function CustomerProfile() {
                   </span>
                 </div>
                 <button
-                  onClick={() => navigate("/customer/vehicles/add")}
+                  onClick={() => navigate("/vehicles/add")}
                   className="flex items-center gap-1 text-sm font-semibold text-primary hover:underline"
                 >
                   <Plus className="size-5" />
@@ -833,12 +885,19 @@ export default function CustomerProfile() {
       {transferSourceVehicle && (
         <TransferPlanModal
           sourceVehicle={transferSourceVehicle}
-          // Xe đích: chỉ xe không có gói đang active
+          // Xe đích: chỉ xe không có gói đang active (AC06 — filter cả UNLIMITED lẫn FAMILY)
           targetVehicles={vehicles.filter((v) => !v.activeSubscription)}
           selectedTargetId={selectedTargetId}
           isTransferring={isTransferring}
-          onSelectTarget={setSelectedTargetId}
-          onClose={() => setTransferSourceVehicle(null)}
+          errorMessage={transferError}
+          onSelectTarget={(id) => {
+            setSelectedTargetId(id);
+            setTransferError(null); // Reset lỗi khi chọn xe khác
+          }}
+          onClose={() => {
+            setTransferSourceVehicle(null);
+            setTransferError(null);
+          }}
           onConfirm={handleConfirmTransfer}
         />
       )}

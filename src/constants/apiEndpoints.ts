@@ -54,4 +54,7 @@ export const API = {
     // API-06-01:: TRANSFER SUBSCRIPTION PLAN
     TRANSFER_SUBSCRIPTION: "/api/subscriptions/transfer",
   },
+  PAYMENTS: {
+    CASH: "/api/payments/cash",
+  },
 };

@@ -112,9 +112,10 @@ export default function PaymentPage() {
     try {
       await processCashPayment({
         bookingId,
+        // điểm khách dùng để đổi (0 nếu không nhập hoặc nhập không hợp lệ)
+        usedLoyaltyPoints: isRedeemInvalid ? 0 : redeemPoints,
+        // số tiền mặt staff nhận từ khách
         receivedAmount: received,
-        // chỉ gửi điểm khi staff nhập hợp lệ và > 0
-        redeemPoints: redeemDiscount > 0 ? redeemPoints : undefined,
       });
       setPaySuccess(true);
     } catch {
@@ -323,6 +324,9 @@ export default function PaymentPage() {
                     detail.endTime ?? "",
                   )}
                 </p>
+                {detail.technicianName && (
+                  <p>👤 Technician: {detail.technicianName}</p>
+                )}
               </div>
             </div>
           </div>

@@ -188,6 +188,9 @@ export interface BookingDetail {
   checkInAt: string | null;
   checkOutAt: string | null;
   pointDiscountAmount: number;
+  loyaltyPoint: number | null;
+  pointsEarned: number | null;
+  pointsRedeemed: number | null;
   discountAmount: number;
   totalAmount: number;
   isDepositPaid: boolean;

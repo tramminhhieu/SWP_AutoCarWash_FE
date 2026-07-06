@@ -29,7 +29,8 @@ import type {
 import Modal from "../../../components/ui/Modal";
 import { getTierStyle, normalizeTierName } from "../../../constants/tierStyles";
 import { getSubscriptionStyle } from "../../../constants/subscriptionStyles";
-import { deleteVehicle } from "../api/vehicleApi";
+import { deleteVehicle } from "../../vehicles/api/vehicleApi";
+import { useAuth } from "../../../hooks/useAuth";
 
 // "1985-12-06" → "12/06/1985" để hiển thị trong view mode
 function formatBirthday(iso: string): string {
@@ -143,8 +144,9 @@ function VehicleItem({
       {/* Tên + màu + badge gói */}
       <div className="min-w-0 flex-1">
         <p className="truncate text-sm font-semibold text-on-surface">
-          {vehicle.brandName}
+          {vehicle.licensePlate}
         </p>
+        <p className="text-xs text-on-surface-variant">{vehicle.brandName}</p>
         <p className="text-xs text-on-surface-variant">{vehicle.color}</p>
         {sub && subStyle && (
           <div
@@ -168,9 +170,14 @@ function VehicleItem({
       {/* Dropdown menu */}
       {isMenuOpen && (
         <div className="absolute right-2 top-10 z-10 min-w-[160px] rounded-xl border border-outline-variant/30 bg-white shadow-[0_10px_25px_-5px_rgba(29,78,216,0.10)]">
-          {/* Edit vehicle → sẽ navigate khi có page riêng */}
+          {/* Edit vehicle → navigate kèm vehicle data để EditVehicle pre-fill, không gọi API lại */}
           <button
-            onClick={() => navigate(`/customer/vehicles/${vehicle.id}/edit`)}
+            onClick={() => {
+              onMenuToggle(vehicle.id); // đóng dropdown
+              navigate(`/vehicles/edit/${vehicle.id}`, {
+                state: { vehicle },
+              });
+            }}
             className="flex w-full items-center gap-2 px-4 py-2.5 text-left text-sm text-on-surface transition-colors hover:bg-surface-ice"
           >
             <Edit2 className="size-4 text-on-surface-variant" />
@@ -398,6 +405,7 @@ function TransferPlanModal({
 export default function CustomerProfile() {
   const navigate = useNavigate();
   const location = useLocation();
+  const { updateUserName } = useAuth();
 
   // Data từ API
   const [profile, setProfile] = useState<CustomerProfileData | null>(null);
@@ -422,7 +430,8 @@ export default function CustomerProfile() {
   >({});
   const [isSaving, setIsSaving] = useState(false);
   const [saveSuccess, setSaveSuccess] = useState(
-    !!location.state?.passwordChangedSuccess,
+    !!location.state?.passwordChangedSuccess ||
+      !!location.state?.vehicleUpdatedSuccess,
   );
 
   // Menu 3 chấm của xe
@@ -486,6 +495,17 @@ export default function CustomerProfile() {
     return () => clearTimeout(t);
   }, [saveSuccess]);
 
+  // Xoá flag khỏi history entry sau khi đã đọc, tránh back/forward trigger lại modal
+  useEffect(() => {
+    if (
+      location.state?.passwordChangedSuccess ||
+      location.state?.vehicleUpdatedSuccess ||
+      location.state?.vehicleCreatedSuccess
+    ) {
+      navigate(location.pathname, { replace: true, state: {} });
+    }
+  }, []);
+
   // ── Form handlers ────────────────────────────────────────────────────────
 
   const handleEditStart = () => {
@@ -518,9 +538,12 @@ export default function CustomerProfile() {
     const errs: typeof fieldErrors = {};
     if (!formData.firstName.trim()) errs.firstName = "This field is required";
     if (!formData.lastName.trim()) errs.lastName = "This field is required";
-    if (formData.birthday && new Date(formData.birthday) > new Date()) {
-      errs.birthday = "Date of birth cannot be in the future";
+    if (!formData.birthday) {
+      errs.birthday = "This field is required";
+    } else if (new Date(formData.birthday) > new Date()) {
+      errs.birthday = "Invalid birthday";
     }
+
     setFieldErrors(errs);
     return Object.keys(errs).length === 0;
   };
@@ -531,13 +554,12 @@ export default function CustomerProfile() {
     setIsSaving(true);
     try {
       const res = await updateCustomerProfile(formData);
-      console.log("update res:", res); // xem cấu trúc thật
       setProfile((prev) => (prev ? { ...prev, customer: res.data } : prev));
+      updateUserName(`${res.data.firstName} ${res.data.lastName}`); // đồng bộ tên header
       setOriginalData(formData);
       setIsEditing(false);
       setSaveSuccess(true);
     } catch (err) {
-      // Email/phone không còn update được nên không còn lỗi field-level từ BE
       console.error("Update profile failed:", err);
     } finally {
       setIsSaving(false);
@@ -846,7 +868,7 @@ export default function CustomerProfile() {
                   </span>
                 </div>
                 <button
-                  onClick={() => navigate("/vehicles/add")}
+                  onClick={() => navigate("/vehicles/create")}
                   className="flex items-center gap-1 text-sm font-semibold text-primary hover:underline"
                 >
                   <Plus className="size-5" />

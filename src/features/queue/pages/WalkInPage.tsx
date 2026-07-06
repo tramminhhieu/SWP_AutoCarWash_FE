@@ -176,7 +176,13 @@ export default function WalkInPage() {
 
   const handleSelectService = (serviceId: number) => {
     setSelectedServiceId(serviceId);
-    recalcInvoice(serviceId, selectedAddonIds);
+    // Addons already bundled into the newly chosen package must not stay selected —
+    // otherwise they'd be double-counted (once via package, once via addon).
+    const newAddonIds = selectedAddonIds.filter(
+      (id) => !addonServices.find((a) => a.id === id)?.includedInPackageIds.includes(serviceId)
+    );
+    setSelectedAddonIds(newAddonIds);
+    recalcInvoice(serviceId, newAddonIds);
   };
 
   const handleToggleAddon = (addonId: number) => {
@@ -197,7 +203,7 @@ export default function WalkInPage() {
       const result = await createWalkIn({
         customerId: vehicleInfo.customerId,
         existingVehicleId: vehicleInfo.existingVehicleId,
-        licensePlate: vehicleInfo.existingVehicleId ? undefined : vehicleInfo.licensePlate,
+        licensePlate: vehicleInfo.licensePlate,
         brandName: vehicleInfo.brandName || undefined,
         color: vehicleInfo.color || undefined,
         servicePackageId: selectedServiceId,
@@ -217,9 +223,20 @@ export default function WalkInPage() {
     }
   };
 
+  // Gói dịch vụ đang được xe này miễn phí nhờ subscription (Unlimited/Family) đang ACTIVE —
+  // dùng để hiển thị giá 0 VNĐ ngay tại card chọn gói, trước khi tính invoice.
+  const freeServicePackageIds = new Set(
+    selectedSavedVehicle?.subscriptionInfo?.map((sub) => sub.servicePackageId) ?? []
+  );
+
   // Order summary computed values (booking-form step)
   const selectedService = servicePackages.find((p) => p.id === selectedServiceId) ?? null;
   const selectedAddons = addonServices.filter((a) => selectedAddonIds.includes(a.id));
+  // Addons already bundled into the selected package are hidden from selection —
+  // staff shouldn't be able to add (and double-charge) something already included.
+  const selectableAddons = addonServices.filter(
+    (a) => !selectedServiceId || !a.includedInPackageIds.includes(selectedServiceId)
+  );
   const computedSubTotal =
     (selectedService?.basePrice ?? 0) + selectedAddons.reduce((sum, a) => sum + a.price, 0);
   const displayTotal = summary?.remainingBalance ?? computedSubTotal;
@@ -515,7 +532,16 @@ export default function WalkInPage() {
                       <p className="text-body-md text-on-surface-variant">
                         {pkg.requiredSlot * SLOT_DURATION_MINUTES} min
                       </p>
-                      <p className="mt-2 text-headline-md text-primary">{formatVND(pkg.basePrice)}</p>
+                      {freeServicePackageIds.has(pkg.id) ? (
+                        <p className="mt-2 flex items-baseline gap-2">
+                          <span className="text-body-md text-on-surface-variant line-through">
+                            {formatVND(pkg.basePrice)}
+                          </span>
+                          <span className="text-headline-md text-primary">0 VNĐ</span>
+                        </p>
+                      ) : (
+                        <p className="mt-2 text-headline-md text-primary">{formatVND(pkg.basePrice)}</p>
+                      )}
                     </button>
                   ))}
                 </div>
@@ -530,7 +556,7 @@ export default function WalkInPage() {
                   <h2 className="text-headline-md text-on-surface">Add-ons</h2>
                 </div>
                 <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-                  {addonServices.map((addon) => (
+                  {selectableAddons.map((addon) => (
                     <button
                       key={addon.id}
                       type="button"

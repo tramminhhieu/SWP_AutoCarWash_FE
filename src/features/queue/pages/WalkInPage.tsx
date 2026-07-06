@@ -18,6 +18,7 @@ import { formatCurrency as formatVND } from "../../../utils/format";
 import { getApiErrorInfo } from "../../../lib/axiosClient";
 import { getSubscriptionStyle } from "../../../constants/subscriptionStyles";
 import { useAuth } from "../../../hooks/useAuth";
+import Modal from "../../../components/ui/Modal";
 
 const SLOT_DURATION_MINUTES = 15; // 1 requiredSlot = 15 phút, theo comment BE WalkInFormDataResponse
 
@@ -73,6 +74,12 @@ export default function WalkInPage() {
   const [isCalculating, setIsCalculating] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [confirmError, setConfirmError] = useState<string | null>(null);
+  // Staff xác nhận ĐÃ thu tiền cọc phạt tại quầy (xe vãng lai bị restricted) qua popup —
+  // bắt buộc trước khi được phép đưa xe vào hàng đợi, theo đúng 2 nhánh xử lý bên BE.
+  const [depositCollected, setDepositCollected] = useState(false);
+  const [showDepositModal, setShowDepositModal] = useState(false);
+  const [depositReceivedInput, setDepositReceivedInput] = useState("");
+  const [depositModalError, setDepositModalError] = useState("");
 
   // schedule: lọc slot của hôm nay theo buổi sáng/chiều, giống booking
   const [period, setPeriod] = useState<"AM" | "PM">("AM");
@@ -109,6 +116,10 @@ export default function WalkInPage() {
     setSelectedSlot(null);
     setConfirmError(null);
     setPeriod("AM");
+    setDepositCollected(false);
+    setShowDepositModal(false);
+    setDepositReceivedInput("");
+    setDepositModalError("");
   };
 
   const handleSelectType = (type: CustomerType) => {
@@ -151,6 +162,7 @@ export default function WalkInPage() {
       color: v.color,
       existingVehicleId: v.id,
     }));
+    setDepositCollected(false);
   };
 
   const recalcInvoice = async (serviceId: number, addonIds: number[]) => {
@@ -195,6 +207,23 @@ export default function WalkInPage() {
     }
   };
 
+  const handleConfirmDeposit = () => {
+    const requiredDeposit = summary?.penaltyDeposit ?? 0;
+    const receivedAmount = Number(depositReceivedInput);
+    if (!receivedAmount || receivedAmount < requiredDeposit) {
+      setDepositModalError(`Please enter at least ${formatVND(requiredDeposit)}.`);
+      return;
+    }
+    setDepositCollected(true);
+    setShowDepositModal(false);
+    setDepositModalError("");
+  };
+
+  const handleCloseDepositModal = () => {
+    setShowDepositModal(false);
+    setDepositModalError("");
+  };
+
   const handleConfirm = async () => {
     if (!selectedServiceId || !selectedSlot || !stationId) return;
     setIsSubmitting(true);
@@ -210,7 +239,7 @@ export default function WalkInPage() {
         addonIds: selectedAddonIds,
         chosenSlotIds: selectedSlot.slotIds,
         stationId,
-        penaltyDepositCollected: false,
+        penaltyDepositCollected: depositCollected,
       });
       setTicketNumber(result.ticketNumber);
       setRemainingBalance(result.remainingBalance);
@@ -271,7 +300,7 @@ export default function WalkInPage() {
     !!selectedServiceId &&
     !!selectedSlot &&
     !isSubmitting &&
-    !(summary?.isActionBlock ?? false);
+    (!(summary?.actionBlock ?? false) || depositCollected);
 
   // Số thứ tự section: MEMBER có thêm bước "Member Lookup" trước "Select Vehicle"
   const sectionNum = {
@@ -469,8 +498,13 @@ export default function WalkInPage() {
                       type="text"
                       value={vehicleInfo.licensePlate}
                       onChange={(e) => {
-                        setVehicleInfo((prev) => ({ ...prev, licensePlate: e.target.value, existingVehicleId: undefined }));
+                        // Chuẩn hoá biển số ngay lúc nhập: viết hoa toàn bộ + bỏ khoảng trắng
+                        // (kể cả khoảng trắng ở giữa) để tránh sai lệch khi so khớp/tra cứu
+                        // theo chuỗi biển số ở BE (vd "51a 12345" và "51A-12345" là cùng 1 xe).
+                        const normalizedPlate = e.target.value.toUpperCase().replace(/\s+/g, "");
+                        setVehicleInfo((prev) => ({ ...prev, licensePlate: normalizedPlate, existingVehicleId: undefined }));
                         setSelectedSavedVehicle(null);
+                        setDepositCollected(false);
                       }}
                       placeholder="e.g. 51A-12345"
                       className="w-full rounded-xl px-3 py-2.5 text-body-md border border-outline-variant outline-none focus:border-primary bg-surface-container-lowest text-on-surface"
@@ -749,9 +783,23 @@ export default function WalkInPage() {
                   {summary.systemNotice}
                 </p>
               )}
-              {summary?.isActionBlock && (
-                <p className="mb-3 rounded-lg border border-error bg-error-container px-3 py-2 text-body-md font-semibold text-on-error-container">
-                  A 20,000 VND penalty deposit is required before confirming
+              {summary?.actionBlock && !depositCollected && (
+                <div className="mb-3 flex flex-col gap-2 rounded-lg border border-error bg-error-container px-3 py-2">
+                  <p className="text-body-md font-semibold text-on-error-container">
+                    A {formatVND(summary.penaltyDeposit)} penalty deposit is required before confirming
+                  </p>
+                  <button
+                    type="button"
+                    onClick={() => setShowDepositModal(true)}
+                    className="w-full rounded-lg bg-error px-3 py-2 text-body-md font-semibold text-on-error hover:opacity-90"
+                  >
+                    Collect Penalty Deposit
+                  </button>
+                </div>
+              )}
+              {summary?.actionBlock && depositCollected && (
+                <p className="mb-3 rounded-lg border border-outline-variant bg-surface-container px-3 py-2 text-body-md font-semibold text-on-surface">
+                  Penalty deposit collected — ready to confirm walk-in.
                 </p>
               )}
               {confirmError && (
@@ -802,6 +850,42 @@ export default function WalkInPage() {
           </div>
         )}
       </div>
+
+      <Modal
+        isOpen={showDepositModal}
+        onClose={handleCloseDepositModal}
+        variant="danger"
+        title="Penalty Deposit Required"
+        confirmText="Confirm Deposit Collected"
+        onConfirm={handleConfirmDeposit}
+        message={
+          <div className="flex flex-col gap-3 text-left">
+            <p>
+              This vehicle has an active violation restriction. Staff must collect a{" "}
+              {formatVND(summary?.penaltyDeposit ?? 0)} cash deposit at the counter before the
+              vehicle can be checked into the queue.
+            </p>
+            <div>
+              <label className="text-label-md font-semibold text-on-surface-variant mb-1.5 block">
+                Amount Received
+              </label>
+              <input
+                type="number"
+                value={depositReceivedInput}
+                onChange={(e) => {
+                  setDepositReceivedInput(e.target.value);
+                  setDepositModalError("");
+                }}
+                placeholder="0"
+                className="w-full rounded-xl px-3 py-2.5 text-body-md border border-outline-variant outline-none focus:border-primary bg-surface-container-lowest text-on-surface"
+              />
+              {depositModalError && (
+                <p className="text-body-md text-error mt-1.5">{depositModalError}</p>
+              )}
+            </div>
+          </div>
+        }
+      />
     </div>
   );
 }

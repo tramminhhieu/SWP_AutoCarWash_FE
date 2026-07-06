@@ -46,7 +46,9 @@ export interface BookingSummaryResponse {
   transferredCredit: number;
   remainingBalance: number;
   systemNotice: string | null;
-  isActionBlock: boolean;
+  // BE serialize field boolean `isActionBlock` (Java) thành "actionBlock" trong JSON
+  // (Jackson bỏ tiền tố "is" khi tên field bắt đầu bằng is + chữ hoa).
+  actionBlock: boolean;
   availableSlots: AvailableSlotDTO[];
 }
 

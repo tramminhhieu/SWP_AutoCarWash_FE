@@ -1,30 +1,28 @@
 //author: Ngọc
-import { useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { Search, ChevronLeft, Check, X } from "lucide-react";
+import { Search, ChevronLeft, Check, X, User, Star, Plus, Calendar, Car } from "lucide-react";
 import {
   checkPhone,
   calculateInvoice,
   createWalkIn,
+  getWalkInFormData,
   type CheckPhoneResponse,
   type SavedVehicleDTO,
   type BookingSummaryResponse,
-  type AvailableSlotDTO,
+  type WalkInServicePackageDTO,
+  type WalkInAddonServiceDTO,
 } from "../services/walkInApi";
 // ported onto dev: dev không có utils/currency.ts, dùng formatCurrency của dev thay formatVND
 import { formatCurrency as formatVND } from "../../../utils/format";
+import { getApiErrorInfo } from "../../../lib/axiosClient";
+import { getSubscriptionStyle } from "../../../constants/subscriptionStyles";
+import { useAuth } from "../../../hooks/useAuth";
 
-// hardcode tạm — thay bằng API khi BE có endpoint /api/service-packages
-const SERVICE_PACKAGES = [
-  { id: 1, name: "Basic Wash", price: 80000 },
-  { id: 2, name: "Premium Wash", price: 150000 },
-  { id: 3, name: "Full Detail Package", price: 250000 },
-];
-
-const STATION_ID = 1; // hardcode tạm — thay bằng AuthContext khi có stationId
+const SLOT_DURATION_MINUTES = 15; // 1 requiredSlot = 15 phút, theo comment BE WalkInFormDataResponse
 
 type CustomerType = "GUEST" | "MEMBER";
-type Step = "select-type" | "vehicle-info" | "service" | "done";
+type Step = "select-type" | "booking-form" | "done";
 
 interface VehicleInfo {
   licensePlate: string;
@@ -36,8 +34,20 @@ interface VehicleInfo {
   tierName?: string;
 }
 
+// Khối giờ đúng bằng tổng thời gian service + addon đã chọn — BE (calculate-invoice) đã tự
+// gộp các slot 15 phút liên tiếp thành từng khối rồi (sliding window theo capacity thực tế),
+// mỗi phần tử trong summary.availableSlots đã là 1 khối sẵn sàng chọn, kèm associatedSlotIds
+// là danh sách slotId đầy đủ cần gửi lên khi confirm. FE không tự gộp lại nữa.
+interface SlotWindow {
+  slotIds: number[];
+  startTime: string;
+  endTime: string;
+}
+
 export default function WalkInPage() {
   const navigate = useNavigate();
+  const { user } = useAuth();
+  const stationId = user?.stationId;
   const [customerType, setCustomerType] = useState<CustomerType | null>(null);
   const [step, setStep] = useState<Step>("select-type");
 
@@ -57,18 +67,54 @@ export default function WalkInPage() {
 
   // service selection
   const [selectedServiceId, setSelectedServiceId] = useState<number | null>(null);
+  const [selectedAddonIds, setSelectedAddonIds] = useState<number[]>([]);
   const [summary, setSummary] = useState<BookingSummaryResponse | null>(null);
-  const [selectedSlot, setSelectedSlot] = useState<AvailableSlotDTO | null>(null);
+  const [selectedSlot, setSelectedSlot] = useState<SlotWindow | null>(null);
   const [isCalculating, setIsCalculating] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [confirmError, setConfirmError] = useState<string | null>(null);
+
+  // schedule: lọc slot của hôm nay theo buổi sáng/chiều, giống booking
+  const [period, setPeriod] = useState<"AM" | "PM">("AM");
 
   // result
   const [ticketNumber, setTicketNumber] = useState("");
   const [remainingBalance, setRemainingBalance] = useState(0);
 
+  // service package / addon options (mock — xem walkInApi.ts để biết API thật đề xuất)
+  const [servicePackages, setServicePackages] = useState<WalkInServicePackageDTO[]>([]);
+  const [addonServices, setAddonServices] = useState<WalkInAddonServiceDTO[]>([]);
+  const [isLoadingOptions, setIsLoadingOptions] = useState(true);
+
+  useEffect(() => {
+    getWalkInFormData()
+      .then((data) => {
+        setServicePackages(data.servicePackages);
+        setAddonServices(data.addonServices);
+      })
+      .finally(() => setIsLoadingOptions(false));
+  }, []);
+
+  // vehicleInfo/service/schedule state dùng chung cho cả GUEST và MEMBER -> phải dọn sạch
+  // mỗi khi đổi loại khách hàng, nếu không giá trị của loại trước sẽ còn sót lại.
+  const resetBookingForm = () => {
+    setPhone("");
+    setPhoneResult(null);
+    setPhoneError("");
+    setVehicleInfo({ licensePlate: "", brandName: "", color: "" });
+    setSelectedSavedVehicle(null);
+    setSelectedServiceId(null);
+    setSelectedAddonIds([]);
+    setSummary(null);
+    setSelectedSlot(null);
+    setConfirmError(null);
+    setPeriod("AM");
+  };
+
   const handleSelectType = (type: CustomerType) => {
+    resetBookingForm();
     setCustomerType(type);
-    setStep("vehicle-info");
+    setStep("booking-form");
   };
 
   const handlePhoneSearch = async () => {
@@ -87,10 +133,10 @@ export default function WalkInPage() {
           tierName: result.tierName,
         }));
       } else {
-        setPhoneError("Không tìm thấy tài khoản với số điện thoại này.");
+        setPhoneError("No account found with this phone number.");
       }
     } catch {
-      setPhoneError("Lỗi kết nối, thử lại.");
+      setPhoneError("Connection error, please try again.");
     } finally {
       setIsPhoneLoading(false);
     }
@@ -107,28 +153,18 @@ export default function WalkInPage() {
     }));
   };
 
-  const canProceedToService = () => {
-    if (customerType === "GUEST") return vehicleInfo.licensePlate.trim() !== "";
-    // MEMBER: need phone result + either saved vehicle or license plate
-    return phoneResult?.existed && vehicleInfo.licensePlate.trim() !== "";
-  };
-
-  const handleProceedToService = () => {
-    setStep("service");
-  };
-
-  const handleSelectService = async (serviceId: number) => {
-    setSelectedServiceId(serviceId);
+  const recalcInvoice = async (serviceId: number, addonIds: number[]) => {
     setSelectedSlot(null);
     setSummary(null);
-    if (!vehicleInfo.licensePlate.trim()) return;
+    if (!vehicleInfo.licensePlate.trim() || !stationId) return;
     setIsCalculating(true);
     try {
       const result = await calculateInvoice({
         customerId: vehicleInfo.customerId,
         licensePlate: vehicleInfo.licensePlate,
         servicePackageId: serviceId,
-        stationId: STATION_ID,
+        addonIds,
+        stationId,
       });
       setSummary(result);
     } catch {
@@ -138,9 +174,25 @@ export default function WalkInPage() {
     }
   };
 
+  const handleSelectService = (serviceId: number) => {
+    setSelectedServiceId(serviceId);
+    recalcInvoice(serviceId, selectedAddonIds);
+  };
+
+  const handleToggleAddon = (addonId: number) => {
+    const newAddonIds = selectedAddonIds.includes(addonId)
+      ? selectedAddonIds.filter((id) => id !== addonId)
+      : [...selectedAddonIds, addonId];
+    setSelectedAddonIds(newAddonIds);
+    if (selectedServiceId) {
+      recalcInvoice(selectedServiceId, newAddonIds);
+    }
+  };
+
   const handleConfirm = async () => {
-    if (!selectedServiceId || !selectedSlot) return;
+    if (!selectedServiceId || !selectedSlot || !stationId) return;
     setIsSubmitting(true);
+    setConfirmError(null);
     try {
       const result = await createWalkIn({
         customerId: vehicleInfo.customerId,
@@ -149,47 +201,108 @@ export default function WalkInPage() {
         brandName: vehicleInfo.brandName || undefined,
         color: vehicleInfo.color || undefined,
         servicePackageId: selectedServiceId,
-        chosenSlotIds: [selectedSlot.slotId],
-        stationId: STATION_ID,
+        addonIds: selectedAddonIds,
+        chosenSlotIds: selectedSlot.slotIds,
+        stationId,
         penaltyDepositCollected: false,
       });
       setTicketNumber(result.ticketNumber);
       setRemainingBalance(result.remainingBalance);
       setStep("done");
-    } catch {
-      alert("Tạo walk-in thất bại, thử lại.");
+    } catch (error) {
+      const { errorCode, message } = getApiErrorInfo(error);
+      setConfirmError(message ?? errorCode ?? "Failed to create walk-in, please try again.");
     } finally {
       setIsSubmitting(false);
     }
   };
 
+  // Order summary computed values (booking-form step)
+  const selectedService = servicePackages.find((p) => p.id === selectedServiceId) ?? null;
+  const selectedAddons = addonServices.filter((a) => selectedAddonIds.includes(a.id));
+  const computedSubTotal =
+    (selectedService?.basePrice ?? 0) + selectedAddons.reduce((sum, a) => sum + a.price, 0);
+  const displayTotal = summary?.remainingBalance ?? computedSubTotal;
+
+  // Tổng thời gian = thời lượng gói dịch vụ + tổng thời lượng các addon đã chọn (chỉ để hiển thị)
+  const totalDurationMinutes =
+    (selectedService ? selectedService.requiredSlot * SLOT_DURATION_MINUTES : 0) +
+    selectedAddons.reduce((sum, a) => sum + a.durationMinutes, 0);
+
+  // summary.availableSlots đã là khối giờ hoàn chỉnh từ BE — map sang SlotWindow, dùng
+  // associatedSlotIds làm slotIds thật để gửi lên khi confirm (không tự gộp lại ở FE).
+  const slotWindows: SlotWindow[] = useMemo(
+    () =>
+      (summary?.availableSlots ?? []).map((s) => ({
+        slotIds: s.associatedSlotIds,
+        startTime: s.startTime,
+        endTime: s.endTime,
+      })),
+    [summary?.availableSlots]
+  );
+
+  // Lọc khối giờ theo buổi sáng (AM, trước 12h) / chiều (PM, từ 12h)
+  const filteredSlots = slotWindows.filter((window) => {
+    const hour = Number(window.startTime.split(":")[0]);
+    return period === "AM" ? hour < 12 : hour >= 12;
+  });
+
+  const canConfirm =
+    !!stationId &&
+    vehicleInfo.licensePlate.trim() !== "" &&
+    (customerType === "GUEST" || !!phoneResult?.existed) &&
+    !!selectedServiceId &&
+    !!selectedSlot &&
+    !isSubmitting &&
+    !(summary?.isActionBlock ?? false);
+
+  // Số thứ tự section: MEMBER có thêm bước "Member Lookup" trước "Select Vehicle"
+  const sectionNum = {
+    lookup: 1,
+    vehicle: customerType === "MEMBER" ? 2 : 1,
+    service: customerType === "MEMBER" ? 3 : 2,
+    addons: customerType === "MEMBER" ? 4 : 3,
+    schedule: customerType === "MEMBER" ? 5 : 4,
+  };
+
   return (
     <div className="min-h-screen bg-background">
-      <div className="max-w-2xl mx-auto px-4 py-6">
+      <div
+        className={`mx-auto flex flex-col gap-8 py-8 ${
+          step === "booking-form" ? "max-w-container-max px-4 md:px-12" : "max-w-2xl px-4"
+        }`}
+      >
         {/* Header */}
-        <div className="flex items-center justify-between gap-3 mb-6">
+        <div className="flex items-center justify-between gap-3">
           <div className="flex items-center gap-3">
             {step !== "select-type" && step !== "done" && (
               <button
-                onClick={() => setStep(step === "service" ? "vehicle-info" : "select-type")}
+                onClick={() => {
+                  resetBookingForm();
+                  setStep("select-type");
+                }}
                 className="rounded-full p-1.5 hover:bg-surface-container transition"
               >
                 <ChevronLeft className="w-5 h-5 text-outline" />
               </button>
             )}
             <div>
-              <h1 className="text-2xl font-bold font-heading text-on-background">Walk-In Check-In</h1>
-              <p className="text-sm text-on-surface-variant mt-0.5">
-                {step === "select-type" && "Chọn loại khách"}
-                {step === "vehicle-info" && "Thông tin xe & khách"}
-                {step === "service" && "Chọn dịch vụ & giờ"}
-                {step === "done" && "Đặt lịch thành công"}
+              <h1 className="font-heading text-headline-xl font-bold tracking-[-1.2px] text-on-surface">
+                Walk-In Check-In
+              </h1>
+              <p className="text-body-md text-on-surface-variant mt-0.5">
+                {step === "select-type" && "Select customer type"}
+                {step === "booking-form" &&
+                  (customerType === "MEMBER"
+                    ? "Member lookup, service & confirmation"
+                    : "Vehicle, service & confirmation")}
+                {step === "done" && "Booking confirmed"}
               </p>
             </div>
           </div>
           <button
             onClick={() => navigate("/staff/queue")}
-            aria-label="Đóng, về Queue Page"
+            aria-label="Close, back to Queue Page"
             className="rounded-full p-1.5 hover:bg-surface-container transition"
           >
             <X className="w-5 h-5 text-outline" />
@@ -201,291 +314,464 @@ export default function WalkInPage() {
           <div className="grid grid-cols-2 gap-4">
             <button
               onClick={() => handleSelectType("GUEST")}
-              className="rounded-2xl p-6 text-left border-2 border-outline-variant hover:border-primary hover:bg-primary-fixed/10 transition bg-surface-container-lowest"
+              className="flex flex-col items-start gap-3 rounded-[8px] border border-outline-variant/50 bg-white p-6 text-left shadow-[0px_10px_25px_-5px_rgba(17,24,39,0.05)] transition hover:border-primary"
             >
-              <div className="w-10 h-10 rounded-full flex items-center justify-center mb-3 bg-surface-container">
-                <span className="text-lg">👤</span>
+              <div className="flex size-16 shrink-0 items-center justify-center rounded-[8px] border border-primary/10 bg-primary/5">
+                <User className="size-6 text-primary" />
               </div>
               <p className="font-bold text-base text-on-surface">GUEST</p>
-              <p className="text-xs text-on-surface-variant mt-1">Khách vãng lai, chưa có tài khoản</p>
+              <p className="text-body-md text-on-surface-variant">Walk-in customer, no account</p>
             </button>
             <button
               onClick={() => handleSelectType("MEMBER")}
-              className="rounded-2xl p-6 text-left border-2 border-outline-variant hover:border-primary hover:bg-primary-fixed/10 transition bg-surface-container-lowest"
+              className="flex flex-col items-start gap-3 rounded-[8px] border border-outline-variant/50 bg-white p-6 text-left shadow-[0px_10px_25px_-5px_rgba(17,24,39,0.05)] transition hover:border-primary"
             >
-              <div className="w-10 h-10 rounded-full flex items-center justify-center mb-3 bg-primary text-on-primary">
-                <span className="text-lg">⭐</span>
+              <div className="flex size-16 shrink-0 items-center justify-center rounded-[8px] border border-primary/10 bg-primary/5">
+                <Star className="size-6 text-primary" />
               </div>
               <p className="font-bold text-base text-on-surface">MEMBER</p>
-              <p className="text-xs text-on-surface-variant mt-1">Khách đã có tài khoản thành viên</p>
+              <p className="text-body-md text-on-surface-variant">Customer with a member account</p>
             </button>
           </div>
         )}
 
-        {/* Step: Vehicle info */}
-        {step === "vehicle-info" && (
-          <div className="space-y-5">
-            {/* MEMBER: phone lookup */}
-            {customerType === "MEMBER" && (
-              <div>
-                <label className="text-xs font-semibold uppercase text-outline mb-1.5 block">Số điện thoại</label>
-                <div className="flex gap-2">
-                  <input
-                    type="tel"
-                    value={phone}
-                    onChange={(e) => setPhone(e.target.value)}
-                    onKeyDown={(e) => e.key === "Enter" && handlePhoneSearch()}
-                    placeholder="Nhập số điện thoại..."
-                    className="flex-1 rounded-xl px-3 py-2.5 text-sm border border-outline-variant outline-none focus:border-primary bg-surface-container-lowest text-on-surface"
-                  />
-                  <button
-                    onClick={handlePhoneSearch}
-                    disabled={isPhoneLoading}
-                    className="px-4 py-2.5 rounded-xl text-sm font-semibold bg-primary text-on-primary disabled:opacity-50"
-                  >
-                    <Search className="w-4 h-4" />
-                  </button>
-                </div>
-                {phoneError && (
-                  <p className="text-xs text-error mt-1.5">{phoneError}</p>
-                )}
-                {phoneResult?.existed && (
-                  <div className="rounded-xl p-3 mt-2 bg-surface-container-low border border-outline-variant/30">
-                    <p className="font-semibold text-sm text-on-surface">{phoneResult.customerName}</p>
-                    <span className="text-xs px-2 py-0.5 rounded-full font-medium bg-primary-fixed text-on-primary-fixed">
-                      {phoneResult.tierName ?? "MEMBER"}
+        {/* Step: Booking form (GUEST & MEMBER) — same section + sticky order summary layout as BookingCreate */}
+        {step === "booking-form" && (
+          <div className="grid grid-cols-1 gap-8 lg:grid-cols-[1fr_360px]">
+            {/* ===== LEFT: form sections ===== */}
+            <div className="flex flex-col gap-8">
+              {/* Member Lookup (MEMBER only) */}
+              {customerType === "MEMBER" && (
+                <section>
+                  <div className="flex items-center gap-2 pb-4">
+                    <span className="flex h-6 w-6 items-center justify-center rounded-full bg-primary text-label-sm font-semibold text-on-primary">
+                      {sectionNum.lookup}
                     </span>
+                    <h2 className="text-headline-md text-on-surface">Member Lookup</h2>
                   </div>
-                )}
-              </div>
-            )}
-
-            {/* Saved vehicles (MEMBER) */}
-            {customerType === "MEMBER" && phoneResult?.savedVehicles && phoneResult.savedVehicles.length > 0 && (
-              <div>
-                <label className="text-xs font-semibold uppercase text-outline mb-1.5 block">Chọn xe đã lưu</label>
-                <div className="flex flex-col gap-2">
-                  {phoneResult.savedVehicles.map((v) => (
-                    <button
-                      key={v.id}
-                      onClick={() => handleSelectSavedVehicle(v)}
-                      className={`rounded-xl px-3 py-2.5 text-left border-2 transition ${
-                        selectedSavedVehicle?.id === v.id
-                          ? "border-primary bg-primary-fixed/10"
-                          : "border-outline-variant bg-surface-container-lowest"
-                      }`}
-                    >
-                      <div className="flex items-center justify-between">
-                        <div>
-                          <p className="font-bold text-sm text-on-surface">{v.licensePlate}</p>
-                          <p className="text-xs text-on-surface-variant">{v.brandName} • {v.color}</p>
-                        </div>
-                        {selectedSavedVehicle?.id === v.id && (
-                          <Check className="w-4 h-4 text-primary" />
-                        )}
+                  <div className="flex flex-col gap-3 rounded-2xl border border-outline-variant bg-surface-container-lowest p-5">
+                    <div>
+                      <label className="text-label-md font-semibold text-on-surface-variant mb-1.5 block">Phone Number</label>
+                      <div className="flex gap-2">
+                        <input
+                          type="tel"
+                          value={phone}
+                          onChange={(e) => setPhone(e.target.value)}
+                          onKeyDown={(e) => e.key === "Enter" && handlePhoneSearch()}
+                          placeholder="Enter phone number..."
+                          className="flex-1 rounded-xl px-3 py-2.5 text-body-md border border-outline-variant outline-none focus:border-primary bg-surface-container-lowest text-on-surface"
+                        />
+                        <button
+                          type="button"
+                          onClick={handlePhoneSearch}
+                          disabled={isPhoneLoading}
+                          className="px-4 py-2.5 rounded-xl text-body-md font-semibold bg-primary text-on-primary disabled:opacity-50"
+                        >
+                          <Search className="w-4 h-4" />
+                        </button>
                       </div>
+                      {phoneError && <p className="text-body-md text-error mt-1.5">{phoneError}</p>}
+                    </div>
+                    {phoneResult?.existed && (
+                      <div className="flex items-center gap-2 rounded-xl p-3 bg-surface-container-low border border-outline-variant/30">
+                        <p className="font-semibold text-body-md text-on-surface">{phoneResult.customerName}</p>
+                        <span className="text-label-sm px-2 py-0.5 rounded-full font-medium bg-primary-fixed text-on-primary-fixed">
+                          {phoneResult.tierName ?? "MEMBER"}
+                        </span>
+                      </div>
+                    )}
+                  </div>
+                </section>
+              )}
+
+              {/* Select Vehicle (MEMBER: cards from saved vehicles, giống BookingCreate) / Vehicle Info (GUEST) */}
+              <section>
+                <div className="flex items-center gap-2 pb-4">
+                  <span className="flex h-6 w-6 items-center justify-center rounded-full bg-primary text-label-sm font-semibold text-on-primary">
+                    {sectionNum.vehicle}
+                  </span>
+                  <h2 className="text-headline-md text-on-surface">
+                    {customerType === "MEMBER" ? "Select Vehicle" : "Vehicle Info"}
+                  </h2>
+                </div>
+                <div className="flex flex-col gap-4 rounded-2xl border border-outline-variant bg-surface-container-lowest p-5">
+                  {customerType === "MEMBER" && phoneResult?.savedVehicles && phoneResult.savedVehicles.length > 0 && (
+                    <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                      {phoneResult.savedVehicles.map((v) => {
+                        // BE (check-phone) chỉ trả subscriptionInfo gồm các gói Unlimited/Family đang
+                        // ACTIVE và chưa hết hạn tính đến hôm nay -> có phần tử là xe đang được miễn phí.
+                        const activeSubscriptions = v.subscriptionInfo ?? [];
+                        return (
+                          <button
+                            key={v.id}
+                            type="button"
+                            onClick={() => handleSelectSavedVehicle(v)}
+                            className={`flex items-center gap-3 rounded-xl p-4 text-left transition-colors
+                              ${
+                                selectedSavedVehicle?.id === v.id
+                                  ? "border-2 border-primary bg-primary-container/10"
+                                  : "border border-outline-variant bg-surface-container-lowest hover:border-primary/40"
+                              }`}
+                          >
+                            <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-primary text-on-primary">
+                              <Car size={18} />
+                            </span>
+                            <div className="flex-1">
+                              <div className="flex flex-wrap items-center gap-1.5">
+                                <p className="text-body-lg font-semibold text-on-surface">{v.brandName}</p>
+                                {activeSubscriptions.map((sub) => {
+                                  const style = getSubscriptionStyle(sub.planType);
+                                  return (
+                                    <span
+                                      key={sub.subscriptionId}
+                                      className={`rounded-full border px-2 py-0.5 text-label-sm font-semibold ${style.badge} ${style.border}`}
+                                    >
+                                      {sub.planName}
+                                    </span>
+                                  );
+                                })}
+                              </div>
+                              <p className="text-body-md text-on-surface-variant">{v.licensePlate}</p>
+                            </div>
+                            {selectedSavedVehicle?.id === v.id && (
+                              <Check size={18} className="text-primary shrink-0" />
+                            )}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  )}
+                  {customerType === "MEMBER" && phoneResult?.savedVehicles && phoneResult.savedVehicles.length > 0 && (
+                    <p className="text-label-md text-outline">— or enter a new license plate below —</p>
+                  )}
+                  <div>
+                    <label className="text-label-md font-semibold text-on-surface-variant mb-1.5 block">
+                      License Plate <span className="text-error">*</span>
+                    </label>
+                    <input
+                      type="text"
+                      value={vehicleInfo.licensePlate}
+                      onChange={(e) => {
+                        setVehicleInfo((prev) => ({ ...prev, licensePlate: e.target.value, existingVehicleId: undefined }));
+                        setSelectedSavedVehicle(null);
+                      }}
+                      placeholder="e.g. 51A-12345"
+                      className="w-full rounded-xl px-3 py-2.5 text-body-md border border-outline-variant outline-none focus:border-primary bg-surface-container-lowest text-on-surface"
+                    />
+                  </div>
+                  {customerType === "MEMBER" && (
+                    <div>
+                      <label className="text-label-md font-semibold text-on-surface-variant mb-1.5 block">Brand</label>
+                      <input
+                        type="text"
+                        value={vehicleInfo.brandName}
+                        onChange={(e) => setVehicleInfo((prev) => ({ ...prev, brandName: e.target.value }))}
+                        placeholder="e.g. Toyota"
+                        className="w-full rounded-xl px-3 py-2.5 text-body-md border border-outline-variant outline-none focus:border-primary bg-surface-container-lowest text-on-surface"
+                      />
+                    </div>
+                  )}
+                  {customerType === "GUEST" && (
+                    <div className="rounded-xl px-4 py-3 bg-surface-container border border-outline-variant/30">
+                      <p className="text-body-md text-on-surface-variant">
+                        Customer will be booked under the <span className="font-semibold text-on-surface">GUEST</span> tier — vouchers and discounts do not apply.
+                      </p>
+                    </div>
+                  )}
+                </div>
+              </section>
+
+              {/* Choose Service */}
+              <section>
+                <div className="flex items-center gap-2 pb-4">
+                  <span className="flex h-6 w-6 items-center justify-center rounded-full bg-primary text-label-sm font-semibold text-on-primary">
+                    {sectionNum.service}
+                  </span>
+                  <h2 className="text-headline-md text-on-surface">Choose Service</h2>
+                </div>
+                {isLoadingOptions && (
+                  <p className="pb-2 text-body-md text-outline">Loading services...</p>
+                )}
+                {!isLoadingOptions && !vehicleInfo.licensePlate.trim() && (
+                  <p className="pb-2 text-body-md text-on-surface-variant">
+                    Enter a license plate above to choose a service.
+                  </p>
+                )}
+                <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+                  {servicePackages.map((pkg) => (
+                    <button
+                      key={pkg.id}
+                      type="button"
+                      onClick={() => handleSelectService(pkg.id)}
+                      disabled={!vehicleInfo.licensePlate.trim()}
+                      className={`rounded-xl p-4 text-left transition-colors disabled:opacity-50 disabled:cursor-not-allowed
+                        ${
+                          selectedServiceId === pkg.id
+                            ? "border-2 border-primary bg-primary-container/5"
+                            : "border border-outline-variant bg-surface-container-lowest hover:border-primary/40"
+                        }`}
+                    >
+                      <p className="text-body-lg font-semibold text-on-surface">{pkg.name}</p>
+                      <p className="text-body-md text-on-surface-variant">
+                        {pkg.requiredSlot * SLOT_DURATION_MINUTES} min
+                      </p>
+                      <p className="mt-2 text-headline-md text-primary">{formatVND(pkg.basePrice)}</p>
                     </button>
                   ))}
                 </div>
-                <p className="text-xs text-outline mt-2">— hoặc nhập biển số mới bên dưới —</p>
-              </div>
-            )}
+              </section>
 
-            {/* License plate */}
-            <div>
-              <label className="text-xs font-semibold uppercase text-outline mb-1.5 block">
-                Biển số xe <span className="text-error">*</span>
-              </label>
-              <input
-                type="text"
-                value={vehicleInfo.licensePlate}
-                onChange={(e) => {
-                  setVehicleInfo((prev) => ({ ...prev, licensePlate: e.target.value, existingVehicleId: undefined }));
-                  setSelectedSavedVehicle(null);
-                }}
-                placeholder="VD: 51A-12345"
-                className="w-full rounded-xl px-3 py-2.5 text-sm border border-outline-variant outline-none focus:border-primary bg-surface-container-lowest text-on-surface"
-              />
-            </div>
-
-            {/* Brand + Color (optional) */}
-            <div className="grid grid-cols-2 gap-3">
-              <div>
-                <label className="text-xs font-semibold uppercase text-outline mb-1.5 block">Hãng xe</label>
-                <input
-                  type="text"
-                  value={vehicleInfo.brandName}
-                  onChange={(e) => setVehicleInfo((prev) => ({ ...prev, brandName: e.target.value }))}
-                  placeholder="VD: Toyota"
-                  className="w-full rounded-xl px-3 py-2.5 text-sm border border-outline-variant outline-none focus:border-primary bg-surface-container-lowest text-on-surface"
-                />
-              </div>
-              <div>
-                <label className="text-xs font-semibold uppercase text-outline mb-1.5 block">Màu xe</label>
-                <input
-                  type="text"
-                  value={vehicleInfo.color}
-                  onChange={(e) => setVehicleInfo((prev) => ({ ...prev, color: e.target.value }))}
-                  placeholder="VD: Đỏ"
-                  className="w-full rounded-xl px-3 py-2.5 text-sm border border-outline-variant outline-none focus:border-primary bg-surface-container-lowest text-on-surface"
-                />
-              </div>
-            </div>
-
-            {/* GUEST badge */}
-            {customerType === "GUEST" && (
-              <div className="rounded-xl px-4 py-3 bg-surface-container border border-outline-variant/30">
-                <p className="text-xs text-on-surface-variant">Khách sẽ được đặt lịch với tier <span className="font-semibold text-on-surface">GUEST</span> — không áp dụng voucher hay discount.</p>
-              </div>
-            )}
-
-            <button
-              onClick={handleProceedToService}
-              disabled={!canProceedToService()}
-              className="w-full py-3 rounded-xl text-sm font-semibold bg-primary text-on-primary disabled:opacity-50 disabled:cursor-not-allowed transition"
-            >
-              Tiếp theo
-            </button>
-          </div>
-        )}
-
-        {/* Step: Service */}
-        {step === "service" && (
-          <div className="space-y-5">
-            {/* Customer summary */}
-            <div className="rounded-xl px-4 py-3 bg-surface-container-low border border-outline-variant/30">
-              <p className="font-bold text-sm text-on-surface">{vehicleInfo.licensePlate}</p>
-              {vehicleInfo.customerName && (
-                <p className="text-xs text-on-surface-variant mt-0.5">{vehicleInfo.customerName} • {vehicleInfo.tierName}</p>
-              )}
-              {!vehicleInfo.customerName && (
-                <span className="text-xs px-2 py-0.5 rounded-full font-medium bg-surface-container text-on-surface-variant">GUEST</span>
-              )}
-            </div>
-
-            {/* Service packages */}
-            <div>
-              <label className="text-xs font-semibold uppercase text-outline mb-2 block">Gói dịch vụ</label>
-              <div className="flex flex-col gap-2">
-                {SERVICE_PACKAGES.map((pkg) => (
-                  <button
-                    key={pkg.id}
-                    onClick={() => handleSelectService(pkg.id)}
-                    className={`rounded-xl px-4 py-3 text-left border-2 transition ${
-                      selectedServiceId === pkg.id
-                        ? "border-primary bg-primary-fixed/10"
-                        : "border-outline-variant bg-surface-container-lowest"
-                    }`}
-                  >
-                    <div className="flex items-center justify-between">
-                      <p className="font-semibold text-sm text-on-surface">{pkg.name}</p>
-                      <p className="text-sm font-bold text-primary">{formatVND(pkg.price)}</p>
-                    </div>
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            {/* Invoice summary */}
-            {isCalculating && (
-              <div className="rounded-xl p-4 text-center bg-surface-container-low">
-                <p className="text-sm text-outline">Đang tính hoá đơn...</p>
-              </div>
-            )}
-
-            {summary && !isCalculating && (
-              <div className="rounded-xl p-4 bg-surface-container-low border border-outline-variant/30 space-y-2">
-                <p className="text-xs font-semibold uppercase text-outline mb-2">Hoá đơn preview</p>
-                <div className="flex justify-between text-sm">
-                  <span className="text-on-surface-variant">Giá gốc</span>
-                  <span className="text-on-surface">{formatVND(summary.rawAmount)}</span>
+              {/* Add-ons */}
+              <section>
+                <div className="flex items-center gap-2 pb-4">
+                  <span className="flex h-6 w-6 items-center justify-center rounded-full bg-primary text-label-sm font-semibold text-on-primary">
+                    {sectionNum.addons}
+                  </span>
+                  <h2 className="text-headline-md text-on-surface">Add-ons</h2>
                 </div>
-                {summary.packageDiscount > 0 && (
-                  <div className="flex justify-between text-sm">
-                    <span className="text-on-surface-variant">Giảm giá gói</span>
-                    <span className="text-green-600">- {formatVND(summary.packageDiscount)}</span>
-                  </div>
-                )}
-                {summary.penaltyDeposit > 0 && (
-                  <div className="flex justify-between text-sm">
-                    <span className="text-error">Cọc phạt</span>
-                    <span className="text-error">{formatVND(summary.penaltyDeposit)}</span>
-                  </div>
-                )}
-                {summary.transferredCredit > 0 && (
-                  <div className="flex justify-between text-sm">
-                    <span className="text-on-surface-variant">Credit chuyển</span>
-                    <span className="text-green-600">- {formatVND(summary.transferredCredit)}</span>
-                  </div>
-                )}
-                <div className="border-t border-outline-variant pt-2 flex justify-between text-sm font-bold">
-                  <span className="text-on-surface">Cần thanh toán</span>
-                  <span className="text-primary">{formatVND(summary.remainingBalance)}</span>
+                <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                  {addonServices.map((addon) => (
+                    <button
+                      key={addon.id}
+                      type="button"
+                      onClick={() => handleToggleAddon(addon.id)}
+                      className={`flex items-center gap-3 rounded-xl p-4 text-left transition-colors
+                        ${
+                          selectedAddonIds.includes(addon.id)
+                            ? "border-2 border-primary bg-primary-container/10"
+                            : "border border-outline-variant bg-surface-container-lowest hover:border-primary/40"
+                        }`}
+                    >
+                      <div className="flex-1">
+                        <p className="text-body-lg font-semibold text-on-surface">{addon.name}</p>
+                        <p className="text-body-md text-on-surface-variant">{addon.durationMinutes} min</p>
+                        {addon.description && (
+                          <p className="text-body-md text-on-surface-variant">{addon.description}</p>
+                        )}
+                        <p className="text-body-md font-medium text-primary">+{formatVND(addon.price)}</p>
+                      </div>
+                      <span
+                        className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-full border-2
+                          ${selectedAddonIds.includes(addon.id) ? "border-primary bg-primary text-on-primary" : "border-outline-variant"}`}
+                      >
+                        {selectedAddonIds.includes(addon.id) ? <Check size={14} strokeWidth={3} /> : <Plus size={14} />}
+                      </span>
+                    </button>
+                  ))}
                 </div>
-                {summary.systemNotice && (
-                  <p className="text-xs text-amber-700 bg-amber-50 rounded-lg px-3 py-2">{summary.systemNotice}</p>
-                )}
-                {summary.isActionBlock && (
-                  <div className="rounded-xl px-3 py-2 bg-error-container border border-error">
-                    <p className="text-xs font-semibold text-on-error-container">Cần thu cọc phạt 20,000đ trước khi xác nhận</p>
-                  </div>
-                )}
+              </section>
 
-                {/* Available slots */}
-                {summary.availableSlots.length > 0 && (
-                  <div className="pt-2">
-                    <p className="text-xs font-semibold uppercase text-outline mb-2">Chọn giờ</p>
-                    <div className="flex flex-wrap gap-2">
-                      {summary.availableSlots.map((slot) => (
+              {/* Schedule */}
+              {!!selectedServiceId && (
+                <section>
+                  <div className="flex items-center gap-2 pb-4">
+                    <span className="flex h-6 w-6 items-center justify-center rounded-full bg-primary text-label-sm font-semibold text-on-primary">
+                      {sectionNum.schedule}
+                    </span>
+                    <h2 className="text-headline-md text-on-surface">Schedule</h2>
+                    {totalDurationMinutes > 0 && (
+                      <span className="ml-auto text-body-md text-on-surface-variant">
+                        Total duration: <span className="font-semibold text-on-surface">{totalDurationMinutes} min</span>
+                      </span>
+                    )}
+                  </div>
+                  <div className="rounded-2xl border border-outline-variant bg-surface-container-lowest p-5">
+                    <p className="pb-4 text-body-md text-on-surface-variant">
+                      Walk-in bookings are for today only — pick an available time slot below.
+                    </p>
+
+                    {/* Toggle AM/PM */}
+                    <div className="flex justify-end pb-3">
+                      <div className="flex rounded-lg border border-outline-variant p-0.5">
                         <button
-                          key={slot.slotId}
-                          onClick={() => setSelectedSlot(slot)}
-                          className={`px-3 py-1.5 rounded-lg text-xs font-medium border transition ${
-                            selectedSlot?.slotId === slot.slotId
-                              ? "bg-primary text-on-primary border-primary"
-                              : "bg-surface-container-lowest text-on-surface border-outline-variant hover:border-primary"
+                          type="button"
+                          onClick={() => setPeriod("AM")}
+                          className={`rounded-md px-3 py-1.5 text-label-md transition-colors ${
+                            period === "AM" ? "bg-surface-container-high text-on-surface" : "text-on-surface-variant"
                           }`}
                         >
-                          {slot.startTime} - {slot.endTime}
+                          Morning (AM)
                         </button>
-                      ))}
+                        <button
+                          type="button"
+                          onClick={() => setPeriod("PM")}
+                          className={`rounded-md px-3 py-1.5 text-label-md transition-colors ${
+                            period === "PM" ? "bg-surface-container-high text-on-surface" : "text-on-surface-variant"
+                          }`}
+                        >
+                          Afternoon (PM)
+                        </button>
+                      </div>
                     </div>
-                  </div>
-                )}
-              </div>
-            )}
 
-            <button
-              onClick={handleConfirm}
-              disabled={!selectedServiceId || !selectedSlot || isSubmitting || (summary?.isActionBlock ?? false)}
-              className="w-full py-3 rounded-xl text-sm font-semibold bg-primary text-on-primary disabled:opacity-50 disabled:cursor-not-allowed transition"
-            >
-              {isSubmitting ? "Đang xử lý..." : "Xác nhận Walk-In"}
-            </button>
+                    {isCalculating ? (
+                      <p className="text-center text-body-md text-outline">Calculating invoice...</p>
+                    ) : filteredSlots.length > 0 ? (
+                      <div className="flex flex-wrap gap-2">
+                        {filteredSlots.map((slot) => (
+                          <button
+                            key={slot.slotIds.join("-")}
+                            type="button"
+                            onClick={() => setSelectedSlot(slot)}
+                            className={`px-3 py-1.5 rounded-lg text-body-md font-medium border transition ${
+                              selectedSlot?.slotIds.join("-") === slot.slotIds.join("-")
+                                ? "bg-primary text-on-primary border-primary"
+                                : "bg-surface-container-lowest text-on-surface border-outline-variant hover:border-primary"
+                            }`}
+                          >
+                            {slot.startTime.slice(0, 5)} - {slot.endTime.slice(0, 5)}
+                          </button>
+                        ))}
+                      </div>
+                    ) : (
+                      <p className="text-body-md text-on-surface-variant">
+                        No available time slots for this period. Try the other period.
+                      </p>
+                    )}
+                  </div>
+                </section>
+              )}
+            </div>
+
+            {/* ===== RIGHT: Order Summary ===== */}
+            <aside className="h-fit rounded-2xl border border-outline-variant bg-surface-container-lowest p-6 shadow-[0_10px_25px_-5px_rgba(29,78,216,0.05)] lg:sticky lg:top-24">
+              <div className="flex items-center gap-2 pb-5">
+                <Calendar size={18} className="text-primary" />
+                <h2 className="text-headline-md text-on-surface">Order Summary</h2>
+              </div>
+
+              {selectedService ? (
+                <div className="flex items-start justify-between gap-2 pb-3">
+                  <div>
+                    <p className="text-body-lg font-semibold text-on-surface">{selectedService.name}</p>
+                    {vehicleInfo.licensePlate && (
+                      <p className="text-body-md text-on-surface-variant">
+                        {vehicleInfo.licensePlate}
+                        {vehicleInfo.customerName ? ` • ${vehicleInfo.customerName}` : ""}
+                      </p>
+                    )}
+                  </div>
+                  <span className="shrink-0 text-body-lg font-semibold text-on-surface">
+                    {formatVND(selectedService.basePrice)}
+                  </span>
+                </div>
+              ) : (
+                <p className="pb-3 text-body-md text-on-surface-variant">No service selected</p>
+              )}
+
+              {selectedAddons.map((addon) => (
+                <div key={addon.id} className="flex items-center justify-between gap-2 pb-3">
+                  <p className="text-body-md font-medium text-on-surface">{addon.name}</p>
+                  <span className="text-body-md font-medium text-on-surface">{formatVND(addon.price)}</span>
+                </div>
+              ))}
+
+              {selectedSlot && (
+                <div className="mt-2 flex items-center gap-2 rounded-lg bg-surface-container-low px-3 py-2.5 text-body-md text-on-surface">
+                  <Calendar size={16} className="text-on-surface-variant" />
+                  <span>
+                    Today • {selectedSlot.startTime.slice(0, 5)} – {selectedSlot.endTime.slice(0, 5)}
+                  </span>
+                </div>
+              )}
+
+              <div className="my-5 border-t border-outline-variant" />
+
+              {summary ? (
+                <>
+                  <div className="flex items-center justify-between pb-2">
+                    <span className="text-body-md text-on-surface-variant">Base Price</span>
+                    <span className="text-body-md text-on-surface">{formatVND(summary.rawAmount)}</span>
+                  </div>
+                  {summary.packageDiscount > 0 && (
+                    <div className="flex items-center justify-between pb-2">
+                      <span className="text-body-md text-on-surface-variant">Package Discount</span>
+                      <span className="text-body-md text-error">-{formatVND(summary.packageDiscount)}</span>
+                    </div>
+                  )}
+                  {summary.penaltyDeposit > 0 && (
+                    <div className="flex items-center justify-between pb-2">
+                      <span className="text-body-md text-error">Penalty Deposit</span>
+                      <span className="text-body-md text-error">{formatVND(summary.penaltyDeposit)}</span>
+                    </div>
+                  )}
+                  {summary.transferredCredit > 0 && (
+                    <div className="flex items-center justify-between pb-2">
+                      <span className="text-body-md text-on-surface-variant">Transferred Credit</span>
+                      <span className="text-body-md text-error">-{formatVND(summary.transferredCredit)}</span>
+                    </div>
+                  )}
+                </>
+              ) : (
+                <div className="flex items-center justify-between pb-2">
+                  <span className="text-body-md text-on-surface-variant">Subtotal</span>
+                  <span className="text-body-md text-on-surface">{formatVND(computedSubTotal)}</span>
+                </div>
+              )}
+
+              <div className="mt-3 mb-5 border-t border-outline-variant" />
+
+              <div className="flex items-center justify-between pb-6">
+                <span className="text-body-lg font-semibold text-on-surface">
+                  {summary ? "Amount Due" : "Total"}
+                </span>
+                <span className="text-headline-md text-primary">{formatVND(displayTotal)}</span>
+              </div>
+
+              {summary?.systemNotice && (
+                <p className="mb-3 rounded-lg bg-amber-50 px-3 py-2 text-body-md text-amber-700">
+                  {summary.systemNotice}
+                </p>
+              )}
+              {summary?.isActionBlock && (
+                <p className="mb-3 rounded-lg border border-error bg-error-container px-3 py-2 text-body-md font-semibold text-on-error-container">
+                  A 20,000 VND penalty deposit is required before confirming
+                </p>
+              )}
+              {confirmError && (
+                <p className="mb-3 rounded-lg border border-error bg-error-container px-3 py-2 text-body-md font-semibold text-on-error-container">
+                  {confirmError}
+                </p>
+              )}
+
+              <button
+                type="button"
+                disabled={!canConfirm}
+                onClick={handleConfirm}
+                className={`flex w-full items-center justify-center gap-2 rounded-lg px-6 py-3 text-body-md font-semibold transition-colors
+                  ${
+                    canConfirm
+                      ? "bg-primary text-on-primary hover:opacity-90"
+                      : "cursor-not-allowed bg-surface-container-high text-on-surface-variant"
+                  }`}
+              >
+                {isSubmitting ? "Processing..." : "Confirm Walk-In →"}
+              </button>
+            </aside>
           </div>
         )}
 
         {/* Step: Done */}
         {step === "done" && (
-          <div className="text-center py-8">
-            <div className="w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4 bg-primary">
-              <Check className="w-8 h-8 text-on-primary" />
+          <div className="flex flex-col items-center gap-1 rounded-[8px] border border-outline-variant/50 bg-white p-8 text-center shadow-[0px_10px_25px_-5px_rgba(17,24,39,0.05)]">
+            <div className="flex size-16 shrink-0 items-center justify-center rounded-[8px] border border-primary/10 bg-primary/5 mb-3">
+              <Check className="size-6 text-primary" />
             </div>
-            <h2 className="text-xl font-bold text-on-surface mb-1">Đặt lịch thành công!</h2>
-            <p className="text-sm text-on-surface-variant mb-6">Xe đang chờ staff check-in tại quầy</p>
-            <div className="rounded-2xl p-6 bg-surface-container-low border border-outline-variant/30 mb-6">
-              <p className="text-xs font-semibold uppercase text-outline mb-1">Số vé</p>
+            <h2 className="text-headline-md text-on-surface mb-1">Booking Confirmed!</h2>
+            <p className="text-body-md text-on-surface-variant mb-6">Vehicle is waiting for staff check-in at the counter</p>
+            <div className="w-full rounded-xl p-6 bg-surface-container-low border border-outline-variant/30 mb-6">
+              <p className="text-label-md font-semibold text-outline mb-1">Ticket Number</p>
               <p className="text-4xl font-bold text-primary tracking-widest">{ticketNumber}</p>
               <div className="border-t border-outline-variant mt-4 pt-4">
-                <p className="text-xs text-on-surface-variant">Còn cần thanh toán</p>
-                <p className="text-xl font-bold text-on-surface">{formatVND(remainingBalance)}</p>
+                <p className="text-body-md text-on-surface-variant">Remaining Balance</p>
+                <p className="text-headline-md text-on-surface">{formatVND(remainingBalance)}</p>
               </div>
             </div>
             <button
               onClick={() => navigate("/staff/queue")}
-              className="w-full py-3 rounded-xl text-sm font-semibold bg-primary text-on-primary"
+              className="w-full py-3 rounded-xl text-body-md font-semibold bg-primary text-on-primary"
             >
-              Về Queue
+              Back to Queue
             </button>
           </div>
         )}

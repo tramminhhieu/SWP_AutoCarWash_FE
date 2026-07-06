@@ -14,6 +14,20 @@ import { getBookingDetail } from "../../booking/api/bookingApi";
 import type { BookingDetail } from "../../booking/types/booking";
 import { formatCheckInTime } from "../../booking/utils/bookingFormatters";
 import { processCashPayment } from "../services/paymentApi";
+import { useAuth } from "../../../hooks/useAuth";
+
+// BE trả checkInAt dạng "yyyy-MM-dd HH:mm:ss" (spring.jackson.date-format) — hiện lại dễ đọc hơn
+function formatCheckInAt(checkInAt: string) {
+  const d = new Date(checkInAt.replace(" ", "T"));
+  if (isNaN(d.getTime())) return checkInAt;
+  return d.toLocaleString("en-GB", {
+    day: "2-digit",
+    month: "short",
+    year: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+}
 
 function formatSchedule(date: string, start: string, end: string) {
   if (!date) return "";
@@ -29,6 +43,7 @@ function formatSchedule(date: string, start: string, end: string) {
 
 export default function PaymentPage() {
   const navigate = useNavigate();
+  const { user } = useAuth();
   const { bookingId: bookingIdParam } = useParams<{ bookingId: string }>();
   const location = useLocation();
   const state = (location.state as { bookingId?: number } | null) ?? null;
@@ -41,6 +56,7 @@ export default function PaymentPage() {
 
   const [paymentMethod, setPaymentMethod] = useState<"cash" | "card">("cash");
   const [received, setReceived] = useState(0);
+  const [receivedInput, setReceivedInput] = useState("");
   const [payError, setPayError] = useState("");
   const [paySuccess, setPaySuccess] = useState(false);
 
@@ -273,6 +289,12 @@ export default function PaymentPage() {
                     detail.endTime ?? "",
                   )}
                 </p>
+                {user?.name && (
+                  <p>Served by: {user.name}</p>
+                )}
+                {detail.checkInAt && (
+                  <p>Checked in: {formatCheckInAt(detail.checkInAt)}</p>
+                )}
               </div>
             </div>
           </div>
@@ -353,8 +375,12 @@ export default function PaymentPage() {
                 </label>
                 <input
                   type="number"
-                  value={received || ""}
-                  onChange={(e) => setReceived(Number(e.target.value))}
+                  value={receivedInput}
+                  onChange={(e) => {
+                    const v = e.target.value;
+                    setReceivedInput(v);
+                    setReceived(v === "" ? 0 : Number(v));
+                  }}
                   placeholder="0"
                   className="w-full rounded-xl px-3 py-2.5 text-sm border border-outline-variant outline-none focus:border-primary bg-surface-container-lowest text-on-surface"
                 />

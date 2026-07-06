@@ -1,28 +1,8 @@
-import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { CheckCircle2 } from "lucide-react";
 import VehicleForm from "../components/VehicleForm";
-
-// Thời gian hiện thông báo thành công trước khi tự chuyển về Home (ms)
-const REDIRECT_DELAY_MS = 1800;
 
 const AddVehicle = () => {
   const navigate = useNavigate();
-  const [isSuccess, setIsSuccess] = useState(false);
-  const [successMessage, setSuccessMessage] = useState<string | undefined>();
-
-  // Thêm xe thành công -> hiện thông báo, sau đó tự chuyển về Home
-  useEffect(() => {
-    if (!isSuccess) return;
-    const timer = setTimeout(() => {
-      navigate("/", {
-        state: {
-          successMessage: successMessage ?? "Vehicle added successfully.",
-        },
-      });
-    }, REDIRECT_DELAY_MS);
-    return () => clearTimeout(timer);
-  }, [isSuccess, successMessage, navigate]);
 
   return (
     <main className="min-h-screen bg-background">
@@ -35,25 +15,10 @@ const AddVehicle = () => {
         </p>
 
         <div className="mt-8">
-          {isSuccess ? (
-            <div className="flex flex-col items-center gap-3 rounded-2xl border border-outline-variant bg-surface-container-lowest p-12 text-center shadow-[0_10px_25px_-5px_rgba(29,78,216,0.05)]">
-              <span className="flex h-12 w-12 items-center justify-center rounded-full bg-tertiary-fixed/30 text-tertiary-fixed-dim">
-                <CheckCircle2 size={28} strokeWidth={2} />
-              </span>
-              <p className="text-headline-md text-on-surface">Vehicle added!</p>
-              <p className="text-body-md text-on-surface-variant">
-                Redirecting to home...
-              </p>
-            </div>
-          ) : (
-            <VehicleForm
-              onSuccess={(message) => {
-                setSuccessMessage(message);
-                setIsSuccess(true);
-              }}
-              onCancel={() => navigate(-1)}
-            />
-          )}
+          <VehicleForm
+            onSuccess={() => navigate("/customer/profile")}
+            onCancel={() => navigate(-1)}
+          />
         </div>
       </div>
     </main>

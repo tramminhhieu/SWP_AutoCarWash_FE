@@ -7,7 +7,8 @@ import SelectStation from "../features/booking/pages/SelectStation";
 import BookingCreate from "../features/booking/pages/BookingCreate";
 import BookingHistory from "../features/booking/pages/BookingHistory";
 import BookingDetail from "../features/booking/pages/BookingDetail";
-import VehicleAdd from "../features/customer/pages/VehicleAdd";
+import VehicleCreate from "../features/vehicles/pages/VehicleCreate";
+import VehicleEdit from "../features/vehicles/pages/VehicleEdit";
 import CustomerProfile from "../features/customer/pages/Profile";
 import PrivateRoute from "./PrivateRoute";
 import RoleRoute from "./RoleRoute";
@@ -42,7 +43,8 @@ export default function AppRouter() {
               path="/booking/history/:bookingId"
               element={<BookingDetail />}
             />
-            <Route path="/vehicles/add" element={<VehicleAdd />} />
+            <Route path="/vehicles/create" element={<VehicleCreate />} />
+            <Route path="/vehicles/edit/:vehicleId" element={<VehicleEdit />} />
             <Route path="/customer/profile" element={<CustomerProfile />} />
             <Route path="/customer/loyalty" element={<LoyaltyRewards />} />
             <Route

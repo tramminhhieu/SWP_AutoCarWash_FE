@@ -43,6 +43,7 @@ export const API = {
   VEHICLE: {
     ADD: "/api/vehicles",
     DELETE: (vehicleId: number | string) => `/api/vehicles/${vehicleId}`,
+    UPDATE: (vehicleId: number | string) => `/api/vehicles/${vehicleId}`,
   },
   CUSTOMER: {
     // API-05-02: GET CUSTOMER PROFILE

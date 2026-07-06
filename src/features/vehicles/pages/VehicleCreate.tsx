@@ -1,7 +1,7 @@
 import { useNavigate } from "react-router-dom";
 import VehicleForm from "../components/VehicleForm";
 
-const AddVehicle = () => {
+const VehicleCreate = () => {
   const navigate = useNavigate();
 
   return (
@@ -25,4 +25,4 @@ const AddVehicle = () => {
   );
 };
 
-export default AddVehicle;
+export default VehicleCreate;

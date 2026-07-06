@@ -213,6 +213,33 @@ export default function BookingDetail() {
                 <span className="font-semibold text-error">-{formatCurrency(booking.pointDiscountAmount)}</span>
               </div>
 
+              {booking.pointsEarned != null && (
+                <div className="flex items-center justify-between text-sm">
+                  <span className="text-on-surface-variant">Points Earned</span>
+                  <span className="font-semibold text-on-surface">
+                    {booking.pointsEarned.toLocaleString()}
+                  </span>
+                </div>
+              )}
+
+              {booking.pointsRedeemed != null && (
+                <div className="flex items-center justify-between text-sm">
+                  <span className="text-on-surface-variant">Points Redeemed</span>
+                  <span className="font-semibold text-on-surface">
+                    {booking.pointsRedeemed.toLocaleString()}
+                  </span>
+                </div>
+              )}
+
+              {booking.loyaltyPoint != null && (
+                <div className="flex items-center justify-between text-sm">
+                  <span className="text-on-surface-variant">Loyalty Points</span>
+                  <span className="font-semibold text-on-surface">
+                    {booking.loyaltyPoint.toLocaleString()}
+                  </span>
+                </div>
+              )}
+
               <div className="flex items-center justify-between text-sm">
                 <span className="text-on-surface-variant">Discount</span>
                 <span className="font-semibold text-error">-{formatCurrency(booking.discountAmount)}</span>

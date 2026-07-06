@@ -18,6 +18,7 @@ import QueuePage from "../features/queue/pages/QueuePage";
 import WalkInPage from "../features/queue/pages/WalkInPage";
 import PaymentPage from "../features/payment/pages/PaymentPage";
 import ChangePassword from "../features/customer/pages/ChangePassword";
+import LoyaltyRewards from "../features/customer/pages/LoyaltyRewards";
 
 export default function AppRouter() {
   return (
@@ -43,6 +44,7 @@ export default function AppRouter() {
             />
             <Route path="/vehicles/add" element={<VehicleAdd />} />
             <Route path="/customer/profile" element={<CustomerProfile />} />
+            <Route path="/customer/loyalty" element={<LoyaltyRewards />} />
             <Route
               path="/customer/profile/change-password"
               element={<ChangePassword />}

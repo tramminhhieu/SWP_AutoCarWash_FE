@@ -44,7 +44,7 @@ export default function PaymentPage() {
   const [isPaying, setIsPaying] = useState(false);
 
   const [paymentMethod, setPaymentMethod] = useState<"cash" | "card">("cash");
-  const [received, setReceived] = useState(0);
+  const [receivedInput, setReceivedInput] = useState(""); // staff nhập tiền mặt nhận được
   const [redeemInput, setRedeemInput] = useState(""); // điểm staff nhập để đổi thưởng
   const [payError, setPayError] = useState("");
   const [paySuccess, setPaySuccess] = useState(false);
@@ -79,6 +79,9 @@ export default function PaymentPage() {
     redeemInput.trim() !== "" &&
     (redeemPoints <= 0 || redeemPoints >= currentPoints);
   const redeemDiscount = isRedeemInvalid ? 0 : redeemPoints * POINT_TO_VND;
+
+  // Tiền mặt staff đã nhận — tách state text riêng để có thể hiển thị đúng khi nhập "0"
+  const received = Number(receivedInput) || 0;
 
   // ── Điểm tích được sau đơn (trên subtotal, trước giảm giá) ─────────────────
   const earnedPoints = calcEarnedPoints(subtotal, detail?.customerTier ?? null);
@@ -460,8 +463,8 @@ export default function PaymentPage() {
                 </label>
                 <input
                   type="number"
-                  value={received || ""}
-                  onChange={(e) => setReceived(Number(e.target.value))}
+                  value={receivedInput}
+                  onChange={(e) => setReceivedInput(e.target.value)}
                   placeholder="0"
                   className="w-full rounded-xl px-3 py-2.5 text-sm border border-outline-variant outline-none focus:border-primary bg-surface-container-lowest text-on-surface"
                 />

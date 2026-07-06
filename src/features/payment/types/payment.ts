@@ -64,9 +64,9 @@ export interface PaymentBookingDetail extends BookingDetail {
 
 export interface CashPaymentRequest {
   bookingId: number;
+  /** Số điểm khách dùng để đổi thưởng; BE tự tính point_discount = usedLoyaltyPoints * 10. Không đổi thì gửi 0. */
+  usedLoyaltyPoints: number;
   receivedAmount: number;
-  /** Số điểm khách đổi tại quầy; BE tự tính point_discount = redeemPoints * 10. */
-  redeemPoints?: number;
 }
 
 export interface CashPaymentResponse {

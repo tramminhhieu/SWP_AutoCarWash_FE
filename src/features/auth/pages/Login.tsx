@@ -69,7 +69,7 @@ const Login = () => {
     setIsSubmitting(true);
     try {
       const result = await login({ identity: identity.trim(), password });
-      loginWithToken(result.token, result.name);
+      loginWithToken(result.token, result.name, result.stationId);
       const decoded = jwtDecode<import("../types/auth").JwtPayload>(
         result.token,
       );

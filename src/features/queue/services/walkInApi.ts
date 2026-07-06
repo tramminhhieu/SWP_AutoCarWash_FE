@@ -1,11 +1,25 @@
 import axiosClient from "../../../lib/axiosClient";
 import type { ApiSuccessResponse } from "../../../types/apiResponse";
 
+// Mirrors BE CheckPhoneResponse.VehicleSubscriptionDTO (vietbinh_branch, WalkInCheckInService.checkPhone) —
+// BE đã lọc sẵn chỉ trả về subscription đang ACTIVE và chưa hết hạn tính đến hôm nay,
+// FE không cần tự check ngày/hạn nữa.
+export interface VehicleSubscriptionDTO {
+  subscriptionId: number;
+  subscriptionPlanId: number;
+  servicePackageId: number;
+  planName: string;
+  planType: "UNLIMITED" | "FAMILY";
+  endDate: string;
+  status: string;
+}
+
 export interface SavedVehicleDTO {
   id: number;
   licensePlate: string;
   brandName: string;
   color: string;
+  subscriptionInfo?: VehicleSubscriptionDTO[];
 }
 
 export interface CheckPhoneResponse {
@@ -20,6 +34,9 @@ export interface AvailableSlotDTO {
   slotId: number;
   startTime: string;
   endTime: string;
+  // Danh sách đầy đủ slotId của khối giờ này (BE đã gộp sẵn theo tổng thời lượng service+addon) —
+  // gửi nguyên mảng này lên làm chosenSlotIds khi confirm, không tự gộp lại ở FE.
+  associatedSlotIds: number[];
 }
 
 export interface BookingSummaryResponse {
@@ -60,8 +77,37 @@ export interface CreateWalkInResponse {
   ticketNumber: string;
   status: string;
   remainingBalance: number;
+  checkInAt: string | null;
   message: string;
 }
+
+export interface WalkInServicePackageDTO {
+  id: number;
+  name: string;
+  basePrice: number;
+  requiredSlot: number;
+  description: string;
+}
+
+export interface WalkInAddonServiceDTO {
+  id: number;
+  name: string;
+  price: number;
+  description: string;
+  durationMinutes: number;
+}
+
+export interface WalkInFormDataResponse {
+  servicePackages: WalkInServicePackageDTO[];
+  addonServices: WalkInAddonServiceDTO[];
+}
+
+export const getWalkInFormData = async (): Promise<WalkInFormDataResponse> => {
+  const res = await axiosClient.get<ApiSuccessResponse<WalkInFormDataResponse>>(
+    "/api/v1/staff/create-walkin/form-data"
+  );
+  return res.data.data;
+};
 
 export const checkPhone = async (phone: string): Promise<CheckPhoneResponse> => {
   const res = await axiosClient.get<ApiSuccessResponse<CheckPhoneResponse>>(

@@ -5,7 +5,7 @@ export interface AuthContextValue {
   user: AuthUser | null;
   isAuthenticated: boolean;
   isLoading: boolean;
-  loginWithToken: (token: string, name?: string) => void;
+  loginWithToken: (token: string, name?: string, stationId?: number) => void;
   logout: () => void;
 }
 

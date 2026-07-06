@@ -7,12 +7,13 @@ export const login = async (payload: LoginRequest): Promise<LoginResponse> => {
   const res = await axiosClient.post<{
     success: boolean;
     message: string;
-    data: { token: string; email: string; name: string };
+    data: { token: string; email: string; name: string; stationId?: number };
   }>(API.AUTH.LOGIN, payload);
   return {
     token: res.data.data.token,
     message: res.data.message,
     name: res.data.data.name,
+    stationId: res.data.data.stationId,
   };
 };
 

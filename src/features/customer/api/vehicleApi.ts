@@ -13,3 +13,7 @@ export const addVehicle = async (
   );
   return response.data;
 };
+
+export const deleteVehicle = async (vehicleId: number): Promise<void> => {
+  await axiosClient.delete(API.VEHICLE.DELETE(vehicleId));
+};

@@ -10,22 +10,22 @@ export interface TierStyleConfig {
 }
 
 export const TIER_STYLES: Record<string, TierStyleConfig> = {
-  Member: {
+  MEMBER: {
     badge: "bg-slate-100 text-slate-700",
     bar: "bg-slate-400",
     label: "text-slate-700",
   },
-  Silver: {
+  SILVER: {
     badge: "bg-slate-200 text-slate-700",
     bar: "bg-slate-500",
     label: "text-slate-700",
   },
-  Gold: {
+  GOLD: {
     badge: "bg-amber-100 text-amber-700",
     bar: "bg-amber-500",
     label: "text-amber-600",
   },
-  Platinum: {
+  PLATINUM: {
     badge: "bg-purple-100 text-purple-700",
     bar: "bg-purple-500",
     label: "text-purple-600",
@@ -34,6 +34,10 @@ export const TIER_STYLES: Record<string, TierStyleConfig> = {
 
 // Lấy style theo tên tier, fallback về Member nếu BE trả tên không khớp
 // Dùng: const style = getTierStyle(tier.currentTierName);
+export function normalizeTierName(tierName: string): string {
+  return tierName.charAt(0).toUpperCase() + tierName.slice(1).toLowerCase();
+}
+
 export function getTierStyle(tierName: string): TierStyleConfig {
-  return TIER_STYLES[tierName] ?? TIER_STYLES["Member"];
+  return TIER_STYLES[tierName.toUpperCase()] ?? TIER_STYLES["MEMBER"];
 }

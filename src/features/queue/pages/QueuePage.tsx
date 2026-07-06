@@ -1,10 +1,11 @@
 //author: Ngọc
 //version:2.0.1
 import { useNavigate } from "react-router-dom";
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, type ReactNode } from "react";
 import {
   Search,
   X,
+  XCircle,
   ChevronRight,
   ChevronUp,
   ChevronDown,
@@ -153,6 +154,7 @@ export default function QueuePage() {
     variant: "success" | "danger";
     message: string;
     onDismiss?: () => void;
+    icon?: ReactNode;
   } | null>(null);
   // author: Ngọc — thu cọc phạt cho xe WALK_IN đang bị hạn chế trước khi cho Confirm Check-in
   // (mirror luồng đã có ở WalkInPage.tsx, nhưng bên Check-in phải gọi API thu cọc thật trước,
@@ -342,10 +344,17 @@ export default function QueuePage() {
     setIsLoading(true);
     try {
       const result = await confirmCheckIn(scanResult.bookingId);
+      // Booking bị chuyển sang NO_SHOW nghĩa là khách bị ghi nhận vi phạm và
+      // KHÔNG vào được Waiting Pool — hiển thị dấu X đỏ thay vì dấu tích xanh.
+      const isPenalized = result.status === "NO_SHOW";
+      const penalizedNotice = {
+        variant: "danger" as const,
+        icon: <XCircle size={48} className="text-error" />,
+      };
       if (result.requiresWalkIn) {
         closeCheckinModal();
         setNotice({
-          variant: "success",
+          ...(isPenalized ? penalizedNotice : { variant: "success" as const }),
           message: result.message,
           onDismiss: () =>
             navigate("/staff/walk-in", {
@@ -357,7 +366,10 @@ export default function QueuePage() {
       closeCheckinModal();
       const board = await getQueueData();
       applyBoard(board);
-      setNotice({ variant: "success", message: result.message });
+      setNotice({
+        ...(isPenalized ? penalizedNotice : { variant: "success" as const }),
+        message: result.message,
+      });
     } catch (error) {
       const { message } = getApiErrorInfo(error);
       setNotice({
@@ -949,9 +961,12 @@ export default function QueuePage() {
             </div>
             {cancelVehicle.tier === "Guest" ? (
               <div className="rounded-xl px-4 py-3 mb-4 bg-error-container border border-error">
-                <p className="text-xs font-semibold mb-0.5 text-on-error-container">
-                  Walk-in Cancellation
-                </p>
+                <div className="flex items-center gap-1.5 mb-0.5">
+                  <XCircle className="w-3.5 h-3.5 text-error shrink-0" />
+                  <p className="text-xs font-semibold text-on-error-container">
+                    Walk-in Cancellation
+                  </p>
+                </div>
                 <p className="text-xs text-on-error-container">
                   1 violation point will be added to{" "}
                   <strong>{cancelVehicle.licensePlate}</strong>.
@@ -959,9 +974,12 @@ export default function QueuePage() {
               </div>
             ) : cancelVehicle.bookingType === "SUBSCRIPTION" ? (
               <div className="rounded-xl px-4 py-3 mb-4 bg-secondary-fixed border border-secondary">
-                <p className="text-xs font-semibold mb-0.5 text-on-secondary-fixed">
-                  Unlimited / Family Package
-                </p>
+                <div className="flex items-center gap-1.5 mb-0.5">
+                  <XCircle className="w-3.5 h-3.5 text-error shrink-0" />
+                  <p className="text-xs font-semibold text-on-secondary-fixed">
+                    Unlimited / Family Package
+                  </p>
+                </div>
                 <p className="text-xs text-on-secondary-fixed-variant">
                   No deposit collected. 1 violation point added.
                 </p>
@@ -1040,6 +1058,7 @@ export default function QueuePage() {
           onDismiss?.();
         }}
         variant={notice?.variant ?? "success"}
+        icon={notice?.icon}
         title={notice?.variant === "danger" ? "Error" : "Notice"}
         message={notice?.message}
         confirmText={notice?.variant === "danger" ? "OK" : undefined}

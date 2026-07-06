@@ -82,6 +82,12 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     setUser(null);
   };
 
+  // Gọi sau khi update profile thành công, đồng bộ lại tên hiển thị trên header
+  const updateUserName = (name: string) => {
+    setUserName(name); // ghi vào localStorage để giữ qua reload
+    setUser((prev) => (prev ? { ...prev, name } : prev));
+  };
+
   return (
     <AuthContext.Provider
       value={{
@@ -90,6 +96,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         isLoading,
         loginWithToken,
         logout,
+        updateUserName,
       }}
     >
       {children}

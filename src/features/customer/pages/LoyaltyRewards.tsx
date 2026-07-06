@@ -300,6 +300,20 @@ export default function LoyaltyRewards() {
             </h2>
           </div>
 
+          <div className="mb-6">
+            <p className="text-xs font-semibold uppercase tracking-wider text-on-surface-variant">
+              Total Accumulated Points
+            </p>
+            <p className="flex items-baseline gap-1">
+              <span className="font-heading text-2xl font-semibold text-primary">
+                {profile.accumulatedPoints.toLocaleString()}
+              </span>
+              <span className="text-sm font-medium tracking-wide text-primary">
+                PTS
+              </span>
+            </p>
+          </div>
+
           <p className="mb-8 text-base text-on-surface-variant">
             {profile.nextTierName
               ? `You are currently at ${profile.tierName} status. Only ${profile.pointsToNextTier?.toLocaleString()} points until ${profile.nextTierName}.`
@@ -376,20 +390,10 @@ export default function LoyaltyRewards() {
             <div className="mb-6 flex flex-wrap gap-8">
               <div>
                 <p className="text-xs font-semibold uppercase tracking-wider text-on-surface-variant">
-                  Accumulated Points
+                  Amount to Maintain {profile.tierName}
                 </p>
                 <p className="font-heading text-2xl font-semibold text-on-surface">
-                  {profile.accumulatedPoints.toLocaleString()}
-                </p>
-              </div>
-              <div>
-                <p className="text-xs font-semibold uppercase tracking-wider text-on-surface-variant">
-                  Points to Maintain {profile.tierName}
-                </p>
-                <p className="font-heading text-2xl font-semibold text-on-surface">
-                  {currentTierIndex !== -1
-                    ? sortedTiers[currentTierIndex].minPoints.toLocaleString()
-                    : "—"}
+                  {profile.retentionTargetAmount.toLocaleString("vi-VN")} ₫
                 </p>
               </div>
             </div>

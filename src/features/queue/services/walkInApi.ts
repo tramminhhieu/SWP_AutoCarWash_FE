@@ -132,6 +132,22 @@ export const calculateInvoice = async (
   return res.data.data;
 };
 
+export interface CollectPenaltyDepositResponse {
+  message: string;
+  requiresWalkIn: boolean;
+}
+
+export const collectWalkInPenaltyDeposit = async (
+  licensePlate: string
+): Promise<CollectPenaltyDepositResponse> => {
+  const res = await axiosClient.post<ApiSuccessResponse<CollectPenaltyDepositResponse>>(
+    "/api/v1/staff/create-walkin/collect-penalty-deposit",
+    null,
+    { params: { licensePlate } }
+  );
+  return res.data.data;
+};
+
 export const createWalkIn = async (
   req: CreateWalkInRequest
 ): Promise<CreateWalkInResponse> => {

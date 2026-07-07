@@ -5,6 +5,7 @@ import Login from "../features/auth/pages/Login";
 import Register from "../features/auth/pages/Register";
 import SelectStation from "../features/booking/pages/SelectStation";
 import BookingCreate from "../features/booking/pages/BookingCreate";
+import BookingPayment from "../features/booking/pages/BookingPayment";
 import BookingHistory from "../features/booking/pages/BookingHistory";
 import BookingDetail from "../features/booking/pages/BookingDetail";
 import VehicleCreate from "../features/vehicles/pages/VehicleCreate";
@@ -38,6 +39,10 @@ export default function AppRouter() {
           <Route element={<RoleRoute allowedRoles={["CUSTOMER"]} />}>
             <Route path="/booking/location" element={<SelectStation />} />
             <Route path="/booking/details" element={<BookingCreate />} />
+            <Route
+              path="/booking/payment/:bookingId"
+              element={<BookingPayment />}
+            />
             <Route path="/booking/history" element={<BookingHistory />} />
             <Route
               path="/booking/history/:bookingId"

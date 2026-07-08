@@ -12,6 +12,9 @@ export interface LoginResponse {
   token: string;
   message: string;
   name?: string;
+  // Station của staff đang đăng nhập (null với CUSTOMER/ADMIN) — dùng thay cho STATION_ID
+  // hardcode ở luồng Walk-in, xem AuthServiceImpl.login() bên BE.
+  stationId?: number;
 }
 
 // Request gửi lên BE khi đăng ký
@@ -48,4 +51,6 @@ export interface AuthUser {
   email: string;
   name?: string;
   role: RoleType;
+  // Station của staff (từ LoginResponse.stationId, không nằm trong JWT) — undefined với CUSTOMER/ADMIN
+  stationId?: number;
 }

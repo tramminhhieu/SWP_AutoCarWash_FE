@@ -44,6 +44,7 @@ export interface CheckInResultResponse {
   message: string;
   requiresWalkIn: boolean;
   oldBookingId: number | null;
+  checkInAt: string | null;
 }
 
 // ── API calls ──────────────────────────────────────────────────────────────
@@ -102,6 +103,7 @@ export interface QueueTicketDTO {
   serviceName: string | null;
   stationId: number | null;
   stationName: string | null;
+  totalAmount: number | null;
 }
 
 // 1 làn rửa (chưa bị xoá) của station — BE: WashLaneResponse. status: "AVAILABLE" | "WASHING".
@@ -109,6 +111,7 @@ export interface WashLaneDTO {
   id: number;
   laneName: string;
   status: string;
+  currentBookingId?: number | null;
 }
 
 // BE trả về object có queue array, lanes array và *LaneCount
@@ -154,23 +157,27 @@ export const getQueueData = async (): Promise<QueuePageData> => {
 };
 
 // author: Ngọc — gọi API thêm xe vào làn rửa (booking CHECK_IN -> WASHING).
-// BE nhận bookingId và trả về board đầy đủ -> FE set lại state từ board này.
+// laneId: DB id của làn cụ thể (khi staff chọn thủ công); null = auto-assign làn đầu tiên.
 export const startService = async (
-  bookingId: number
+  bookingId: number,
+  laneId?: number
 ): Promise<QueuePageData> => {
-  const res = await axiosClient.patch<ApiSuccessResponse<QueueResponseData>>(
-    `/api/queue/${bookingId}/start`
-  );
+  const url = laneId != null
+    ? `/api/queue/${bookingId}/start?laneId=${laneId}`
+    : `/api/queue/${bookingId}/start`;
+  const res = await axiosClient.patch<ApiSuccessResponse<QueueResponseData>>(url);
   return mapBoard(res.data.data);
 };
 
-// BE nhận bookingId (không phải ticketId) và trả về board đầy đủ sau khi hoàn tất.
+// BE nhận bookingId + laneId (DB id của làn cần giải phóng) để tránh giải phóng nhầm làn.
 export const completeService = async (
-  bookingId: number
+  bookingId: number,
+  laneId?: number
 ): Promise<QueuePageData> => {
-  const res = await axiosClient.patch<ApiSuccessResponse<QueueResponseData>>(
-    `/api/queue/${bookingId}/complete`
-  );
+  const url = laneId != null
+    ? `/api/queue/${bookingId}/complete?laneId=${laneId}`
+    : `/api/queue/${bookingId}/complete`;
+  const res = await axiosClient.patch<ApiSuccessResponse<QueueResponseData>>(url);
   return mapBoard(res.data.data);
 };
 

@@ -2,34 +2,8 @@ import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Eye, EyeOff, Lock } from "lucide-react";
 import { isAxiosError } from "axios";
-
-// ─── Mock API — xoá và thay bằng import thật khi BE sẵn sàng ─────────────────
-// Thêm vào features/auth/api/authApi.ts:
-//
-// export interface ChangePasswordRequest {
-//   currentPassword: string;
-//   newPassword: string;
-//   confirmNewPassword: string;
-// }
-//
-// export const changePassword = async (data: ChangePasswordRequest) => {
-//   const res = await axiosClient.post("/api/auth/change-password", data);
-//   return res.data;
-// };
-
-interface ChangePasswordRequest {
-  currentPassword: string;
-  newPassword: string;
-  confirmNewPassword: string;
-}
-
-// Mock luôn thành công — thay bằng import từ authApi khi có BE
-const changePassword = async (_data: ChangePasswordRequest): Promise<void> => {
-  void _data;
-  await new Promise((resolve) => setTimeout(resolve, 800));
-};
-
-// ─────────────────────────────────────────────────────────────────────────────
+import { changePassword } from "../api/profileApi";
+import type { ChangePasswordRequest } from "../types/profile";
 
 type FieldKey = "currentPassword" | "newPassword" | "confirmNewPassword";
 
@@ -53,6 +27,7 @@ export default function ChangePassword() {
     Partial<Record<FieldKey, string>>
   >({});
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [formError, setFormError] = useState<string | null>(null); // thêm dòng này
 
   // ── Handlers ───────────────────────────────────────────────────────────────
 
@@ -70,15 +45,17 @@ export default function ChangePassword() {
   // Validate FE trước khi gọi API (AC-04.4: confirm khớp new)
   const validate = (): boolean => {
     const errs: typeof fieldErrors = {};
-    if (!form.currentPassword) errs.currentPassword = "This field is required";
+    if (!form.currentPassword)
+      errs.currentPassword = "Current password is required";
     if (!form.newPassword) {
-      errs.newPassword = "This field is required";
+      errs.newPassword = "New password is required";
+    } else if (form.newPassword.length < 6) {
+      errs.newPassword = "Password must be at least 6 characters long";
     } else if (form.newPassword.length > 20) {
-      // FE chặn max 20 ký tự (nhóm đã thống nhất, BE không validate rule này)
       errs.newPassword = "Password must not exceed 20 characters";
     }
     if (!form.confirmNewPassword) {
-      errs.confirmNewPassword = "This field is required";
+      errs.confirmNewPassword = "Confirm new password is required";
     } else if (
       form.newPassword &&
       form.confirmNewPassword !== form.newPassword
@@ -111,9 +88,9 @@ export default function ChangePassword() {
   const handleSubmit = async () => {
     if (!validate()) return;
     setIsSubmitting(true);
+    setFormError(null); // reset mỗi lần submit
     try {
       await changePassword(form);
-      // AC-04.1: thành công → về Profile, hiện message thành công qua location state
       navigate("/customer/profile", {
         state: {
           passwordChangedSuccess:
@@ -127,6 +104,12 @@ export default function ChangePassword() {
           | undefined;
         if (errors?.length) {
           applyServerErrors(errors);
+        } else {
+          // Lỗi chung: sai mật khẩu hiện tại, v.v.
+          setFormError(
+            err.response?.data?.message ??
+              "Failed to update password. Please try again.",
+          );
         }
       }
     } finally {
@@ -150,6 +133,11 @@ export default function ChangePassword() {
               Change Password
             </h1>
           </div>
+          {formError && (
+            <div className="mb-5 rounded-lg border border-error/30 bg-error-container px-4 py-3 text-sm text-on-error-container">
+              {formError}
+            </div>
+          )}
 
           {/* Fields */}
           <div className="flex flex-col gap-5">
@@ -265,7 +253,7 @@ function PasswordField({
       </div>
       {/* Hiện hint (vd: bộ đếm ký tự) hoặc lỗi — không hiện cùng lúc */}
       {error ? (
-        <p className="text-xs text-error">{error}</p>
+        <p className="mt-1.5 text-label-md text-error">{error}</p>
       ) : hint ? (
         <p className="text-xs text-on-surface-variant">{hint}</p>
       ) : null}

@@ -246,8 +246,21 @@ const BookingCreate = () => {
     setPreviewTotal(null);
     setAppliedVoucherCode(null);
     setVoucherDiscount(null);
+
+    // Gói mới có thể đã bao gồm sẵn 1 số add-on -> bỏ các add-on đó khỏi lựa chọn
+    // hiện tại. Nếu không, chúng vẫn bị gửi lên API và cộng tiền dù đã bị ẩn khỏi UI.
+    const includedAddonIds =
+      context?.servicePackages.find((s) => s.id === serviceId)
+        ?.addonServiceIds ?? [];
+    const nextAddonIds = selectedAddonIds.filter(
+      (id) => !includedAddonIds.includes(id),
+    );
+    if (nextAddonIds.length !== selectedAddonIds.length) {
+      setSelectedAddonIds(nextAddonIds);
+    }
+
     if (selectedDate) {
-      loadSlots(selectedDate, serviceId, selectedAddonIds);
+      loadSlots(selectedDate, serviceId, nextAddonIds);
     }
   };
 
@@ -422,6 +435,13 @@ const BookingCreate = () => {
   const addonServices = context.addonServices ?? [];
   const vouchers = context.vouchers ?? [];
 
+  // Add-on đã được gói đang chọn bao gồm sẵn thì ẩn khỏi danh sách "thêm dịch vụ".
+  // Chưa chọn gói -> chưa biết gói bao gồm gì -> hiện tất cả.
+  const includedAddonIds = selectedService?.addonServiceIds ?? [];
+  const visibleAddons = addonServices.filter(
+    (a) => !includedAddonIds.includes(a.id),
+  );
+
   return (
     <main className="bg-background">
       <div className="mx-auto max-w-container-max px-4 md:px-12">
@@ -537,7 +557,7 @@ const BookingCreate = () => {
             </section>
 
             {/* BƯỚC 3: Enhance Your Service (addon) */}
-            {addonServices.length > 0 && (
+            {visibleAddons.length > 0 && (
               <section>
                 <div className="flex items-center gap-2 pb-4">
                   <span className="flex h-6 w-6 items-center justify-center rounded-full bg-primary text-label-sm font-semibold text-on-primary">
@@ -549,7 +569,7 @@ const BookingCreate = () => {
                 </div>
 
                 <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-                  {addonServices.map((addon) => (
+                  {visibleAddons.map((addon) => (
                     <AddonOption
                       key={addon.id}
                       addon={addon}

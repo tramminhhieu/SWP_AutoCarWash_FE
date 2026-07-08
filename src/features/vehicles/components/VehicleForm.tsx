@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Car, Save } from "lucide-react";
-import { addVehicle } from "../api/vehicleApi";
+import { addVehicle, updateVehicle } from "../api/vehicleApi";
 import { LICENSE_PLATE_ALREADY_EXISTS } from "../types/vehicle";
 import { getApiErrorInfo } from "../../../lib/axiosClient";
 
@@ -11,15 +11,32 @@ const UNICODE_TEXT_REGEX = /^[\p{L}\s-]+$/u;
 const MAX_FIELD_LENGTH = 20;
 
 interface VehicleFormProps {
-  // Gọi khi thêm xe thành công, kèm message từ BE để page cha hiển thị thông báo
+  // Gọi khi thêm/sửa xe thành công, kèm message từ BE để page cha hiển thị thông báo
   onSuccess: (message?: string) => void;
   onCancel: () => void;
+  // Nếu có 2 prop này → chế độ Edit; không có → chế độ Add (mặc định)
+  vehicleId?: number;
+  initialData?: {
+    licensePlate: string;
+    brandName: string;
+    color: string | null;
+  };
 }
 
-const VehicleForm = ({ onSuccess, onCancel }: VehicleFormProps) => {
-  const [licensePlate, setLicensePlate] = useState("");
-  const [color, setColor] = useState("");
-  const [brand, setBrand] = useState("");
+const VehicleForm = ({
+  onSuccess,
+  onCancel,
+  vehicleId,
+  initialData,
+}: VehicleFormProps) => {
+  const isEditMode = !!vehicleId;
+
+  // Pre-fill từ initialData nếu là Edit mode, để rỗng nếu là Add mode
+  const [licensePlate, setLicensePlate] = useState(
+    initialData?.licensePlate ?? "",
+  );
+  const [color, setColor] = useState(initialData?.color ?? "");
+  const [brand, setBrand] = useState(initialData?.brandName ?? "");
 
   // Lỗi riêng từng field
   const [licensePlateError, setLicensePlateError] = useState<string | null>(
@@ -83,11 +100,16 @@ const VehicleForm = ({ onSuccess, onCancel }: VehicleFormProps) => {
     if (!validate()) return;
     setIsSubmitting(true);
     try {
-      const result = await addVehicle({
+      const payload = {
         licensePlate: licensePlate.trim().toUpperCase(),
         brandName: brand.trim(),
-        color: color.trim(),
-      });
+        color: color.trim() || null,
+      };
+
+      // Edit mode gọi PUT, Add mode gọi POST
+      const result = isEditMode
+        ? await updateVehicle(vehicleId!, payload)
+        : await addVehicle({ ...payload, color: payload.color ?? "" });
 
       onSuccess(result.message);
     } catch (error) {
@@ -99,7 +121,10 @@ const VehicleForm = ({ onSuccess, onCancel }: VehicleFormProps) => {
           message ?? "License plate already exists in the system",
         );
       } else {
-        setFormError(message ?? "Unable to add vehicle. Please try again.");
+        setFormError(
+          message ??
+            `Unable to ${isEditMode ? "update" : "add"} vehicle. Please try again.`,
+        );
       }
     } finally {
       setIsSubmitting(false);
@@ -216,7 +241,11 @@ const VehicleForm = ({ onSuccess, onCancel }: VehicleFormProps) => {
             }`}
         >
           <Save size={16} />
-          {isSubmitting ? "Saving..." : "Save Vehicle"}
+          {isSubmitting
+            ? "Saving..."
+            : isEditMode
+              ? "Save Changes"
+              : "Save Vehicle"}
         </button>
       </div>
     </form>

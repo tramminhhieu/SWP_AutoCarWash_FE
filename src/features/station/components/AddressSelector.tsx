@@ -1,5 +1,4 @@
 import { useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom";
 import Loading from "../../../components/ui/Loading";
 import StationCard from "../../station/components/StationCard";
 import {
@@ -108,13 +107,16 @@ const ListColumn = ({
   );
 };
 
+interface AddressSelectorProps {
+  /** Callback khi chọn xong station — caller tự quyết định xử lý tiếp (navigate, setState...) */
+  onStationSelect: (station: Station) => void;
+}
+
 // AddressSelector: chọn địa chỉ theo 3 cấp Province -> Commune -> Station,
 // hiển thị dạng 3 cột (đúng mockup "Find a Service Center").
 // Mỗi lần chọn 1 cấp sẽ tự gọi API lấy danh sách cấp kế tiếp (API-01-01, API-01-02, API-01-03).
-// Khi chọn xong Station -> chuyển sang bước 2 (/booking/details), mang theo stationId qua query param.
-const AddressSelector = () => {
-  const navigate = useNavigate();
-
+// Không tự navigate — trả station về qua callback để caller quyết định.
+const AddressSelector = ({ onStationSelect }: AddressSelectorProps) => {
   // --- State cho cột Province ---
   const [provinces, setProvinces] = useState<Province[]>([]);
   const [selectedProvinceId, setSelectedProvinceId] = useState<number | null>(
@@ -205,11 +207,10 @@ const AddressSelector = () => {
     }
   };
 
-  // Khi chọn 1 station (đang hoạt động) -> highlight rồi chuyển sang bước 2,
-  // mang theo stationId qua query param để trang Booking dùng gọi API tiếp
+  // Khi chọn 1 station (đang hoạt động) -> highlight rồi gọi callback cho caller xử lý
   const handleSelectStation = (station: Station) => {
     setSelectedStationId(station.id);
-    navigate(`/booking/details?stationId=${station.id}`);
+    onStationSelect(station);
   };
 
   const provinceItems = provinces.map((p) => ({

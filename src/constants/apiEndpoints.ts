@@ -74,4 +74,9 @@ export const API = {
   SERVICE_PACKAGE: {
     LIST: "/api/service-packages",
   },
+  WASHLANE: {
+    // GET /api/admin/stations/{stationId}/lanes — danh sách wash lane theo station (Admin)
+    LIST_BY_STATION: (stationId: number | string) =>
+      `/api/admin/stations/${stationId}/lanes`,
+  },
 };

@@ -3,7 +3,7 @@ import CustomerLayout from "../layouts/CustomerLayout";
 import Home from "../features/customer/pages/Home";
 import Login from "../features/auth/pages/Login";
 import Register from "../features/auth/pages/Register";
-import SelectStation from "../features/booking/pages/SelectStation";
+import SelectStation from "../features/station/components/SelectStation";
 import BookingCreate from "../features/booking/pages/BookingCreate";
 import BookingHistory from "../features/booking/pages/BookingHistory";
 import BookingDetail from "../features/booking/pages/BookingDetail";
@@ -27,6 +27,7 @@ import AddonEdit from "../features/addon/pages/AddonEdit";
 import ServicePackageList from "../features/servicepackage/pages/ServicePackageList";
 import ServicePackageCreate from "../features/servicepackage/pages/ServicePackageCreate";
 import ServicePackageEdit from "../features/servicepackage/pages/ServicePackageEdit";
+import WashLanePage from "../features/washlanes/pages/WashLanePage";
 
 export default function AppRouter() {
   return (
@@ -105,6 +106,7 @@ export default function AppRouter() {
               path="/admin/service-packages/edit/:servicePackageId"
               element={<ServicePackageEdit />}
             />
+            <Route path="/admin/wash-lanes" element={<WashLanePage />} />
           </Route>
         </Route>
       </Route>

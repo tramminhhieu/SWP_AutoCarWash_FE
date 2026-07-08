@@ -1,11 +1,12 @@
 import { NavLink, useNavigate } from "react-router-dom";
-import { Package, Puzzle, LogOut, User as UserIcon } from "lucide-react";
+import { Package, Puzzle, Waves, LogOut, User as UserIcon } from "lucide-react";
 import { useAuth } from "../hooks/useAuth";
 
 /* Danh sách nav — tạm 2 mục, thêm sau khi cần */
 const navItems = [
   { path: "/admin/service-packages", label: "Service Package", icon: Package },
   { path: "/admin/add-ons", label: "Add-on", icon: Puzzle },
+  { path: "/admin/wash-lanes", label: "Wash Lane", icon: Waves },
 ];
 
 export default function AdminSidebar() {

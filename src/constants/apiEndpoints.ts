@@ -68,4 +68,10 @@ export const API = {
     // GET tier change history (upgrade/downgrade log)
     TIER_HISTORY: "/api/loyalty/tier-history",
   },
+  ADDON: {
+    LIST: "/api/addon-services",
+  },
+  SERVICE_PACKAGE: {
+    LIST: "/api/service-packages",
+  },
 };

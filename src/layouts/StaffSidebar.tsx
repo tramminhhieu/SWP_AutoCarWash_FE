@@ -14,8 +14,12 @@ export default function StaffSidebar() {
     <aside className="fixed top-0 left-0 z-20 flex h-screen w-56 flex-col py-6 px-4 bg-surface-container-lowest border-r border-outline-variant">
       {/* Logo */}
       <div className="mb-8 px-2">
-        <h1 className="text-xl font-bold leading-tight font-heading text-primary">HydroLux</h1>
-        <p className="text-xs mt-1 text-on-surface-variant">Management Portal</p>
+        <h1 className="text-xl font-bold leading-tight font-heading text-primary">
+          HydroLux
+        </h1>
+        <p className="text-xs mt-1 text-on-surface-variant">
+          Management Portal
+        </p>
       </div>
 
       {/* Nav */}
@@ -50,7 +54,9 @@ export default function StaffSidebar() {
               {user.name?.[0]?.toUpperCase() ?? "?"}
             </div>
             <div>
-              <p className="text-xs font-semibold text-on-surface">{user.name}</p>
+              <p className="text-xs font-semibold text-on-surface">
+                {user.name}
+              </p>
               <p className="text-xs text-on-surface-variant">{user.email}</p>
             </div>
           </div>
@@ -66,7 +72,10 @@ export default function StaffSidebar() {
 
         {/* Logout */}
         <button
-          onClick={() => { logout(); navigate("/login"); }}
+          onClick={() => {
+            logout();
+            navigate("/login");
+          }}
           className="flex items-center gap-2 px-2 py-1.5 rounded-lg w-full text-xs transition-colors hover:bg-surface-container text-on-surface-variant"
         >
           <LogOut className="w-3.5 h-3.5" strokeWidth={1.75} />

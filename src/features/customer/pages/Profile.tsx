@@ -28,7 +28,10 @@ import type {
 } from "../types/profile";
 import Modal from "../../../components/ui/Modal";
 import { getTierStyle, normalizeTierName } from "../../../constants/tierStyles";
-import { getSubscriptionStyle } from "../../../constants/subscriptionStyles";
+import {
+  getSubscriptionStyle,
+  getSubscriptionTypeLabel,
+} from "../../../constants/subscriptionStyles";
 import { deleteVehicle } from "../../vehicles/api/vehicleApi";
 import { useAuth } from "../../../hooks/useAuth";
 
@@ -153,7 +156,7 @@ function VehicleItem({
             className={`mt-1 inline-flex items-center gap-1 rounded-full border px-2 py-0.5 ${subStyle.badge} ${subStyle.border}`}
           >
             <span className="text-[10px] font-bold uppercase tracking-wider">
-              {sub.type}
+              {getSubscriptionTypeLabel(sub.type)}
             </span>
           </div>
         )}
@@ -306,7 +309,7 @@ function TransferPlanModal({
                 <span
                   className={`rounded-full border px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider ${subStyle.badge} ${subStyle.border}`}
                 >
-                  {sub.type}
+                  {getSubscriptionTypeLabel(sub.type)}
                 </span>
               )}
             </div>

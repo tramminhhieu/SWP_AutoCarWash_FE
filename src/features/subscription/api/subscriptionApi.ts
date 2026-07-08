@@ -1,4 +1,7 @@
+import { API } from "../../../constants/apiEndpoints";
+import axiosClient from "../../../lib/axiosClient";
 import { getCustomerProfile } from "../../customer/api/profileApi";
+import type { ApiSuccessResponse } from "../../../types/apiResponse";
 import type {
   CustomerSubscriptionPlan,
   PlanType,
@@ -9,10 +12,11 @@ import type {
 } from "../types/subscription";
 import { SUBSCRIPTION_ERROR_CODES } from "../types/subscription";
 
-// ⚠️ MOCK DATA - Note.md chưa có BE thật cho nhóm API customer/subscription-*
-// (renew endpoint còn để trống hoàn toàn trong note). Toàn bộ state chỉ tồn tại trong bộ
-// nhớ trình duyệt (mất khi F5). Data mẫu lấy đúng 12 dòng trong bảng subscription_plan
-// thật (data.sql) - id 1-12, service_package_id 1/3 = Basic/Premium.
+// getPlans/getPlanById/register/getMySubscriptions/cancel dưới đây đã gọi API thật.
+// renew/getPaymentInfo/simulatePaymentSuccess VẪN LÀ MOCK - BE xác nhận (2026-07-08) là
+// chưa build FE-56-US-02 (renew) lẫn FE-56-US-05 (hoàn tất gia hạn/xác nhận thanh toán QR),
+// xem BE_API_GAPS_Subscription.md mục 4/3. MOCK_PLANS/mockInvoices/mockSubscriptions dưới
+// đây chỉ còn phục vụ 3 hàm mock đó - không còn là nguồn dữ liệu cho phần đã wire thật.
 interface MockPlan {
   id: number;
   planName: string;
@@ -25,17 +29,17 @@ interface MockPlan {
 }
 
 const MOCK_PLANS: MockPlan[] = [
-  { id: 1, planName: "Unlimited Basic 1 Month", price: 500000, durationDays: 30, planType: "UNLIMITED", servicePackageName: "Basic", maxVehicleCount: 1, description: "Unlimited car wash for 1 month." },
-  { id: 2, planName: "Unlimited Premium 1 Month", price: 900000, durationDays: 30, planType: "UNLIMITED", servicePackageName: "Premium", maxVehicleCount: 1, description: "Unlimited premium car wash for 1 month." },
-  { id: 3, planName: "Unlimited Basic 3 Months", price: 1350000, durationDays: 90, planType: "UNLIMITED", servicePackageName: "Basic", maxVehicleCount: 1, description: "Unlimited car wash for 3 months." },
-  { id: 4, planName: "Unlimited Premium 3 Months", price: 2400000, durationDays: 90, planType: "UNLIMITED", servicePackageName: "Premium", maxVehicleCount: 1, description: "Unlimited premium car wash for 3 months." },
-  { id: 5, planName: "Unlimited Premium 6 Months", price: 4800000, durationDays: 180, planType: "UNLIMITED", servicePackageName: "Premium", maxVehicleCount: 1, description: "Unlimited premium car wash for 6 months." },
+  { id: 1, planName: "Unlimited Basic 1 Month", price: 500000, durationDays: 30, planType: "UNLIMIT", servicePackageName: "Basic", maxVehicleCount: 1, description: "Unlimited car wash for 1 month." },
+  { id: 2, planName: "Unlimited Premium 1 Month", price: 900000, durationDays: 30, planType: "UNLIMIT", servicePackageName: "Premium", maxVehicleCount: 1, description: "Unlimited premium car wash for 1 month." },
+  { id: 3, planName: "Unlimited Basic 3 Months", price: 1350000, durationDays: 90, planType: "UNLIMIT", servicePackageName: "Basic", maxVehicleCount: 1, description: "Unlimited car wash for 3 months." },
+  { id: 4, planName: "Unlimited Premium 3 Months", price: 2400000, durationDays: 90, planType: "UNLIMIT", servicePackageName: "Premium", maxVehicleCount: 1, description: "Unlimited premium car wash for 3 months." },
+  { id: 5, planName: "Unlimited Premium 6 Months", price: 4800000, durationDays: 180, planType: "UNLIMIT", servicePackageName: "Premium", maxVehicleCount: 1, description: "Unlimited premium car wash for 6 months." },
   { id: 6, planName: "Family Basic 1 Month", price: 1200000, durationDays: 30, planType: "FAMILY", servicePackageName: "Basic", maxVehicleCount: 3, description: "Unlimited wash for the whole family, 1 month." },
   { id: 7, planName: "Family Premium 1 Month", price: 2000000, durationDays: 30, planType: "FAMILY", servicePackageName: "Premium", maxVehicleCount: 3, description: "Premium wash for the whole family, 1 month." },
   { id: 8, planName: "Family Basic 3 Months", price: 3200000, durationDays: 90, planType: "FAMILY", servicePackageName: "Basic", maxVehicleCount: 4, description: "Unlimited wash for the whole family, 3 months." },
   { id: 9, planName: "Family Premium 3 Months", price: 5400000, durationDays: 90, planType: "FAMILY", servicePackageName: "Premium", maxVehicleCount: 4, description: "Premium wash for the whole family, 3 months." },
   { id: 10, planName: "Family Premium 6 Months", price: 10800000, durationDays: 180, planType: "FAMILY", servicePackageName: "Premium", maxVehicleCount: 5, description: "Premium wash for the whole family, 6 months." },
-  { id: 11, planName: "Unlimited Basic 6 Months", price: 2700000, durationDays: 180, planType: "UNLIMITED", servicePackageName: "Basic", maxVehicleCount: 1, description: "Unlimited car wash for 6 months." },
+  { id: 11, planName: "Unlimited Basic 6 Months", price: 2700000, durationDays: 180, planType: "UNLIMIT", servicePackageName: "Basic", maxVehicleCount: 1, description: "Unlimited car wash for 6 months." },
   { id: 12, planName: "Family Basic 6 Months", price: 6500000, durationDays: 180, planType: "FAMILY", servicePackageName: "Basic", maxVehicleCount: 3, description: "Unlimited wash for the whole family, 6 months." },
 ];
 
@@ -48,9 +52,9 @@ const FALLBACK_VEHICLES: RegisterVehicleOption[] = [
 
 interface MockInvoice {
   id: number;
-  planId: number;
   vehicleId: number;
   finalAmount: number;
+  planName: string;
   status: "PENDING" | "PAID";
   isRenewal: boolean;
   renewSubscriptionId?: number;
@@ -58,26 +62,20 @@ interface MockInvoice {
 
 let mockInvoices: MockInvoice[] = [];
 let nextInvoiceId = 100;
-let nextSubscriptionId = 100;
 
-// Xe đang có 1 invoice PENDING chưa thanh toán - chặn đăng ký lần 2 cho cùng xe trong lúc
-// invoice trước còn treo (tránh double-book trước khi payment confirm/thất bại/hết hạn).
-const pendingVehicleIds = new Set<number>();
-
-// Data mẫu "My Subscriptions" - lấy đúng theo bảng unlimit_subscription thật (data.sql,
-// id 1 và 6 - ACTIVE), gắn với plan/vehicle mock ở trên. planId trỏ lại đúng MOCK_PLANS
-// để renew() tra cứu theo id thay vì so planName (dễ vỡ nếu tên plan bị đổi).
+// Data mẫu chỉ còn dùng nội bộ cho renew() (mock) tra cứu "subscription hiện tại" - KHÔNG
+// còn phản ánh dữ liệu thật hiển thị trên MySubscriptions (đã wire getMySubscriptions() thật
+// ở dưới). Vì vậy renew() trên 1 subscription id THẬT từ BE sẽ luôn rơi vào nhánh "not found"
+// bên dưới (xem comment tại renew()).
 let mockSubscriptions: UnlimitedSubscription[] = [
   {
     id: 1,
     planId: 1,
     planName: "Unlimited Basic 1 Month",
     servicePackageName: "Basic",
-    planType: "UNLIMITED",
+    planType: "UNLIMIT",
     status: "ACTIVE",
     startDate: "2026-06-08",
-    // Cố tình để gần hết hạn (2 ngày, trong ngưỡng cảnh báo BL-SP-07) để Nora thấy ngay
-    // banner "Expires in X days" trên MySubscriptions.tsx mà không cần tự sửa data.
     endDate: "2026-07-10",
     durationDays: 30,
     price: 500000,
@@ -100,9 +98,6 @@ let mockSubscriptions: UnlimitedSubscription[] = [
     description: "Unlimited wash for the whole family, 1 month.",
     maxVehicleCount: 3,
   },
-  // Thêm 1 gói Family đang ACTIVE (data.sql chỉ cho 1 gói family mẫu ở trên nhưng đã set
-  // EXPIRED để test luồng Renew) - cần thêm bản ACTIVE để có chỗ test màn Family Group
-  // Manage (chỉ mở được khi status ACTIVE). Dùng plan id 9 "Family Premium 3 Months".
   {
     id: 9,
     planId: 9,
@@ -126,11 +121,21 @@ const delay = <T,>(value: T, ms = 350): Promise<T> =>
 const rejectWith = (message: string, errorCode: string) =>
   Promise.reject({ response: { data: { success: false, message, errorCode } } });
 
-// FE-60-US-01
-export const getPlans = (): Promise<CustomerSubscriptionPlan[]> => delay(MOCK_PLANS);
+// FE-60-US-01: GET /api/customer/subscription-plans
+export const getPlans = async (): Promise<CustomerSubscriptionPlan[]> => {
+  const res = await axiosClient.get<ApiSuccessResponse<CustomerSubscriptionPlan[]>>(
+    API.CUSTOMER.SUBSCRIPTION_PLAN.LIST,
+  );
+  return res.data.data;
+};
 
-export const getPlanById = (id: number): Promise<CustomerSubscriptionPlan | undefined> =>
-  delay(MOCK_PLANS.find((p) => p.id === id));
+// Không có endpoint detail riêng cho customer (spec chỉ có list) - tra trong kết quả getPlans().
+export const getPlanById = async (
+  id: number,
+): Promise<CustomerSubscriptionPlan | undefined> => {
+  const plans = await getPlans();
+  return plans.find((p) => p.id === id);
+};
 
 // Vehicle list cho bước chọn xe khi đăng ký - ưu tiên API thật (đã có sẵn ở profile),
 // fallback sang mock khi chưa có BE chạy để vẫn demo được UI.
@@ -149,7 +154,7 @@ export const getVehicleOptions = async (): Promise<RegisterVehicleOption[]> => {
 };
 
 // FE-60-US-02.1 step 2: POST /api/customer/unlimited-subscriptions
-export const register = (
+export const register = async (
   subscriptionPlanId: number,
   vehicleId: number,
   vehicleAlreadySubscribed: boolean,
@@ -157,59 +162,51 @@ export const register = (
   if (!vehicleId) {
     return rejectWith("Vehicle is required.", SUBSCRIPTION_ERROR_CODES.VEHICLE_REQUIRED);
   }
-
-  // BL-SP-01: nếu xe đang có ĐÚNG gói này (cùng planId) còn ACTIVE, hệ thống phải tự gia
-  // hạn thay vì tạo Subscription ACTIVE mới - không reject như 1 lần đăng ký khác gói.
-  // Chỉ tra được trong mockSubscriptions (nguồn dữ liệu subscription duy nhất FE mock có) -
-  // vehicleAlreadySubscribed ở dưới đến từ API profile THẬT nên có thể không khớp id xe mock
-  // khi Nora test bằng dữ liệu backend thật (2 nguồn dữ liệu tách biệt, giới hạn đã biết của
-  // kiến trúc hybrid real+mock hiện tại - xem thêm getVehicleOptions()).
-  const existingSameActive = mockSubscriptions.find(
-    (s) =>
-      s.vehicle.id === vehicleId &&
-      s.planId === subscriptionPlanId &&
-      s.status === "ACTIVE",
-  );
-  if (existingSameActive) {
-    return renew(existingSameActive.id);
-  }
-
   if (vehicleAlreadySubscribed) {
     return rejectWith(
       "The vehicle is already registered with another subscription plan.",
       SUBSCRIPTION_ERROR_CODES.VEHICLE_ALREADY_SUBSCRIBED,
     );
   }
-  if (pendingVehicleIds.has(vehicleId)) {
-    return rejectWith(
-      "This vehicle already has a pending subscription payment.",
-      SUBSCRIPTION_ERROR_CODES.VEHICLE_ALREADY_SUBSCRIBED,
-    );
-  }
-  const plan = MOCK_PLANS.find((p) => p.id === subscriptionPlanId);
-  if (!plan) {
-    return rejectWith(
-      "Invalid subscription plan.",
-      SUBSCRIPTION_ERROR_CODES.INVALID_SUBSCRIPTION_PLAN,
-    );
-  }
 
-  const invoiceId = nextInvoiceId++;
+  const res = await axiosClient.post<ApiSuccessResponse<RegisterUnlimitedResult>>(
+    API.CUSTOMER.UNLIMITED_SUBSCRIPTION.CREATE,
+    { subscriptionPlanId, vehicleId },
+  );
+  const result = res.data.data;
+
+  // getPaymentInfo/simulatePaymentSuccess (dưới đây) vẫn mock vì BE chưa có API xác nhận
+  // thanh toán QR - cache lại invoice bằng đúng invoiceId thật BE vừa trả, dùng giá/tên gói
+  // thật (getPlanById cũng đã là API thật) để màn QR vẫn hiển thị đúng số tiền cho tới khi BE
+  // có endpoint xác nhận thanh toán thật.
+  const plan = await getPlanById(subscriptionPlanId);
   mockInvoices = [
     ...mockInvoices,
-    { id: invoiceId, planId: plan.id, vehicleId, finalAmount: plan.price, status: "PENDING", isRenewal: false },
+    {
+      id: result.invoiceId,
+      vehicleId,
+      finalAmount: plan?.price ?? 0,
+      planName: plan?.planName ?? "Subscription",
+      status: "PENDING",
+      isRenewal: false,
+    },
   ];
-  pendingVehicleIds.add(vehicleId);
 
-  return delay({ subscriptionId: nextSubscriptionId++, invoiceId, status: "PENDING" as const });
+  return result;
 };
 
-// FE-56-US-02: gia hạn - Note.md để trống API, tự dựng theo đúng pattern của register
-// (tạo invoice mới, dùng chung màn QR payment) vì AC mô tả logic tương tự.
+// FE-56-US-02: ⚠️ MOCK - BE xác nhận (2026-07-08) CHƯA build API renew.
 export const renew = (subscriptionId: number): Promise<RegisterUnlimitedResult> => {
   const sub = mockSubscriptions.find((s) => s.id === subscriptionId);
   if (!sub) {
-    return rejectWith("Subscription not found.", SUBSCRIPTION_ERROR_CODES.SUBSCRIPTION_NOT_FOUND);
+    // getMySubscriptions() (trên) đã trả dữ liệu THẬT từ BE - id subscription hiển thị trên
+    // UI sẽ không khớp id giả (1/6/9) trong seed mock này nên luôn rơi vào nhánh này. Dùng
+    // message phản ánh đúng "tính năng chưa sẵn sàng", không phải "không tìm thấy gói" (dễ
+    // hiểu nhầm là bug) - MySubscriptions.tsx handleRenew tự hiển thị message này.
+    return rejectWith(
+      "Renewal isn't available yet - please check back soon.",
+      "RENEWAL_NOT_YET_AVAILABLE",
+    );
   }
   // FE-56-US-02 AC03: từ chối gia hạn nếu subscription đã hết hạn hoặc không còn ACTIVE
   // (EXPIRED/CANCELED không được renew - khách phải đăng ký lại gói mới qua Browse Plans).
@@ -219,7 +216,6 @@ export const renew = (subscriptionId: number): Promise<RegisterUnlimitedResult> 
       SUBSCRIPTION_ERROR_CODES.INVALID_SUBSCRIPTION_STATUS,
     );
   }
-  // Tra theo planId (không so planName - dễ vỡ nếu admin đổi tên plan sau này)
   const plan = MOCK_PLANS.find((p) => p.id === sub.planId);
   if (!plan) {
     return rejectWith(
@@ -232,9 +228,9 @@ export const renew = (subscriptionId: number): Promise<RegisterUnlimitedResult> 
     ...mockInvoices,
     {
       id: invoiceId,
-      planId: plan.id,
       vehicleId: sub.vehicle.id,
       finalAmount: sub.price,
+      planName: plan.planName,
       status: "PENDING",
       isRenewal: true,
       renewSubscriptionId: subscriptionId,
@@ -244,99 +240,46 @@ export const renew = (subscriptionId: number): Promise<RegisterUnlimitedResult> 
 };
 
 // FE-60-US-02.1 step 3: GET /api/customer/subscription-invoices/{invoiceId}/payment
+// ⚠️ MOCK - BE chưa có API polling/webhook xác nhận thanh toán QR.
 export const getPaymentInfo = (invoiceId: number): Promise<SubscriptionPaymentInfo> => {
   const invoice = mockInvoices.find((i) => i.id === invoiceId);
   if (!invoice) {
     return rejectWith("Invoice not found.", "INVOICE_NOT_FOUND");
   }
-  const plan = MOCK_PLANS.find((p) => p.id === invoice.planId);
   const qrData = encodeURIComponent(`AutoCarWash|invoice=${invoiceId}|amount=${invoice.finalAmount}`);
   return delay({
     invoiceId,
     finalAmount: invoice.finalAmount,
     qrCode: `https://api.qrserver.com/v1/create-qr-code/?size=240x240&data=${qrData}`,
     expiredAt: new Date(Date.now() + 15 * 60 * 1000).toISOString(),
-    planName: plan?.planName ?? "Subscription",
+    planName: invoice.planName,
     isRenewal: invoice.isRenewal,
   });
 };
 
-// Không có trong Note.md (chưa tích hợp cổng thanh toán thật) - nút "Simulate Payment"
-// trên trang QR gọi hàm này để giả lập webhook thanh toán thành công, dùng để demo/test
-// hết luồng FE-60-US-02.1 + FE-56-US-05 mà không cần cổng thanh toán thật.
+// ⚠️ MOCK - không có endpoint thật để BE báo thanh toán thành công. Nút "Simulate Payment"
+// trên màn QR gọi hàm này để demo/test hết luồng UI - chỉ đánh dấu invoice cục bộ là PAID để
+// hiện màn "Payment successful", KHÔNG tạo/sửa subscription thật nào - subscription thật (nếu
+// có) chỉ xuất hiện trên MySubscriptions khi BE thật sự xác nhận thanh toán.
 export const simulatePaymentSuccess = (invoiceId: number): Promise<{ success: boolean }> => {
   const invoice = mockInvoices.find((i) => i.id === invoiceId);
   if (!invoice) return delay({ success: false });
   invoice.status = "PAID";
-  // Payment resolved (success) - xe không còn "đang chờ thanh toán" nữa, mở lại cho phép
-  // đăng ký/gia hạn lần sau. Không clear thì xe bị kẹt "pending" vĩnh viễn sau lần đầu.
-  pendingVehicleIds.delete(invoice.vehicleId);
-
-  const plan = MOCK_PLANS.find((p) => p.id === invoice.planId);
-  const vehicle =
-    getVehicleFromMockOrSubscription(invoice.vehicleId) ??
-    { id: invoice.vehicleId, licensePlate: "—", vehicleName: "Vehicle" };
-
-  if (invoice.isRenewal && invoice.renewSubscriptionId) {
-    // FE-56-US-05: gia hạn thành công -> cộng thêm durationDays vào endDate hiện tại
-    mockSubscriptions = mockSubscriptions.map((s) => {
-      if (s.id !== invoice.renewSubscriptionId) return s;
-      const base = new Date(s.endDate) > new Date() ? new Date(s.endDate) : new Date();
-      base.setDate(base.getDate() + (plan?.durationDays ?? 30));
-      return { ...s, status: "ACTIVE", endDate: base.toISOString().slice(0, 10) };
-    });
-  } else if (plan) {
-    const startDate = new Date();
-    const endDate = new Date();
-    endDate.setDate(endDate.getDate() + plan.durationDays);
-    mockSubscriptions = [
-      ...mockSubscriptions,
-      {
-        id: nextSubscriptionId++,
-        planId: plan.id,
-        planName: plan.planName,
-        servicePackageName: plan.servicePackageName,
-        planType: plan.planType,
-        status: "ACTIVE",
-        startDate: startDate.toISOString().slice(0, 10),
-        endDate: endDate.toISOString().slice(0, 10),
-        durationDays: plan.durationDays,
-        price: plan.price,
-        vehicle,
-        description: plan.description,
-        maxVehicleCount: plan.maxVehicleCount,
-      },
-    ];
-  }
-
   return delay({ success: true });
 };
 
-function getVehicleFromMockOrSubscription(vehicleId: number) {
-  return (
-    FALLBACK_VEHICLES.find((v) => v.id === vehicleId) ??
-    mockSubscriptions.find((s) => s.vehicle.id === vehicleId)?.vehicle
-  );
-}
-
 // FE-60-US-05: GET /api/customer/unlimited-subscriptions
-export const getMySubscriptions = (): Promise<UnlimitedSubscription[]> =>
-  delay([...mockSubscriptions]);
+export const getMySubscriptions = async (): Promise<UnlimitedSubscription[]> => {
+  const res = await axiosClient.get<ApiSuccessResponse<UnlimitedSubscription[]>>(
+    API.CUSTOMER.UNLIMITED_SUBSCRIPTION.LIST,
+  );
+  return res.data.data;
+};
 
 // FE-58-US-01: PATCH /api/customer/unlimited-subscriptions/{id}/cancel
-export const cancel = (id: number): Promise<{ success: true; message: string }> => {
-  const sub = mockSubscriptions.find((s) => s.id === id);
-  if (!sub) {
-    return rejectWith("Subscription not found.", SUBSCRIPTION_ERROR_CODES.SUBSCRIPTION_NOT_FOUND);
-  }
-  if (sub.status !== "ACTIVE") {
-    return rejectWith(
-      "Only active subscriptions can be canceled.",
-      SUBSCRIPTION_ERROR_CODES.INVALID_SUBSCRIPTION_STATUS,
-    );
-  }
-  mockSubscriptions = mockSubscriptions.map((s) =>
-    s.id === id ? { ...s, status: "CANCELED" } : s,
+export const cancel = async (id: number): Promise<{ success: true; message: string }> => {
+  const res = await axiosClient.patch<ApiSuccessResponse<unknown>>(
+    API.CUSTOMER.UNLIMITED_SUBSCRIPTION.CANCEL(id),
   );
-  return delay({ success: true, message: "Subscription canceled successfully." });
+  return res.data;
 };

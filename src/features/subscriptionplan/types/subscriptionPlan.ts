@@ -1,7 +1,9 @@
 // Khớp bảng subscription_plan (data.sql thật) + AC FE-53 (Note.md).
-// plan_type thật trong DB là "UNLIMITED" (Note.md ghi "UNLIMIT" ở vài chỗ là lỗi đánh máy -
-// đã xác nhận lại bằng data.sql, seed data chỉ có 'UNLIMITED'/'FAMILY').
-export type PlanType = "FAMILY" | "UNLIMITED";
+// plan_type thật là "UNLIMIT" - đã confirm trực tiếp với BE ngày 2026-07-08 (kết luận cũ ở
+// đây nói "UNLIMITED" mới đúng theo data.sql seed là SAI, BE xác nhận lại giá trị thật là
+// "UNLIMIT" khớp spec Sprint 3). UI vẫn hiển thị chữ "UNLIMITED" cho người dùng - xem
+// getSubscriptionTypeLabel() trong src/constants/subscriptionStyles.ts.
+export type PlanType = "FAMILY" | "UNLIMIT";
 export type PlanStatus = "ACTIVE" | "INACTIVE";
 export type PlanStatusFilter = "ALL" | PlanStatus;
 

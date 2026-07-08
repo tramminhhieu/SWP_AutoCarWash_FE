@@ -4,7 +4,10 @@ import { AlertTriangle, Car, RefreshCw, Users, XCircle } from "lucide-react";
 import Loading from "../../../components/ui/Loading";
 import Modal from "../../../components/ui/Modal";
 import { formatCurrency, formatDate } from "../../../utils";
-import { getSubscriptionStyle } from "../../../constants/subscriptionStyles";
+import {
+  getSubscriptionStyle,
+  getSubscriptionTypeLabel,
+} from "../../../constants/subscriptionStyles";
 import { getApiErrorInfo } from "../../../lib/axiosClient";
 import { cancel, getMySubscriptions, renew } from "../api/subscriptionApi";
 import type { UnlimitedSubscription } from "../types/subscription";
@@ -69,7 +72,7 @@ function SubscriptionCard({
             <span
               className={`rounded-full border px-2 py-0.5 text-label-sm font-bold uppercase tracking-wider ${typeStyle.badge} ${typeStyle.border}`}
             >
-              {sub.planType}
+              {getSubscriptionTypeLabel(sub.planType)}
             </span>
           </div>
           <p className="mt-0.5 text-body-md text-on-surface-variant">

@@ -8,7 +8,11 @@ import {
   Car,
   Calendar,
   Award,
+  Puzzle,
+  Package,
+  Repeat,
 } from "lucide-react";
+
 import NotificationBell from "../features/crm/components/NotificationBell";
 
 /**
@@ -28,9 +32,14 @@ interface CustomerHeaderProps {
 }
 
 const NAV_LINKS = [
-  { label: "Service", href: "/services" },
   { label: "My Family", href: "/family" },
   { label: "My Subscription", href: "/subscription" },
+];
+
+const SERVICE_LINKS = [
+  { label: "Add-on", href: "/add-ons", icon: Puzzle },
+  { label: "Service Package", href: "/service-packages", icon: Package },
+  { label: "Subscription Plan", href: "/subscription-plans", icon: Repeat },
 ];
 
 export default function CustomerHeader({
@@ -40,6 +49,8 @@ export default function CustomerHeader({
 }: CustomerHeaderProps) {
   const [isProfileOpen, setIsProfileOpen] = useState(false);
   const profileRef = useRef<HTMLDivElement>(null);
+  const [isServiceOpen, setIsServiceOpen] = useState(false);
+  const serviceRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
@@ -48,6 +59,12 @@ export default function CustomerHeader({
         !profileRef.current.contains(event.target as Node)
       ) {
         setIsProfileOpen(false);
+      }
+      if (
+        serviceRef.current &&
+        !serviceRef.current.contains(event.target as Node)
+      ) {
+        setIsServiceOpen(false);
       }
     }
     document.addEventListener("mousedown", handleClickOutside);
@@ -67,11 +84,53 @@ export default function CustomerHeader({
 
         {/* Nav links - desktop */}
         <nav className="hidden items-center gap-8 md:flex">
+          {/* Service dropdown */}
+          <div ref={serviceRef} className="relative">
+            <button
+              type="button"
+              onClick={() => setIsServiceOpen((prev) => !prev)}
+              aria-expanded={isServiceOpen}
+              className="flex items-center gap-1 font-body font-bold text-on-surface-variant transition-colors hover:text-primary"
+            >
+              Service
+              <ChevronDown
+                className={`h-4 w-4 transition-transform ${isServiceOpen ? "rotate-180" : ""}`}
+              />
+            </button>
+
+            {isServiceOpen && (
+              <div
+                role="menu"
+                className="absolute left-0 z-50 mt-2 w-56 rounded-lg border border-outline-variant bg-white/80 py-1 shadow-soft backdrop-blur-md"
+              >
+                {SERVICE_LINKS.map((item) => {
+                  const Icon = item.icon;
+                  return (
+                    <Link
+                      key={item.href}
+                      to={item.href}
+                      role="menuitem"
+                      className="flex items-center gap-2 px-4 py-2 font-body text-sm text-on-surface hover:bg-surface-container-low"
+                      onClick={() => setIsServiceOpen(false)}
+                    >
+                      <Icon
+                        className="h-4 w-4 text-outline"
+                        strokeWidth={1.75}
+                      />
+                      {item.label}
+                    </Link>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+
+          {/* Các link còn lại */}
           {NAV_LINKS.map((link) => (
             <Link
               key={link.href}
               to={link.href}
-              className="font-body  font-bold text-on-surface-variant transition-colors hover:text-primary"
+              className="font-body font-bold text-on-surface-variant transition-colors hover:text-primary"
             >
               {link.label}
             </Link>

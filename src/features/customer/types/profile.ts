@@ -16,7 +16,8 @@ export interface CustomerTier {
 }
 
 export interface VehicleActiveSubscription {
-  type: string; // "UNLIMITED" | "FAMILY"
+  type: string; // "UNLIMIT" | "FAMILY" (giá trị thật BE trả, confirm 2026-07-08 - UI hiển thị
+  // "UNLIMITED" qua getSubscriptionTypeLabel(), xem src/constants/subscriptionStyles.ts)
   // Chỉ gửi khi xe đang trong lock period (last_vehicle_change_at chưa hết hạn)
   hasTransferred?: boolean;
   transferUnlockDate?: string; // "YYYY-MM-DD"

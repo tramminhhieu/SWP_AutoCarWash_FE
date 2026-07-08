@@ -5,7 +5,7 @@ import type { PlanType } from "../types/subscriptionPlan";
 // Map :type trên URL (đến từ SubscriptionPlanTypeSelect) -> planType thật + nội dung hiển thị
 const TYPE_CONFIG: Record<string, { planType: PlanType; title: string; subtitle: string }> = {
   unlimited: {
-    planType: "UNLIMITED",
+    planType: "UNLIMIT",
     title: "Create Unlimited Membership",
     subtitle: "Unlimited wash package for a single vehicle.",
   },

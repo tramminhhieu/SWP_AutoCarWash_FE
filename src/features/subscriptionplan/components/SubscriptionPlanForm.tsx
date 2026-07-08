@@ -1,6 +1,7 @@
 import { useEffect, useState, type ReactNode } from "react";
 import { CarFront, ChevronDown, Info, Save, Tag } from "lucide-react";
 import { getApiErrorInfo } from "../../../lib/axiosClient";
+import { getSubscriptionTypeLabel } from "../../../constants/subscriptionStyles";
 import { create, getServicePackageOptions, update } from "../api/subscriptionPlanApi";
 import {
   SUBSCRIPTION_PLAN_ERROR_CODES,
@@ -9,7 +10,7 @@ import {
   type ServicePackageOption,
 } from "../types/subscriptionPlan";
 
-const PLAN_TYPES: PlanType[] = ["UNLIMITED", "FAMILY"];
+const PLAN_TYPES: PlanType[] = ["UNLIMIT", "FAMILY"];
 const STATUSES: PlanStatus[] = ["ACTIVE", "INACTIVE"];
 
 // Style dùng chung cho input/select/label, theo đúng token trong index.css (@theme) +
@@ -141,7 +142,7 @@ export default function SubscriptionPlanForm({
     initialData?.servicePackageId?.toString() ?? "",
   );
   const [planType, setPlanType] = useState<PlanType>(
-    initialData?.planType ?? fixedPlanType ?? "UNLIMITED",
+    initialData?.planType ?? fixedPlanType ?? "UNLIMIT",
   );
   // FAMILY: >1 do admin nhập. UNLIMITED: note + data.sql thật đều để 1, nên field bị ẩn và
   // luôn gửi 1 - xem quyết định đã báo Nora trong plan trước khi code phần này.
@@ -313,7 +314,7 @@ export default function SubscriptionPlanForm({
               >
                 {PLAN_TYPES.map((t) => (
                   <option key={t} value={t}>
-                    {t}
+                    {getSubscriptionTypeLabel(t)}
                   </option>
                 ))}
               </SelectField>

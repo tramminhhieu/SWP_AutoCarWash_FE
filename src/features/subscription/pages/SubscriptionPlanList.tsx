@@ -3,13 +3,16 @@ import { useNavigate } from "react-router-dom";
 import { CalendarClock, CarFront } from "lucide-react";
 import { useAuth } from "../../../hooks/useAuth";
 import { formatCurrency } from "../../../utils";
-import { getSubscriptionStyle } from "../../../constants/subscriptionStyles";
+import {
+  getSubscriptionStyle,
+  getSubscriptionTypeLabel,
+} from "../../../constants/subscriptionStyles";
 import { getPlans } from "../api/subscriptionApi";
 import type { CustomerSubscriptionPlan, PlanType } from "../types/subscription";
 
 const SECTION_ORDER: { type: PlanType; title: string; subtitle: string }[] = [
   {
-    type: "UNLIMITED",
+    type: "UNLIMIT",
     title: "Unlimited Membership",
     subtitle: "Unlimited washes for a single vehicle.",
   },
@@ -43,7 +46,7 @@ function PlanGroupCard({
   const [selectedId, setSelectedId] = useState(variants[0].id);
   const selected = variants.find((v) => v.id === selectedId) ?? variants[0];
   const style = getSubscriptionStyle(selected.planType);
-  const baseName = `${selected.planType === "UNLIMITED" ? "Unlimited" : "Family"} ${selected.servicePackageName}`;
+  const baseName = `${selected.planType === "UNLIMIT" ? "Unlimited" : "Family"} ${selected.servicePackageName}`;
 
   return (
     <div className="flex h-full flex-col rounded-2xl border border-outline-variant bg-surface-container-lowest p-6 shadow-[0_10px_25px_-5px_rgba(29,78,216,0.05)]">
@@ -55,7 +58,7 @@ function PlanGroupCard({
           <span
             className={`shrink-0 rounded-full border px-2 py-0.5 text-label-sm font-bold uppercase tracking-wider ${style.badge} ${style.border}`}
           >
-            {selected.planType}
+            {getSubscriptionTypeLabel(selected.planType)}
           </span>
         </div>
 

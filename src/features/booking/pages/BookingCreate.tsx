@@ -32,7 +32,10 @@ import type {
 } from "../types/booking";
 import { NO_VEHICLE_REGISTERED } from "../types/booking";
 import type { BookingSlot } from "../types/bookingSlot";
-import { getSubscriptionStyle } from "../../../constants/subscriptionStyles";
+import {
+  getSubscriptionStyle,
+  getSubscriptionTypeLabel,
+} from "../../../constants/subscriptionStyles";
 
 // Format số tiền VND, vd 110000 -> "110,000 VND"
 const formatCurrency = (amount: number) =>
@@ -864,7 +867,7 @@ const VehicleOption = ({
 }: {
   vehicle: BookingVehicle;
   isSelected: boolean;
-  subscriptionType: "UNLIMITED" | "FAMILY" | null;
+  subscriptionType: "UNLIMIT" | "FAMILY" | null;
   onSelect: () => void;
 }) => (
   <button
@@ -892,7 +895,7 @@ const VehicleOption = ({
               <span
                 className={`rounded-full border px-2 py-0.5 text-label-sm font-semibold ${style.badge} ${style.border}`}
               >
-                {subscriptionType}
+                {getSubscriptionTypeLabel(subscriptionType)}
               </span>
             );
           })()}

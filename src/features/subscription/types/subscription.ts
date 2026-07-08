@@ -1,7 +1,9 @@
 // Customer-facing subscription (khác admin CRUD ở src/features/subscriptionplan/).
 // Khớp FE-60 / FE-56 / FE-58 (Note.md) + bảng subscription_plan / unlimit_subscription
 // thật trong data.sql. FE-59 (transfer vehicle) đã có sẵn trong Profile.tsx, không lặp lại ở đây.
-export type PlanType = "FAMILY" | "UNLIMITED";
+// plan_type thật là "UNLIMIT" (confirm với BE 2026-07-08) - UI vẫn hiển thị "UNLIMITED", xem
+// getSubscriptionTypeLabel() trong src/constants/subscriptionStyles.ts.
+export type PlanType = "FAMILY" | "UNLIMIT";
 
 // FE-60-US-01: GET /api/customer/subscription-plans
 export interface CustomerSubscriptionPlan {

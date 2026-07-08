@@ -54,6 +54,33 @@ export const API = {
     CHANGE_PASSWORD: "/api/auth/change-password",
     // API-06-01:: TRANSFER SUBSCRIPTION PLAN
     TRANSFER_SUBSCRIPTION: "/api/subscriptions/transfer",
+    SUBSCRIPTION_PLAN: {
+      // FE-60-US-01: GET /api/customer/subscription-plans
+      LIST: "/api/customer/subscription-plans",
+    },
+    UNLIMITED_SUBSCRIPTION: {
+      // FE-60-US-05: GET /api/customer/unlimited-subscriptions
+      LIST: "/api/customer/unlimited-subscriptions",
+      // FE-60-US-02.1 step 2: POST /api/customer/unlimited-subscriptions
+      CREATE: "/api/customer/unlimited-subscriptions",
+      // FE-58-US-01: PATCH /api/customer/unlimited-subscriptions/{id}/cancel
+      CANCEL: (id: number | string) =>
+        `/api/customer/unlimited-subscriptions/${id}/cancel`,
+    },
+    // ⚠️ CHƯA có contract từ BE (không có trong Note.md/spec Sprint 3) - path tự đoán theo
+    // đúng pattern REST của UNLIMITED_SUBSCRIPTION ở trên. Sửa lại ngay khi BE có API thật.
+    FAMILY_GROUP: {
+      DETAIL: (subscriptionId: number | string) =>
+        `/api/customer/family-groups/${subscriptionId}`,
+      ADD_MEMBER: (subscriptionId: number | string) =>
+        `/api/customer/family-groups/${subscriptionId}/members`,
+      REMOVE_MEMBER: (subscriptionId: number | string, memberId: number | string) =>
+        `/api/customer/family-groups/${subscriptionId}/members/${memberId}`,
+      UPDATE_MEMBER_VEHICLE: (subscriptionId: number | string, memberId: number | string) =>
+        `/api/customer/family-groups/${subscriptionId}/members/${memberId}/vehicle`,
+      DISSOLVE: (subscriptionId: number | string) =>
+        `/api/customer/family-groups/${subscriptionId}`,
+    },
   },
   PAYMENTS: {
     CASH: "/api/payments/cash",

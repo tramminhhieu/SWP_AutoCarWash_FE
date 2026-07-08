@@ -9,11 +9,10 @@ BE xác nhận/quyết định (không phải thiếu field, mà là 2 nguồn t
 - 🔴 **`GET /api/admin/subscription-plans`** — response mẫu trong spec không có `id` trong
   từng phần tử, nhưng FE bắt buộc phải có `id` để biết bấm Edit/Delete vào đúng plan nào.
   BE cần trả thêm field `id` cho mỗi item trong `data[]`.
-- 🔵 **`planType` = `"UNLIMIT"` hay `"UNLIMITED"`?** Spec Sprint 3 dùng `"UNLIMIT"` xuyên
-  suốt mọi request/response mẫu (create/update/detail/list). Nhưng `data.sql` (seed thật)
-  chỉ có giá trị `"UNLIMITED"` ở cột `plan_type`. FE hiện đang dùng `"UNLIMITED"` theo
-  data.sql. Cần BE xác nhận giá trị enum thật sự BE sẽ lưu/trả về trước khi FE chốt lại,
-  đổi sai sẽ làm mọi so sánh planType trong FE bị vỡ.
+- ✅ **`planType` = `"UNLIMIT"`** — đã confirm trực tiếp với BE ngày 2026-07-08 (không còn là
+  câu hỏi mở). FE đã cập nhật lại toàn bộ literal type/so sánh sang `"UNLIMIT"` (trước đó FE
+  dùng nhầm `"UNLIMITED"` theo `data.sql` seed cũ). UI vẫn hiển thị chữ "UNLIMITED" cho người
+  dùng qua 1 lớp map label riêng - không ảnh hưởng BE.
 - 🟡 **`maxVehicleCount` cho UNLIMITED**: response mẫu ghi `null`, nhưng data.sql seed thật
   luôn để `1` (không có dòng nào null). Nên thống nhất 1 trong 2 - FE hiện xử lý được cả
   2 dạng nhưng để tránh nhầm lẫn khi so sánh/hiển thị, nên trả `1` cho khớp data thật.
@@ -45,14 +44,18 @@ BE xác nhận/quyết định (không phải thiếu field, mà là 2 nguồn t
 
 ## 4. Gia hạn Unlimited Subscription (FE-56-US-02 / US-05)
 
-- 🔴 **Chưa có API nào cho việc gia hạn** - cả Note.md gốc lẫn spec Sprint 3 đều để trống
-  phần API của 2 ticket này. FE cần BE định nghĩa tối thiểu 1 endpoint dạng
+- 🔴 **Chưa có API nào cho việc gia hạn** - đã hỏi thẳng BE ngày 2026-07-08 và BE xác nhận
+  **CHƯA build cả FE-56-US-02 (renew) lẫn FE-56-US-05 (hoàn tất gia hạn/xác nhận thanh toán
+  sau renew)** - không chỉ là "chưa thấy trong doc" như các gap khác, mà là chưa triển khai
+  thật. FE cần BE định nghĩa tối thiểu 1 endpoint dạng
   `POST /api/customer/unlimited-subscriptions/{id}/renew` trả về
   `{subscriptionId, invoiceId, status}` (giống hệt shape của Register) để FE điều hướng
   sang cùng màn thanh toán QR đang dùng chung cho cả đăng ký mới lẫn gia hạn.
 - 🔴 Cần định nghĩa rõ **response lỗi khi gia hạn 1 subscription không còn ACTIVE**
   (EXPIRED/CANCELED) - theo AC03 phải reject, nhưng chưa có errorCode cụ thể nào được
   đặt tên trong spec cho case này.
+- FE hiện giữ nguyên mock cho toàn bộ luồng renew (renew/getPaymentInfo/simulatePaymentSuccess
+  trong `src/features/subscription/api/subscriptionApi.ts`) cho tới khi có API thật.
 
 ## 5. Chuyển đổi phương tiện - Transfer Vehicle (FE-59-US-01)
 
@@ -78,10 +81,32 @@ BE xác nhận/quyết định (không phải thiếu field, mà là 2 nguồn t
 
 - ✅ Không thiếu gì - response mẫu đã đủ field FE cần hiển thị.
 
-## 8. Ngoài phạm vi Sprint 3 doc này (không có ticket/API nào cả)
+## 8. Family Group Management (ngoài phạm vi Sprint 3 doc này - chưa có ticket/API nào cả)
 
-Family Group Management (route `/subscription/family/:id`, xem/thêm/xóa thành viên, đổi
-xe liên kết, giải tán nhóm) hiện 100% mock, xây theo mockup bạn gửi + bảng `family_group`/
-`family_member` thật trong data.sql, chưa có bất kỳ API contract nào từ BE. Khi nào cần
-làm thật, sẽ cần 1 bộ API riêng (list group, add/remove member, update member vehicle,
-dissolve group) - hiện chưa có gì để đối chiếu nên không liệt kê chi tiết ở đây.
+Route `/subscription/family/:id` (xem/thêm/xóa thành viên, đổi xe liên kết, giải tán nhóm),
+xây theo mockup Nora gửi + bảng `family_group`/`family_member` thật trong data.sql, **100%
+chưa có bất kỳ API contract chính thức nào từ BE**.
+
+- 🔴 **Cần bộ 5 endpoint** tương ứng 5 thao tác: xem chi tiết nhóm, thêm thành viên, xoá
+  thành viên, đổi xe liên kết của 1 thành viên, giải tán nhóm.
+- FE đã tự code sẵn phần gọi API theo path/method **tự đoán tạm** (đặt trong
+  `API.CUSTOMER.FAMILY_GROUP.*`, `src/constants/apiEndpoints.ts`), cần BE xác nhận hoặc cho
+  path/shape thật để đối chiếu lại:
+  - `GET /api/customer/family-groups/{subscriptionId}` - xem chi tiết nhóm
+  - `POST /api/customer/family-groups/{subscriptionId}/members` - thêm thành viên
+  - `DELETE /api/customer/family-groups/{subscriptionId}/members/{memberId}` - xoá thành viên
+  - `PATCH /api/customer/family-groups/{subscriptionId}/members/{memberId}/vehicle` - đổi xe
+    liên kết của thành viên
+  - `DELETE /api/customer/family-groups/{subscriptionId}` - giải tán nhóm
+- Request/response shape FE đang dùng (xem
+  `src/features/subscription/types/familyGroup.ts`):
+  - `FamilyGroupDetail`: `{subscriptionId, groupName, planName, maxVehicleCount, members: FamilyMember[]}`
+  - `FamilyMember`: `{id, name, phone, email, isOwner, addedAt, vehicle: {licensePlate, vehicleName} | null, vehicleChangeLockedUntil: string | null}`
+  - `AddFamilyMemberRequest`: `{email, licensePlate?, vehicleName?}` - thêm thành viên bằng
+    email (BL-AC-19: member phải là customer có sẵn trong hệ thống, chưa thuộc group nào khác)
+  - `UpdateMemberVehicleRequest`: `{licensePlate, vehicleName}`
+  - errorCode FE đang tự định nghĩa (cần BE xác nhận hoặc thay bằng errorCode thật):
+    `GROUP_NOT_FOUND`, `GROUP_FULL`, `MEMBER_NOT_FOUND`, `CANNOT_REMOVE_OWNER`,
+    `DUPLICATE_EMAIL`, `VEHICLE_CHANGE_LOCKED`, `MEMBER_NOT_REGISTERED`, `ALREADY_IN_A_GROUP`
+- 🔵 BL-AC-23 (FE tự áp dụng, cần BE xác nhận): 1 Family Group tối đa 5 thành viên bất kể
+  plan cho phép bao nhiêu xe (`min(5, subscription_plan.max_vehicle_count)`).

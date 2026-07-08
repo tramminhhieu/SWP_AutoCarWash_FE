@@ -58,6 +58,12 @@ export const API = {
   PAYMENTS: {
     CASH: "/api/payments/cash",
   },
+  CUSTOMERS: {
+    // GET admin customer list + KPI summary (?page=&size=&keyword=) - FE-US-09
+    LIST: "/api/customers",
+    // GET customer detail / DELETE customer (admin only) - FE-US-09-03
+    DETAIL: (customerId: number | string) => `/api/customers/${customerId}`,
+  },
   LOYALTY: {
     // GET loyalty profile (points, tier, spending)
     PROFILE: "/api/loyalty/profile",

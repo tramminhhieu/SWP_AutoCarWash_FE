@@ -12,6 +12,7 @@ import {
   Plus,
   Check,
   MapPin,
+  Crown,
 } from "lucide-react";
 import Loading from "../../../components/ui/Loading";
 import { getApiErrorInfo } from "../../../lib/axiosClient";
@@ -953,8 +954,11 @@ const ServiceOption = ({
         formatCurrency(service.basePrice)
       )}
     </p>
+    {/* FE-55-US-01 AC03: hiển thị icon Membership trên service package được áp dụng
+        quyền lợi (trước đây chỉ có text "Included in your package", chưa có icon riêng) */}
     {isCovered && (
-      <p className="mt-1 text-label-sm font-semibold text-tertiary">
+      <p className="mt-1 flex items-center gap-1 text-label-sm font-semibold text-tertiary">
+        <Crown size={13} />
         Included in your package
       </p>
     )}

@@ -210,7 +210,7 @@ const Home = () => {
 
             <button
               type="button"
-              onClick={() => navigate("/servicePackages")}
+              onClick={() => navigate("/subscription-plans")}
               className="mt-7 px-6 py-3 rounded-lg bg-primary text-on-primary font-body font-semibold text-sm"
             >
               Get Started
@@ -252,7 +252,7 @@ const Home = () => {
 
             <button
               type="button"
-              onClick={() => navigate("/servicePackages")}
+              onClick={() => navigate("/subscription-plans")}
               className="mt-7 px-6 py-3 rounded-lg bg-primary text-on-primary font-body font-semibold text-sm"
             >
               Get Started

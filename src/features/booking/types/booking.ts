@@ -19,6 +19,7 @@ export interface BookingServicePackage {
   name: string;
   basePrice: number;
   durationMinutes: number;
+  addonServiceIds: number[];
 }
 
 export interface BookingAddonService {
@@ -175,6 +176,8 @@ export interface BookingDetail {
   appointmentDate: string;
   startTime: string | null;
   endTime: string | null;
+  // Thời điểm check-in thực tế, format "yyyy-MM-dd HH:mm:ss" (spring.jackson.date-format) — null nếu chưa check-in
+  checkInAt: string | null;
   technicianName: string | null;
   servicePrice: number;
   addonTotal: number;

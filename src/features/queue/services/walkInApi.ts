@@ -1,11 +1,25 @@
 import axiosClient from "../../../lib/axiosClient";
 import type { ApiSuccessResponse } from "../../../types/apiResponse";
 
+// Mirrors BE CheckPhoneResponse.VehicleSubscriptionDTO (vietbinh_branch, WalkInCheckInService.checkPhone) —
+// BE đã lọc sẵn chỉ trả về subscription đang ACTIVE và chưa hết hạn tính đến hôm nay,
+// FE không cần tự check ngày/hạn nữa.
+export interface VehicleSubscriptionDTO {
+  subscriptionId: number;
+  subscriptionPlanId: number;
+  servicePackageId: number;
+  planName: string;
+  planType: "UNLIMITED" | "FAMILY";
+  endDate: string;
+  status: string;
+}
+
 export interface SavedVehicleDTO {
   id: number;
   licensePlate: string;
   brandName: string;
   color: string;
+  subscriptionInfo?: VehicleSubscriptionDTO[];
 }
 
 export interface CheckPhoneResponse {
@@ -20,6 +34,9 @@ export interface AvailableSlotDTO {
   slotId: number;
   startTime: string;
   endTime: string;
+  // Danh sách đầy đủ slotId của khối giờ này (BE đã gộp sẵn theo tổng thời lượng service+addon) —
+  // gửi nguyên mảng này lên làm chosenSlotIds khi confirm, không tự gộp lại ở FE.
+  associatedSlotIds: number[];
 }
 
 export interface BookingSummaryResponse {
@@ -29,7 +46,9 @@ export interface BookingSummaryResponse {
   transferredCredit: number;
   remainingBalance: number;
   systemNotice: string | null;
-  isActionBlock: boolean;
+  // BE serialize field boolean `isActionBlock` (Java) thành "actionBlock" trong JSON
+  // (Jackson bỏ tiền tố "is" khi tên field bắt đầu bằng is + chữ hoa).
+  actionBlock: boolean;
   availableSlots: AvailableSlotDTO[];
 }
 
@@ -60,8 +79,40 @@ export interface CreateWalkInResponse {
   ticketNumber: string;
   status: string;
   remainingBalance: number;
+  checkInAt: string | null;
   message: string;
 }
+
+export interface WalkInServicePackageDTO {
+  id: number;
+  name: string;
+  basePrice: number;
+  requiredSlot: number;
+  description: string;
+}
+
+export interface WalkInAddonServiceDTO {
+  id: number;
+  name: string;
+  price: number;
+  description: string;
+  durationMinutes: number;
+  // service_package ids this addon is already bundled into (package_addon_mapping) —
+  // hide it from selection once one of those packages is chosen.
+  includedInPackageIds: number[];
+}
+
+export interface WalkInFormDataResponse {
+  servicePackages: WalkInServicePackageDTO[];
+  addonServices: WalkInAddonServiceDTO[];
+}
+
+export const getWalkInFormData = async (): Promise<WalkInFormDataResponse> => {
+  const res = await axiosClient.get<ApiSuccessResponse<WalkInFormDataResponse>>(
+    "/api/v1/staff/create-walkin/form-data"
+  );
+  return res.data.data;
+};
 
 export const checkPhone = async (phone: string): Promise<CheckPhoneResponse> => {
   const res = await axiosClient.get<ApiSuccessResponse<CheckPhoneResponse>>(
@@ -77,6 +128,22 @@ export const calculateInvoice = async (
   const res = await axiosClient.post<ApiSuccessResponse<BookingSummaryResponse>>(
     "/api/v1/staff/create-walkin/calculate-invoice",
     req
+  );
+  return res.data.data;
+};
+
+export interface CollectPenaltyDepositResponse {
+  message: string;
+  requiresWalkIn: boolean;
+}
+
+export const collectWalkInPenaltyDeposit = async (
+  licensePlate: string
+): Promise<CollectPenaltyDepositResponse> => {
+  const res = await axiosClient.post<ApiSuccessResponse<CollectPenaltyDepositResponse>>(
+    "/api/v1/staff/create-walkin/collect-penalty-deposit",
+    null,
+    { params: { licensePlate } }
   );
   return res.data.data;
 };

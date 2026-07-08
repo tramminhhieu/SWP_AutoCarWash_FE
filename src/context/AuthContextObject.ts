@@ -5,8 +5,9 @@ export interface AuthContextValue {
   user: AuthUser | null;
   isAuthenticated: boolean;
   isLoading: boolean;
-  loginWithToken: (token: string, name?: string) => void;
+  loginWithToken: (token: string, name?: string, stationId?: number) => void;
   logout: () => void;
+  updateUserName: (name: string) => void;
 }
 
 // Chỉ tạo Context object ở đây - tách riêng khỏi AuthProvider (component)

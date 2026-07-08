@@ -143,8 +143,8 @@ const Register = () => {
     } else if (password.length < 6) {
       setPasswordError("Password must be at least 6 characters long");
       isValid = false;
-    } else if (password.length > 50) {
-      setPasswordError("Password must not exceed 50 characters");
+    } else if (password.length > 20) {
+      setPasswordError("Password must not exceed 20 characters");
       isValid = false;
     }
 

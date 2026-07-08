@@ -1,10 +1,11 @@
 //author: Ngọc
 //version:2.0.1
 import { useNavigate } from "react-router-dom";
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, type ReactNode } from "react";
 import {
   Search,
   X,
+  XCircle,
   ChevronRight,
   ChevronUp,
   ChevronDown,
@@ -20,11 +21,15 @@ import {
   startService,
   completeService,
   getQueueData,
+  collectPenaltyDeposit,
   type ScanVehicleResponse,
   type QueuePageData,
 } from "../services/queueApi";
 // ported onto dev: dev không có utils/currency.ts, dùng formatCurrency của dev thay formatVND
 import { formatCurrency as formatVND } from "../../../utils/format";
+import { getApiErrorInfo } from "../../../lib/axiosClient";
+import { QUEUE_MESSAGES } from "../../../constants/queueMessages";
+import Modal from "../../../components/ui/Modal";
 
 interface Vehicle {
   id: number;
@@ -46,6 +51,7 @@ interface Vehicle {
 
 interface Lane {
   lane: string;
+  laneDbId: number;
   plate: string;
   model: string;
   color: string;
@@ -102,8 +108,9 @@ const mapTier = (tier: string | null): Vehicle["tier"] => {
   return tier as "PLATINUM" | "GOLD" | "SILVER";
 };
 
-const makeEmptyLane = (index: number): Lane => ({
+const makeEmptyLane = (index: number, laneDbId = 0): Lane => ({
   lane: String(index + 1).padStart(2, "0"),
+  laneDbId,
   plate: "—",
   model: "",
   color: "",
@@ -142,6 +149,21 @@ export default function QueuePage() {
   );
   const [isLoading, setIsLoading] = useState(false);
   const [totalLanes, setTotalLanes] = useState(0);
+  const [assignCar, setAssignCar] = useState<Vehicle | null>(null);
+  const [notice, setNotice] = useState<{
+    variant: "success" | "danger";
+    message: string;
+    onDismiss?: () => void;
+    icon?: ReactNode;
+  } | null>(null);
+  // author: Ngọc — thu cọc phạt cho xe WALK_IN đang bị hạn chế trước khi cho Confirm Check-in
+  // (mirror luồng đã có ở WalkInPage.tsx, nhưng bên Check-in phải gọi API thu cọc thật trước,
+  // không chỉ truyền cờ boolean trong cùng 1 request như bên Create Walk-in)
+  const [depositCollected, setDepositCollected] = useState(false);
+  const [showDepositModal, setShowDepositModal] = useState(false);
+  const [depositReceivedInput, setDepositReceivedInput] = useState("");
+  const [depositModalError, setDepositModalError] = useState("");
+  const [isDepositSubmitting, setIsDepositSubmitting] = useState(false);
 
   // author: Ngọc — đổ board (GET /api/queue hoặc kết quả PATCH start/complete) vào
   // cả 3 cột (Active Lanes / Waiting Pool / Completed). BE trả về cùng 1 shape board
@@ -159,24 +181,24 @@ export default function QueuePage() {
       service: t.serviceName ?? "",
       tier: mapTier(t.customerTier),
       finishedAt: "",
-      totalAmount: 0,
+      totalAmount: t.totalAmount ?? 0,
     }));
     setWaitingPool(waiting);
 
-    // Active Lanes: render trực tiếp từ data.lanes — nguồn sự thật về các làn chưa
-    // bị xoá của station (hiện đủ mọi làn, kể cả làn trống). Làn WASHING ghép với
-    // ticket WASHING theo thứ tự; làn WASHING không có ticket tương ứng -> coi như trống.
-    const washingTickets = [...data.activeLanes];
+    // Active Lanes: render từ data.lanes — mỗi làn WASHING dùng currentBookingId
+    // (do BE tính sẵn) để lookup đúng ticket, tránh nhầm lane khi nhiều xe cùng rửa.
     const builtLanes: Lane[] = data.lanes.map((l, idx) => {
-      const label =
-        l.laneName.replace(/\D/g, "") || String(idx + 1).padStart(2, "0");
-      const ticket =
-        l.status === "WASHING" ? washingTickets.shift() : undefined;
+      const label = l.laneName.replace(/\D/g, "") || String(idx + 1).padStart(2, "0");
+      if (l.status !== "WASHING" || l.currentBookingId == null) {
+        return { ...makeEmptyLane(idx, l.id), lane: label };
+      }
+      const ticket = data.activeLanes.find(t => t.bookingId === l.currentBookingId);
       if (!ticket) {
-        return { ...makeEmptyLane(idx), lane: label };
+        return { ...makeEmptyLane(idx, l.id), lane: label };
       }
       return {
         lane: label,
+        laneDbId: l.id,
         plate: ticket.licensePlate ?? "—",
         model: ticket.vehicleBrand ?? "",
         color: ticket.vehicleColor ?? "",
@@ -184,7 +206,7 @@ export default function QueuePage() {
         status: "Washing" as const,
         est: "",
         bookingId: ticket.bookingId ?? 0,
-        totalAmount: 0,
+        totalAmount: ticket.totalAmount ?? 0,
         ticketId: ticket.id,
         tier: mapTier(ticket.customerTier),
       };
@@ -201,7 +223,7 @@ export default function QueuePage() {
       service: t.serviceName ?? "",
       tier: mapTier(t.customerTier),
       finishedAt: "",
-      totalAmount: 0,
+      totalAmount: t.totalAmount ?? 0,
     }));
     setCompleted(done);
   }, []);
@@ -223,6 +245,44 @@ export default function QueuePage() {
     setScanResult(null);
     setSelectedBooking(null);
     setIsSearched(false);
+    setDepositCollected(false);
+    setShowDepositModal(false);
+    setDepositReceivedInput("");
+    setDepositModalError("");
+  };
+
+  // Xe WALK_IN đang bị hạn chế (violation_count > 3 + còn restricted_until) mới thực sự bị
+  // confirmCheckIn chặn (xem StaffCheckInServiceImpl) — vehiclePenalized từ /scan không phân
+  // biệt loại booking nên phải tự AND thêm điều kiện bookingType ở đây để tránh báo động giả
+  // cho booking ADVANCE/SUBSCRIPTION.
+  const requiresPenaltyDeposit =
+    !!scanResult?.vehiclePenalized && scanResult?.bookingType === "WALK_IN";
+
+  const handleConfirmDeposit = async () => {
+    if (!scanResult?.bookingId) return;
+    const requiredDeposit = scanResult.depositAmount ?? 0;
+    const receivedAmount = Number(depositReceivedInput);
+    if (!receivedAmount || receivedAmount < requiredDeposit) {
+      setDepositModalError(`Please enter at least ${formatVND(requiredDeposit)}.`);
+      return;
+    }
+    setIsDepositSubmitting(true);
+    setDepositModalError("");
+    try {
+      await collectPenaltyDeposit(scanResult.bookingId);
+      setDepositCollected(true);
+      setShowDepositModal(false);
+    } catch (error) {
+      const { message } = getApiErrorInfo(error);
+      setDepositModalError(message ?? "Failed to collect deposit, please try again.");
+    } finally {
+      setIsDepositSubmitting(false);
+    }
+  };
+
+  const handleCloseDepositModal = () => {
+    setShowDepositModal(false);
+    setDepositModalError("");
   };
 
   // author: Ngọc — đổi từ mock sang gọi API thật
@@ -284,18 +344,38 @@ export default function QueuePage() {
     setIsLoading(true);
     try {
       const result = await confirmCheckIn(scanResult.bookingId);
+      // Booking bị chuyển sang NO_SHOW nghĩa là khách bị ghi nhận vi phạm và
+      // KHÔNG vào được Waiting Pool — hiển thị dấu X đỏ thay vì dấu tích xanh.
+      const isPenalized = result.status === "NO_SHOW";
+      const penalizedNotice = {
+        variant: "danger" as const,
+        icon: <XCircle size={48} className="text-error" />,
+      };
       if (result.requiresWalkIn) {
         closeCheckinModal();
-        navigate("/staff/walk-in", {
-          state: { oldBookingId: result.oldBookingId },
+        setNotice({
+          ...(isPenalized ? penalizedNotice : { variant: "success" as const }),
+          message: result.message,
+          onDismiss: () =>
+            navigate("/staff/walk-in", {
+              state: { oldBookingId: result.oldBookingId },
+            }),
         });
         return;
       }
       closeCheckinModal();
       const board = await getQueueData();
       applyBoard(board);
-    } catch {
-      alert("Check-in thất bại, thử lại.");
+      setNotice({
+        ...(isPenalized ? penalizedNotice : { variant: "success" as const }),
+        message: result.message,
+      });
+    } catch (error) {
+      const { message } = getApiErrorInfo(error);
+      setNotice({
+        variant: "danger",
+        message: message ?? QUEUE_MESSAGES.CHECK_IN_FAILED,
+      });
     } finally {
       setIsLoading(false);
     }
@@ -311,8 +391,7 @@ export default function QueuePage() {
     });
   };
 
-  // author: Ngọc — gọi API PATCH /api/queue/{bookingId}/start (booking CHECK_IN -> WASHING).
-  // BE trả về board đầy đủ -> set lại toàn bộ state từ board, không cập nhật cục bộ.
+  // "+" button — auto-assign xe đầu tiên trong waiting pool vào làn trống đầu tiên.
   const handleAddToLane = async () => {
     if (waitingPool.length === 0) return;
     const emptyIndex = lanes.findIndex((l) => l.status === "Empty");
@@ -323,7 +402,22 @@ export default function QueuePage() {
       const board = await startService(next.bookingId);
       applyBoard(board);
     } catch {
-      alert("Thêm xe vào làn thất bại, thử lại.");
+      setNotice({ variant: "danger", message: QUEUE_MESSAGES.ADD_TO_LANE_FAILED });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // Click vào xe trong Waiting Pool — assign xe đó vào lane được chọn trong popup.
+  const handleAssignToLane = async (laneDbId: number) => {
+    if (!assignCar) return;
+    setIsLoading(true);
+    setAssignCar(null);
+    try {
+      const board = await startService(assignCar.bookingId, laneDbId);
+      applyBoard(board);
+    } catch {
+      setNotice({ variant: "danger", message: QUEUE_MESSAGES.ADD_TO_LANE_FAILED });
     } finally {
       setIsLoading(false);
     }
@@ -334,7 +428,7 @@ export default function QueuePage() {
     if (!lane.bookingId) return;
     setIsLoading(true);
     try {
-      const board = await completeService(lane.bookingId);
+      const board = await completeService(lane.bookingId, lane.laneDbId);
       applyBoard(board);
     } catch {
       // show nothing — isLoading will reset and button re-enables
@@ -353,8 +447,13 @@ export default function QueuePage() {
       const board = await cancelGuestLeft(cancelVehicle.bookingId);
       applyBoard(board);
       setCancelVehicle(null);
-    } catch {
-      alert("Huỷ booking thất bại, thử lại.");
+      setNotice({ variant: "success", message: QUEUE_MESSAGES.CANCEL_SUCCESS });
+    } catch (error) {
+      const { message } = getApiErrorInfo(error);
+      setNotice({
+        variant: "danger",
+        message: message ?? QUEUE_MESSAGES.CANCEL_FAILED,
+      });
     } finally {
       setIsLoading(false);
     }
@@ -491,10 +590,7 @@ export default function QueuePage() {
               </p>
             )}
             {waitingPool.map((v, idx) => (
-              <div
-                key={v.id}
-                className="rounded-xl px-3 py-2.5 flex items-center gap-2 bg-white border border-outline-variant/20"
-              >
+              <div key={v.id} onClick={() => hasEmptyLane && setAssignCar(v)} className={`rounded-xl px-3 py-2.5 flex items-center gap-2 bg-white border border-outline-variant/20 ${hasEmptyLane ? "cursor-pointer hover:bg-surface-container-low transition" : ""}`}>
                 <div className="flex flex-col justify-center gap-0.5 shrink-0">
                   <button
                     onClick={() => moveVehicle(idx, -1)}
@@ -685,14 +781,31 @@ export default function QueuePage() {
 
               {isSearched && searchResult?.type === "booked" && (
                 <div className="py-2">
-                  {scanResult?.vehiclePenalized && (
-                    <div className="rounded-xl px-4 py-3 mb-3 bg-error-container border border-error">
-                      <p className="text-xs font-semibold text-on-error-container">
-                        Xe bị hạn chế
-                      </p>
-                      <p className="text-xs text-on-error-container mt-0.5">
-                        Xe này có vi phạm. Cần thu cọc phạt 20,000đ trước khi
-                        check-in.
+                  {requiresPenaltyDeposit && !depositCollected && (
+                    <div className="rounded-xl px-4 py-3 mb-3 flex flex-col gap-2 bg-error-container border border-error">
+                      <div>
+                        <p className="text-xs font-semibold text-on-error-container">
+                          Vehicle Restricted
+                        </p>
+                        <p className="text-xs text-on-error-container mt-0.5">
+                          This vehicle has an active violation restriction. A{" "}
+                          {formatVND(scanResult?.depositAmount ?? 0)} cash deposit
+                          must be collected before check-in.
+                        </p>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => setShowDepositModal(true)}
+                        className="w-full py-2 rounded-lg text-xs font-semibold bg-error text-on-error hover:opacity-90"
+                      >
+                        Collect Penalty Deposit
+                      </button>
+                    </div>
+                  )}
+                  {requiresPenaltyDeposit && depositCollected && (
+                    <div className="rounded-xl px-4 py-3 mb-3 bg-surface-container border border-outline-variant">
+                      <p className="text-xs font-semibold text-on-surface">
+                        Penalty deposit collected — ready to confirm.
                       </p>
                     </div>
                   )}
@@ -752,13 +865,51 @@ export default function QueuePage() {
                   </div>
                   <button
                     onClick={handleConfirmCheckIn}
-                    disabled={!selectedBooking || isLoading}
+                    disabled={
+                      !selectedBooking ||
+                      isLoading ||
+                      (requiresPenaltyDeposit && !depositCollected)
+                    }
                     className="w-full py-3 rounded-xl text-sm font-semibold transition bg-primary text-on-primary disabled:opacity-50 disabled:cursor-not-allowed"
                   >
                     {isLoading ? "Đang xử lý..." : "Confirm Check-in"}
                   </button>
                 </div>
               )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Lane Select Modal */}
+      {assignCar && (
+        <div className="fixed inset-0 flex items-center justify-center z-50 bg-inverse-surface/50" onClick={() => setAssignCar(null)}>
+          <div className="rounded-2xl shadow-xl w-full max-w-sm mx-4 bg-surface-container-lowest" onClick={(e) => e.stopPropagation()}>
+            <div className="flex items-center justify-between px-6 pt-6 pb-4 border-b border-outline-variant">
+              <div>
+                <h2 className="text-base font-bold font-heading text-on-surface">Chọn làn rửa</h2>
+                <p className="text-xs text-outline mt-0.5">{assignCar.licensePlate} • {assignCar.service}</p>
+              </div>
+              <button onClick={() => setAssignCar(null)} className="rounded-full p-1 hover:bg-surface-container transition">
+                <X className="w-5 h-5 text-outline" />
+              </button>
+            </div>
+            <div className="px-6 py-4 flex flex-col gap-2">
+              {lanes.filter(l => l.status === "Empty").map(l => (
+                <button
+                  key={l.laneDbId}
+                  onClick={() => handleAssignToLane(l.laneDbId)}
+                  disabled={isLoading}
+                  className="flex items-center gap-3 rounded-xl px-4 py-3 border-2 border-outline-variant hover:border-primary hover:bg-primary-fixed transition disabled:opacity-50"
+                >
+                  <div className="w-10 h-10 rounded-xl flex flex-col items-center justify-center bg-primary text-on-primary shrink-0">
+                    <span className="text-[9px] font-medium leading-none">LANE</span>
+                    <span className="text-sm font-bold leading-tight">{l.lane}</span>
+                  </div>
+                  <span className="text-sm font-semibold text-on-surface">Lane {l.lane}</span>
+                  <span className="ml-auto text-xs px-2 py-0.5 rounded-full bg-surface-container text-outline">Trống</span>
+                </button>
+              ))}
             </div>
           </div>
         </div>
@@ -810,9 +961,12 @@ export default function QueuePage() {
             </div>
             {cancelVehicle.tier === "Guest" ? (
               <div className="rounded-xl px-4 py-3 mb-4 bg-error-container border border-error">
-                <p className="text-xs font-semibold mb-0.5 text-on-error-container">
-                  Walk-in Cancellation
-                </p>
+                <div className="flex items-center gap-1.5 mb-0.5">
+                  <XCircle className="w-3.5 h-3.5 text-error shrink-0" />
+                  <p className="text-xs font-semibold text-on-error-container">
+                    Walk-in Cancellation
+                  </p>
+                </div>
                 <p className="text-xs text-on-error-container">
                   1 violation point will be added to{" "}
                   <strong>{cancelVehicle.licensePlate}</strong>.
@@ -820,9 +974,12 @@ export default function QueuePage() {
               </div>
             ) : cancelVehicle.bookingType === "SUBSCRIPTION" ? (
               <div className="rounded-xl px-4 py-3 mb-4 bg-secondary-fixed border border-secondary">
-                <p className="text-xs font-semibold mb-0.5 text-on-secondary-fixed">
-                  Unlimited / Family Package
-                </p>
+                <div className="flex items-center gap-1.5 mb-0.5">
+                  <XCircle className="w-3.5 h-3.5 text-error shrink-0" />
+                  <p className="text-xs font-semibold text-on-secondary-fixed">
+                    Unlimited / Family Package
+                  </p>
+                </div>
                 <p className="text-xs text-on-secondary-fixed-variant">
                   No deposit collected. 1 violation point added.
                 </p>
@@ -855,6 +1012,57 @@ export default function QueuePage() {
           </div>
         </div>
       )}
+
+      <Modal
+        isOpen={showDepositModal}
+        onClose={handleCloseDepositModal}
+        variant="danger"
+        title="Penalty Deposit Required"
+        confirmText="Confirm Deposit Collected"
+        onConfirm={handleConfirmDeposit}
+        isConfirmLoading={isDepositSubmitting}
+        message={
+          <div className="flex flex-col gap-3 text-left">
+            <p>
+              This vehicle has an active violation restriction. Staff must collect a{" "}
+              {formatVND(scanResult?.depositAmount ?? 0)} cash deposit at the counter
+              before the vehicle can be checked in.
+            </p>
+            <div>
+              <label className="text-xs font-semibold text-on-surface-variant mb-1.5 block">
+                Amount Received
+              </label>
+              <input
+                type="number"
+                value={depositReceivedInput}
+                onChange={(e) => {
+                  setDepositReceivedInput(e.target.value);
+                  setDepositModalError("");
+                }}
+                placeholder="0"
+                className="w-full rounded-xl px-3 py-2.5 text-sm border border-outline-variant outline-none focus:border-primary bg-surface-container-lowest text-on-surface"
+              />
+              {depositModalError && (
+                <p className="text-sm text-error mt-1.5">{depositModalError}</p>
+              )}
+            </div>
+          </div>
+        }
+      />
+
+      <Modal
+        isOpen={!!notice}
+        onClose={() => {
+          const onDismiss = notice?.onDismiss;
+          setNotice(null);
+          onDismiss?.();
+        }}
+        variant={notice?.variant ?? "success"}
+        icon={notice?.icon}
+        title={notice?.variant === "danger" ? "Error" : "Notice"}
+        message={notice?.message}
+        confirmText={notice?.variant === "danger" ? "OK" : undefined}
+      />
     </div>
   );
 }

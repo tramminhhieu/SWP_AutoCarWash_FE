@@ -58,6 +58,24 @@ export const API = {
   PAYMENTS: {
     CASH: "/api/payments/cash",
   },
+  SERVICE_PACKAGE: {
+    // API-05-01: GET /api/service-packages
+    LIST: "/api/service-packages",
+  },
+  ADMIN: {
+    SUBSCRIPTION_PLAN: {
+      // FE-53-US-01: GET /api/admin/subscription-plans?status=ACTIVE/INACTIVE/ALL
+      LIST: "/api/admin/subscription-plans",
+      // FE-53-US-03: GET /api/admin/subscription-plans/{id}
+      DETAIL: (id: number | string) => `/api/admin/subscription-plans/${id}`,
+      // FE-53-US-02: POST /api/admin/subscription-plans
+      CREATE: "/api/admin/subscription-plans",
+      // FE-53-US-03: PUT /api/admin/subscription-plans/{id}
+      UPDATE: (id: number | string) => `/api/admin/subscription-plans/${id}`,
+      // FE-53-US-04: DELETE /api/admin/subscription-plans/{id} (soft delete -> INACTIVE)
+      DELETE: (id: number | string) => `/api/admin/subscription-plans/${id}`,
+    },
+  },
   LOYALTY: {
     // GET loyalty profile (points, tier, spending)
     PROFILE: "/api/loyalty/profile",

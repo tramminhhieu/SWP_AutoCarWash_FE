@@ -10,12 +10,18 @@ import { useNavigate, useParams, useLocation } from "react-router-dom";
 import { useEffect, useState } from "react";
 import { ArrowLeft, Car, User, Wrench } from "lucide-react";
 import { formatCurrency as formatVND } from "../../../utils/format";
-import { getPaymentBookingDetail, processCashPayment } from "../api/paymentApi";
+import {
+  getInvoiceDetail,
+  getPaymentBookingDetail,
+  processCashPayment,
+} from "../api/paymentApi";
 import {
   calcEarnedPoints,
   POINT_TO_VND,
+  type InvoiceDetail,
   type PaymentBookingDetail,
 } from "../types/payment";
+import { formatCheckInTime } from "../../booking/utils/bookingFormatters";
 
 function formatSchedule(date: string, start: string, end: string) {
   if (!date) return "";
@@ -47,7 +53,7 @@ export default function PaymentPage() {
   const [receivedInput, setReceivedInput] = useState(""); // staff nhập tiền mặt nhận được
   const [redeemInput, setRedeemInput] = useState(""); // điểm staff nhập để đổi thưởng
   const [payError, setPayError] = useState("");
-  const [paySuccess, setPaySuccess] = useState(false);
+  const [invoice, setInvoice] = useState<InvoiceDetail | null>(null);
 
   useEffect(() => {
     if (!bookingId) return; // ← chỉ return sớm, không setState
@@ -113,14 +119,15 @@ export default function PaymentPage() {
     setPayError("");
     setIsPaying(true);
     try {
-      await processCashPayment({
+      const res = await processCashPayment({
         bookingId,
         // điểm khách dùng để đổi (0 nếu không nhập hoặc nhập không hợp lệ)
         usedLoyaltyPoints: isRedeemInvalid ? 0 : redeemPoints,
         // số tiền mặt staff nhận từ khách
         receivedAmount: received,
       });
-      setPaySuccess(true);
+      const invoiceDetail = await getInvoiceDetail(res.invoiceId);
+      setInvoice(invoiceDetail);
     } catch {
       setPayError("Payment failed. Please try again.");
     } finally {
@@ -172,64 +179,114 @@ export default function PaymentPage() {
         </div>
       </div>
 
-      {paySuccess && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm">
-          <div className="relative rounded-2xl p-8 bg-surface-container-lowest border border-outline-variant/30 flex flex-col items-center gap-4 max-w-sm w-full mx-4 shadow-xl">
-            <button
-              onClick={() =>
-                navigate("/staff/queue", {
-                  state: { paidBookingId: bookingId },
-                })
-              }
-              className="absolute top-3 right-3 rounded-full p-1.5 hover:bg-surface-container transition text-outline"
-            >
-              <svg
-                className="w-4 h-4"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M6 18L18 6M6 6l12 12"
-                />
-              </svg>
-            </button>
-            <div className="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center">
-              <svg
-                className="w-8 h-8 text-primary"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M5 13l4 4L19 7"
-                />
-              </svg>
+      {invoice && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm overflow-y-auto py-8">
+          <div className="relative rounded-2xl p-6 bg-surface-container-lowest border border-outline-variant/30 flex flex-col gap-4 max-w-xl w-full mx-4 shadow-xl">
+            <div className="flex items-center justify-between border-b border-outline-variant pb-4">
+              <div>
+                <h2 className="text-xl font-bold text-on-surface">
+                  Invoice #{invoice.invoiceId}
+                </h2>
+                <p className="text-sm text-on-surface-variant">
+                  Booking #{invoice.bookingId}
+                </p>
+              </div>
+              <span className="text-xs px-2.5 py-1 rounded-full font-semibold bg-primary/10 text-primary">
+                {invoice.invoiceStatus}
+              </span>
             </div>
-            <div className="text-center">
-              <h2 className="text-xl font-bold text-on-surface mb-1">
-                Payment Successful
-              </h2>
-              <p className="text-sm text-on-surface-variant">
-                Booking #{bookingId} has been completed.
+
+            <div className="rounded-xl p-4 bg-surface-container-low border border-outline-variant/30">
+              <p className="text-sm font-bold text-on-surface">
+                {invoice.vehicleLicensePlate}
+              </p>
+              <p className="text-xs text-on-surface-variant">
+                {invoice.vehicleBrand}
               </p>
             </div>
-            <button
-              onClick={() =>
-                navigate("/staff/queue", {
-                  state: { paidBookingId: bookingId },
-                })
-              }
-              className="w-full py-3 rounded-xl text-sm font-semibold bg-primary text-on-primary transition"
-            >
-              Back to Queue
-            </button>
+
+            <div className="space-y-2 text-sm">
+              <p className="text-sm font-bold text-on-surface">
+                Service Details
+              </p>
+              {invoice.services.map((s, idx) => (
+                <div key={idx} className="flex justify-between">
+                  <span className="text-on-surface-variant">{s.name}</span>
+                  <span className="text-on-surface font-medium">
+                    {formatVND(s.price)}
+                  </span>
+                </div>
+              ))}
+            </div>
+
+            <div className="space-y-2 text-sm border-t border-outline-variant pt-3">
+              <div className="flex justify-between">
+                <span className="text-on-surface-variant">Raw Amount</span>
+                <span className="text-on-surface">
+                  {formatVND(invoice.rawAmount)}
+                </span>
+              </div>
+              {invoice.voucherDiscount > 0 && (
+                <div className="flex justify-between">
+                  <span className="text-on-surface-variant">
+                    Voucher Discount
+                  </span>
+                  <span className="text-green-600">
+                    - {formatVND(invoice.voucherDiscount)}
+                  </span>
+                </div>
+              )}
+              {invoice.pointDiscount > 0 && (
+                <div className="flex justify-between">
+                  <span className="text-on-surface-variant">
+                    Point Discount
+                  </span>
+                  <span className="text-green-600">
+                    - {formatVND(invoice.pointDiscount)}
+                  </span>
+                </div>
+              )}
+              <div className="border-t border-outline-variant pt-2 flex justify-between font-bold">
+                <span className="text-on-surface">Final Amount</span>
+                <span className="text-primary">
+                  {formatVND(invoice.finalAmount)}
+                </span>
+              </div>
+            </div>
+
+            <div className="space-y-1 text-xs text-on-surface-variant border-t border-outline-variant pt-3">
+              <p>Payment Method: {invoice.paymentMethod}</p>
+              {invoice.checkInAt && (
+                <p>Check-in: {formatCheckInTime(invoice.checkInAt)}</p>
+              )}
+              {invoice.checkOutAt && (
+                <p>Check-out: {formatCheckInTime(invoice.checkOutAt)}</p>
+              )}
+              <p>Paid At: {formatCheckInTime(invoice.paidAt)}</p>
+            </div>
+
+            <div className="flex gap-3 pt-2">
+              <button
+                onClick={() =>
+                  navigate("/staff/queue", {
+                    state: { paidBookingId: bookingId },
+                  })
+                }
+                className="flex-1 py-3 rounded-xl text-sm font-semibold border-2 border-outline-variant text-on-surface transition"
+              >
+                Back to Queue
+              </button>
+              <button
+                onClick={() =>
+                  navigate("/staff/queue", {
+                    state: { paidBookingId: bookingId },
+                  })
+                }
+                className="flex-1 py-3 rounded-xl text-sm font-semibold bg-primary text-on-primary transition"
+              >
+                Done
+              </button>
+            </div>
           </div>
         </div>
       )}

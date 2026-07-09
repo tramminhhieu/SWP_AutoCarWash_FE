@@ -61,11 +61,18 @@ export const API = {
     UNLIMITED_SUBSCRIPTION: {
       // FE-60-US-05: GET /api/customer/unlimited-subscriptions
       LIST: "/api/customer/unlimited-subscriptions",
-      // FE-60-US-02.1 step 2: POST /api/customer/unlimited-subscriptions
-      CREATE: "/api/customer/unlimited-subscriptions",
       // FE-58-US-01: PATCH /api/customer/unlimited-subscriptions/{id}/cancel
       CANCEL: (id: number | string) =>
         `/api/customer/unlimited-subscriptions/${id}/cancel`,
+    },
+    // FE-US-56-04: mua/gia hạn gói Unlimited CÓ thanh toán QR thật (tách khỏi
+    // UNLIMITED_SUBSCRIPTION ở trên - đăng ký cũ không QR đã bị thay thế).
+    SUBSCRIPTION_PURCHASE: {
+      REGISTER: "/api/customer/subscriptions/unlimited",
+      RENEW: (subscriptionId: number | string) =>
+        `/api/customer/subscriptions/unlimited/${subscriptionId}/renew`,
+      INVOICE_STATUS: (invoiceId: number | string) =>
+        `/api/subscriptions/invoices/${invoiceId}`,
     },
     // ⚠️ CHƯA có contract từ BE (không có trong Note.md/spec Sprint 3) - path tự đoán theo
     // đúng pattern REST của UNLIMITED_SUBSCRIPTION ở trên. Sửa lại ngay khi BE có API thật.

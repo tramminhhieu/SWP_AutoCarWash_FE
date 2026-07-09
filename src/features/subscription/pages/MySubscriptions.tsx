@@ -218,7 +218,9 @@ export default function MySubscriptions() {
     setError(null);
     try {
       const result = await renew(sub.id);
-      navigate(`/subscription-plans/payment/${result.invoiceId}`);
+      navigate(`/subscription-plans/payment/${result.invoiceId}`, {
+        state: { isRenewal: true },
+      });
     } catch (err) {
       const { message } = getApiErrorInfo(err);
       setError(message ?? "Unable to start renewal. Please try again.");

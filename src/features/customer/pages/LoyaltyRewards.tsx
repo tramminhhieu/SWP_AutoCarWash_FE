@@ -159,14 +159,21 @@ export default function LoyaltyRewards() {
     [tiers],
   );
   const maxTierPoints = sortedTiers.at(-1)?.minPoints ?? 1;
-  const progressPercent = profile
-    ? Math.min((profile.accumulatedPoints / maxTierPoints) * 100, 100)
-    : 0;
   const currentTierIndex = profile
     ? sortedTiers.findIndex(
         (t) => t.tierName.toUpperCase() === profile.tierName.toUpperCase(),
       )
     : -1;
+  // Tier is a ratchet: after a points reset that also upgrades the tier, accumulatedPoints
+  // drops to ~0 but the customer already earned this tier, so the bar must not render behind
+  // that tier's own marker.
+  const currentTier = currentTierIndex !== -1 ? sortedTiers[currentTierIndex] : null;
+  const effectivePoints = profile
+    ? Math.max(profile.accumulatedPoints, currentTier?.minPoints ?? 0)
+    : 0;
+  const progressPercent = profile
+    ? Math.min((effectivePoints / maxTierPoints) * 100, 100)
+    : 0;
 
   const totalPages = Math.ceil(transactions.length / PAGE_SIZE);
   const paginatedActivity = transactions.slice(

@@ -22,6 +22,7 @@ import ChangePassword from "../features/customer/pages/ChangePassword";
 import LoyaltyRewards from "../features/customer/pages/LoyaltyRewards";
 import AdminLayout from "../layouts/AdminLayout";
 import AdminCustomers from "../features/adminCustomer/pages/AdminCustomers";
+import AdminCustomerBookingHistory from "../features/adminCustomer/pages/AdminCustomerBookingHistory";
 
 export default function AppRouter() {
   return (
@@ -82,6 +83,10 @@ export default function AppRouter() {
           />
           <Route element={<AdminLayout />}>
             <Route path="/admin/customers" element={<AdminCustomers />} />
+            <Route
+              path="/admin/customers/:customerId/bookings"
+              element={<AdminCustomerBookingHistory />}
+            />
           </Route>
         </Route>
       </Route>

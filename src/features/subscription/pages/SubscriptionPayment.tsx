@@ -103,7 +103,7 @@ export default function SubscriptionPayment() {
   };
 
   return (
-    <div className="mx-auto max-w-md px-margin-mobile py-16 md:px-margin-desktop">
+    <div className="mx-auto max-w-4xl px-margin-mobile py-16 md:px-margin-desktop">
       <div className="text-center">
         <h1 className="font-heading text-headline-lg text-on-surface">
           Secure Payment
@@ -138,122 +138,126 @@ export default function SubscriptionPayment() {
             </button>
           </div>
         ) : payment ? (
-          <div className="rounded-2xl border border-outline-variant bg-surface-container-lowest p-6">
-            <div className="flex items-center justify-center gap-2 border-b border-outline-variant pb-4">
-              <QrCode size={18} className="text-primary" />
-              <h2 className="font-heading text-body-lg font-bold text-on-surface">
-                {payment.planName}
-              </h2>
-            </div>
-
-            <div className="mt-3 flex items-center justify-between text-label-sm">
-              <span className="text-on-surface-variant">Customer</span>
-              <span className="text-on-surface-variant">{payment.customerName}</span>
-            </div>
-            <div className="mt-1 flex items-center justify-between text-label-sm">
-              <span className="text-on-surface-variant">Vehicle</span>
-              <span className="text-on-surface-variant">{payment.vehicleLicensePlate}</span>
-            </div>
-            <div className="mt-1 flex items-center justify-between text-label-sm">
-              <span className="text-on-surface-variant">Plan period</span>
-              <span className="text-on-surface-variant">
-                {formatDate(payment.startDate)} - {formatDate(payment.endDate)} (
-                {payment.durationDays} days)
-              </span>
-            </div>
-
-            <div className="mt-5 flex justify-center">
-              <div className="rounded-xl border border-outline-variant bg-white p-3">
-                <img
-                  src={payment.qrImageUrl ?? undefined}
-                  alt="Payment QR code"
-                  width={220}
-                  height={220}
-                  className="size-[220px]"
-                />
-              </div>
-            </div>
-
-            <div className="mt-5 flex items-center justify-between text-body-md">
-              <span className="text-on-surface-variant">Amount</span>
-              <span className="font-heading text-body-lg font-bold text-on-surface">
-                {formatCurrency(payment.amount)}
-              </span>
-            </div>
-            <div className="mt-1 flex items-center justify-between text-label-sm">
-              <span className="text-on-surface-variant">Expires in</span>
-              <span className="text-on-surface-variant">
-                {secondsLeft !== null
-                  ? formatCountdown(secondsLeft)
-                  : formatDateTime(payment.expiresAt)}
-              </span>
-            </div>
-
-            <div className="mt-4 rounded-xl border border-outline-variant bg-surface-container p-3">
-              <div className="flex items-center justify-between text-label-sm">
-                <span className="text-on-surface-variant">Bank</span>
-                <span className="font-semibold text-on-surface">{payment.bankCode}</span>
+          <div className="grid grid-cols-1 gap-8 lg:grid-cols-[1fr_360px]">
+            <div className="rounded-2xl border border-outline-variant bg-surface-container-lowest p-8">
+              <div className="flex items-center gap-2 border-b border-outline-variant pb-4">
+                <QrCode size={22} className="text-primary" />
+                <h2 className="font-heading text-headline-md font-bold text-on-surface">
+                  {payment.planName}
+                </h2>
               </div>
 
-              <div className="mt-2 flex items-center justify-between">
-                <span className="text-label-sm text-on-surface-variant">
-                  Account number
-                </span>
-                <button
-                  type="button"
-                  onClick={() => handleCopy(payment.bankAccountNumber, "account")}
-                  className="flex items-center gap-1 text-label-sm font-semibold text-primary"
-                >
-                  {copiedField === "account" ? (
-                    <>
-                      <Check size={14} /> Copied
-                    </>
-                  ) : (
-                    <>
-                      <Copy size={14} /> Copy
-                    </>
-                  )}
-                </button>
+              <div className="mt-6 flex items-center justify-between text-label-md">
+                <span className="text-on-surface-variant">Customer</span>
+                <span className="text-body-md text-on-surface">{payment.customerName}</span>
               </div>
-              <p className="mt-1 break-words font-mono text-body-md font-semibold text-on-surface">
-                {payment.bankAccountNumber}
-              </p>
-
-              <div className="mt-2 flex items-center justify-between text-label-sm">
-                <span className="text-on-surface-variant">Account name</span>
-                <span className="font-semibold text-on-surface">
-                  {payment.bankAccountName}
+              <div className="mt-3 flex items-center justify-between text-label-md">
+                <span className="text-on-surface-variant">Vehicle</span>
+                <span className="text-body-md text-on-surface">{payment.vehicleLicensePlate}</span>
+              </div>
+              <div className="mt-3 flex items-center justify-between text-label-md">
+                <span className="text-on-surface-variant">Plan period</span>
+                <span className="text-body-md text-on-surface">
+                  {formatDate(payment.startDate)} - {formatDate(payment.endDate)} (
+                  {payment.durationDays} days)
                 </span>
               </div>
 
-              <div className="mt-3 flex items-center justify-between border-t border-outline-variant pt-3">
-                <span className="text-label-sm text-on-surface-variant">
-                  Transfer content
+              <div className="mt-6 flex items-center justify-between text-body-lg">
+                <span className="text-on-surface-variant">Amount</span>
+                <span className="font-heading text-headline-lg font-bold text-on-surface">
+                  {formatCurrency(payment.amount)}
                 </span>
-                <button
-                  type="button"
-                  onClick={() => handleCopy(payment.transferContent, "content")}
-                  className="flex items-center gap-1 text-label-sm font-semibold text-primary"
-                >
-                  {copiedField === "content" ? (
-                    <>
-                      <Check size={14} /> Copied
-                    </>
-                  ) : (
-                    <>
-                      <Copy size={14} /> Copy
-                    </>
-                  )}
-                </button>
               </div>
-              <p className="mt-1 break-words font-mono text-body-md font-semibold text-on-surface">
-                {payment.transferContent}
-              </p>
+              <div className="mt-3 flex items-center justify-between text-body-md">
+                <span className="text-on-surface-variant">Expires in</span>
+                <span className="text-on-surface-variant">
+                  {secondsLeft !== null
+                    ? formatCountdown(secondsLeft)
+                    : formatDateTime(payment.expiresAt)}
+                </span>
+              </div>
             </div>
 
-            <div className="mt-6 flex items-center justify-center gap-2 text-label-sm text-on-surface-variant">
-              <Loader2 size={14} className="animate-spin" />
-              Waiting for payment confirmation...
+            <div className="rounded-2xl border border-outline-variant bg-surface-container-lowest p-8">
+              <div className="flex justify-center">
+                <div className="rounded-xl border border-outline-variant bg-white p-3">
+                  <img
+                    src={payment.qrImageUrl ?? undefined}
+                    alt="Payment QR code"
+                    width={260}
+                    height={260}
+                    className="size-[260px]"
+                  />
+                </div>
+              </div>
+
+              <div className="mt-6 rounded-xl border border-outline-variant bg-surface-container p-5">
+                <div className="flex items-center justify-between text-label-md">
+                  <span className="text-on-surface-variant">Bank</span>
+                  <span className="font-semibold text-on-surface">{payment.bankCode}</span>
+                </div>
+
+                <div className="mt-3 flex items-center justify-between">
+                  <span className="text-label-md text-on-surface-variant">
+                    Account number
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => handleCopy(payment.bankAccountNumber, "account")}
+                    className="flex items-center gap-1 text-label-md font-semibold text-primary"
+                  >
+                    {copiedField === "account" ? (
+                      <>
+                        <Check size={16} /> Copied
+                      </>
+                    ) : (
+                      <>
+                        <Copy size={16} /> Copy
+                      </>
+                    )}
+                  </button>
+                </div>
+                <p className="mt-1 break-words font-mono text-body-lg font-semibold text-on-surface">
+                  {payment.bankAccountNumber}
+                </p>
+
+                <div className="mt-3 flex items-center justify-between text-label-md">
+                  <span className="text-on-surface-variant">Account name</span>
+                  <span className="font-semibold text-on-surface">
+                    {payment.bankAccountName}
+                  </span>
+                </div>
+
+                <div className="mt-4 flex items-center justify-between border-t border-outline-variant pt-4">
+                  <span className="text-label-md text-on-surface-variant">
+                    Transfer content
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => handleCopy(payment.transferContent, "content")}
+                    className="flex items-center gap-1 text-label-md font-semibold text-primary"
+                  >
+                    {copiedField === "content" ? (
+                      <>
+                        <Check size={16} /> Copied
+                      </>
+                    ) : (
+                      <>
+                        <Copy size={16} /> Copy
+                      </>
+                    )}
+                  </button>
+                </div>
+                <p className="mt-1 break-words font-mono text-body-lg font-semibold text-on-surface">
+                  {payment.transferContent}
+                </p>
+              </div>
+
+              <div className="mt-6 flex items-center justify-center gap-2 text-body-md text-on-surface-variant">
+                <Loader2 size={16} className="animate-spin" />
+                Waiting for payment confirmation...
+              </div>
             </div>
           </div>
         ) : null}

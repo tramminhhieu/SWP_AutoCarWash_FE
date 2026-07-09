@@ -28,27 +28,32 @@ export interface RegisterVehicleOption {
   hasActiveSubscription: boolean;
 }
 
-// FE-60-US-02.1 step 2: POST /api/customer/unlimited-subscriptions
+// FE-US-56-04: request đăng ký gói mới CÓ thanh toán QR - POST /api/customer/subscriptions/unlimited
 export interface RegisterUnlimitedRequest {
   subscriptionPlanId: number;
   vehicleId: number;
 }
-export interface RegisterUnlimitedResult {
-  subscriptionId: number;
-  invoiceId: number;
-  status: "PENDING";
-}
 
-// FE-60-US-02.1 step 3: GET /api/customer/subscription-invoices/{invoiceId}/payment
-export interface SubscriptionPaymentInfo {
+export type SubscriptionInvoiceStatus = "PENDING" | "PAID" | "FAILED";
+
+// FE-US-56-04: response chung cho register/renew/poll invoice (SubscriptionPaymentInitResponse bên BE) -
+// dùng chung 1 shape cho cả 3 API vì BE trả cùng cấu trúc.
+export interface SubscriptionPaymentInit {
   invoiceId: number;
-  finalAmount: number;
-  qrCode: string;
-  expiredAt: string; // ISO datetime
   planName: string;
-  // Không có trong Note.md - FE tự thêm để phân biệt copy "Payment successful" giữa
-  // đăng ký mới và gia hạn (dùng chung 1 màn QR cho cả 2 luồng, xem SubscriptionPayment.tsx)
-  isRenewal: boolean;
+  durationDays: number;
+  transferContent: string;
+  amount: number;
+  invoiceStatus: SubscriptionInvoiceStatus;
+  expiresAt: string; // ISO datetime (Instant)
+  qrImageUrl: string | null; // null khi invoiceStatus PAID/FAILED - chỉ có giá trị lúc PENDING
+  bankAccountNumber: string;
+  bankCode: string;
+  bankAccountName: string;
+  customerName: string;
+  vehicleLicensePlate: string;
+  startDate: string; // "YYYY-MM-DD"
+  endDate: string; // "YYYY-MM-DD"
 }
 
 // FE-58-US-01 AC03 dùng "CANCELED" (chính tả Mỹ, 1 chữ L) - khớp với BookingStatus/

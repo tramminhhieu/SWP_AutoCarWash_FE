@@ -51,7 +51,9 @@ export default function SubscriptionRegister() {
     setIsSubmitting(true);
     try {
       const result = await register(id, selected.id, selected.hasActiveSubscription);
-      navigate(`/subscription-plans/payment/${result.invoiceId}`);
+      navigate(`/subscription-plans/payment/${result.invoiceId}`, {
+        state: { isRenewal: false },
+      });
     } catch (error) {
       // AC (US-02.1): VEHICLE_REQUIRED / VEHICLE_ALREADY_SUBSCRIBED / INVALID_SUBSCRIPTION_PLAN
       // đều hiển thị chung 1 chỗ - vehicle đã bận gói đã bị disable sẵn ở danh sách bên dưới.

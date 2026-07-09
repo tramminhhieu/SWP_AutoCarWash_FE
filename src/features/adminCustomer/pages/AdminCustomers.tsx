@@ -1,7 +1,9 @@
 import { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import {
   ChevronLeft,
   ChevronRight,
+  History,
   Search,
   Trash2,
   UserPlus,
@@ -94,6 +96,7 @@ function KpiCard({
 }
 
 export default function AdminCustomers() {
+  const navigate = useNavigate();
   const [rows, setRows] = useState<AdminCustomerRow[]>([]);
   const [totalCustomers, setTotalCustomers] = useState(0);
   const [newThisMonth, setNewThisMonth] = useState(0);
@@ -605,7 +608,17 @@ export default function AdminCustomers() {
                   </div>
                 </div>
 
-                <div className="-mx-8 -mb-8 flex justify-end rounded-b-2xl border-t border-outline-variant bg-surface-container-low px-8 py-4">
+                <div className="-mx-8 -mb-8 flex items-center justify-between rounded-b-2xl border-t border-outline-variant bg-surface-container-low px-8 py-4">
+                  <button
+                    type="button"
+                    onClick={() =>
+                      navigate(`/admin/customers/${detail.customerId}/bookings`)
+                    }
+                    className="flex items-center justify-center gap-2 rounded-lg border border-primary px-6 py-3 text-sm font-semibold text-primary hover:bg-primary/5"
+                  >
+                    <History className="size-4" />
+                    View Booking History
+                  </button>
                   <button
                     type="button"
                     onClick={() => {

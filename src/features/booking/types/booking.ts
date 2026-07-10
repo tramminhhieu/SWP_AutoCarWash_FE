@@ -128,6 +128,7 @@ export type BookingStatus =
   | "CHECK_IN"
   | "WASHING"
   | "PAID"
+  | "COMPLETED"
   | "CANCELED"
   | "NO_SHOW"
   | "CHECK_OUT";

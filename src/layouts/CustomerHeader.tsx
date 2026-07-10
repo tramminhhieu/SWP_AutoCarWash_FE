@@ -5,12 +5,11 @@ import {
   User as UserIcon,
   LogOut,
   UserPen,
-  Car,
   Calendar,
-  Award,
   Puzzle,
   Package,
   Repeat,
+  Receipt,
 } from "lucide-react";
 
 import NotificationBell from "../features/crm/components/NotificationBell";
@@ -203,18 +202,6 @@ export default function CustomerHeader({
                       My Profile
                     </Link>
                     <Link
-                      to="/vehicles/add"
-                      role="menuitem"
-                      className="flex items-center gap-2 px-4 py-2 font-body text-sm text-on-surface hover:bg-surface-container-low"
-                      onClick={() => setIsProfileOpen(false)}
-                    >
-                      <Car
-                        className="h-4 w-4 text-outline"
-                        strokeWidth={1.75}
-                      />
-                      Add Vehicle
-                    </Link>
-                    <Link
                       to="/booking/history"
                       role="menuitem"
                       className="flex items-center gap-2 px-4 py-2 font-body text-sm text-on-surface hover:bg-surface-container-low"
@@ -227,16 +214,16 @@ export default function CustomerHeader({
                       My Booking
                     </Link>
                     <Link
-                      to="/customer/loyalty"
+                      to="/customer/transactions"
                       role="menuitem"
                       className="flex items-center gap-2 px-4 py-2 font-body text-sm text-on-surface hover:bg-surface-container-low"
                       onClick={() => setIsProfileOpen(false)}
                     >
-                      <Award
+                      <Receipt
                         className="h-4 w-4 text-outline"
                         strokeWidth={1.75}
                       />
-                      My Point
+                      My Transaction
                     </Link>
                     <button
                       type="button"

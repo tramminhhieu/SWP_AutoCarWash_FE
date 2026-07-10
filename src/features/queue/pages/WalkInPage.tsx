@@ -6,6 +6,7 @@ import {
   checkPhone,
   calculateInvoice,
   createWalkIn,
+  collectWalkInPenaltyDeposit,
   getWalkInFormData,
   type CheckPhoneResponse,
   type SavedVehicleDTO,
@@ -80,6 +81,7 @@ export default function WalkInPage() {
   const [showDepositModal, setShowDepositModal] = useState(false);
   const [depositReceivedInput, setDepositReceivedInput] = useState("");
   const [depositModalError, setDepositModalError] = useState("");
+  const [isCollectingDeposit, setIsCollectingDeposit] = useState(false);
 
   // schedule: lọc slot của hôm nay theo buổi sáng/chiều, giống booking
   const [period, setPeriod] = useState<"AM" | "PM">("AM");
@@ -120,6 +122,7 @@ export default function WalkInPage() {
     setShowDepositModal(false);
     setDepositReceivedInput("");
     setDepositModalError("");
+    setIsCollectingDeposit(false);
   };
 
   const handleSelectType = (type: CustomerType) => {
@@ -207,16 +210,25 @@ export default function WalkInPage() {
     }
   };
 
-  const handleConfirmDeposit = () => {
+  const handleConfirmDeposit = async () => {
     const requiredDeposit = summary?.penaltyDeposit ?? 0;
     const receivedAmount = Number(depositReceivedInput);
     if (!receivedAmount || receivedAmount < requiredDeposit) {
       setDepositModalError(`Please enter at least ${formatVND(requiredDeposit)}.`);
       return;
     }
-    setDepositCollected(true);
-    setShowDepositModal(false);
+    setIsCollectingDeposit(true);
     setDepositModalError("");
+    try {
+      await collectWalkInPenaltyDeposit(vehicleInfo.licensePlate);
+      setDepositCollected(true);
+      setShowDepositModal(false);
+    } catch (error) {
+      const { message } = getApiErrorInfo(error);
+      setDepositModalError(message ?? "Failed to confirm deposit, please try again.");
+    } finally {
+      setIsCollectingDeposit(false);
+    }
   };
 
   const handleCloseDepositModal = () => {
@@ -858,6 +870,7 @@ export default function WalkInPage() {
         title="Penalty Deposit Required"
         confirmText="Confirm Deposit Collected"
         onConfirm={handleConfirmDeposit}
+        isConfirmLoading={isCollectingDeposit}
         message={
           <div className="flex flex-col gap-3 text-left">
             <p>

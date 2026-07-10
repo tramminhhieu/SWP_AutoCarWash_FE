@@ -18,6 +18,8 @@ export const API = {
     // API-01-03: GET STATIONS BY COMMUNE
     STATIONS_BY_COMMUNE: (communeId: number | string) =>
       `/api/communes/${communeId}/stations`,
+    // GET toàn bộ station (id + tên), dùng cho dropdown filter "Chi nhánh" - FE-US-09-04 AC5/AC6
+    ALL_STATIONS: "/api/stations",
   },
   BOOKINGS: {
     /** `GET` — list of a customer's upcoming bookings (CONFIRMED/CHECK_IN/WASHING). */
@@ -57,6 +59,27 @@ export const API = {
   },
   PAYMENTS: {
     CASH: "/api/payments/cash",
+    // GET admin/staff-wide transaction list + KPI summary (?method=&status=&type=&fromDate=&toDate=&bookingId=&transactionId=&stationId=)
+    TRANSACTIONS: "/api/payments/transactions",
+    // GET invoice detail after payment (FE-63-US-01 AC02)
+    INVOICE_DETAIL: (invoiceId: number | string) =>
+      `/api/payments/invoices/${invoiceId}`,
+    // GET payment history for the logged-in customer (?type=&fromDate=&toDate=)
+    HISTORY: "/api/payments/history",
+  },
+  SUBSCRIPTIONS: {
+    // GET the customer's currently active subscription (204 if none)
+    ACTIVE: "/api/subscriptions/active",
+  },
+  CUSTOMERS: {
+    // GET admin customer list + KPI summary (?page=&size=&keyword=) - FE-US-09
+    LIST: "/api/customers",
+    // GET customer detail / DELETE customer (admin only) - FE-US-09-03
+    DETAIL: (customerId: number | string) => `/api/customers/${customerId}`,
+    // GET lịch sử booking của 1 khách hàng (admin only) - FE-US-09-04
+    // (?page=&size=&vehicleKeyword=&serviceCategoryId=&active=&stationId=)
+    BOOKINGS: (customerId: number | string) =>
+      `/api/customers/${customerId}/bookings`,
   },
   LOYALTY: {
     // GET loyalty profile (points, tier, spending)

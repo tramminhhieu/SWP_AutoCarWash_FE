@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import {
   Award,
   Check,
@@ -53,17 +53,13 @@ export default function LoyaltyRewards() {
   const [historyError, setHistoryError] = useState<string | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
 
-  const [tierHistoryYear, setTierHistoryYear] = useState(
-    () => new Date().getFullYear(),
+  const [tierHistoryYear, setTierHistoryYear] = useState(() =>
+    new Date().getFullYear(),
   );
-  const [tierHistoryMonth, setTierHistoryMonth] = useState<number | null>(
-    null,
-  );
+  const [tierHistoryMonth, setTierHistoryMonth] = useState<number | null>(null);
   const [tierHistory, setTierHistory] = useState<TierHistoryEntry[]>([]);
   const [isTierHistoryLoading, setIsTierHistoryLoading] = useState(true);
-  const [tierHistoryError, setTierHistoryError] = useState<string | null>(
-    null,
-  );
+  const [tierHistoryError, setTierHistoryError] = useState<string | null>(null);
   const [tierHistoryPage, setTierHistoryPage] = useState(1);
 
   useEffect(() => {
@@ -159,14 +155,22 @@ export default function LoyaltyRewards() {
     [tiers],
   );
   const maxTierPoints = sortedTiers.at(-1)?.minPoints ?? 1;
-  const progressPercent = profile
-    ? Math.min((profile.accumulatedPoints / maxTierPoints) * 100, 100)
-    : 0;
   const currentTierIndex = profile
     ? sortedTiers.findIndex(
         (t) => t.tierName.toUpperCase() === profile.tierName.toUpperCase(),
       )
     : -1;
+  // Tier is a ratchet: after a points reset that also upgrades the tier, accumulatedPoints
+  // drops to ~0 but the customer already earned this tier, so the bar must not render behind
+  // that tier's own marker.
+  const currentTier =
+    currentTierIndex !== -1 ? sortedTiers[currentTierIndex] : null;
+  const effectivePoints = profile
+    ? Math.max(profile.accumulatedPoints, currentTier?.minPoints ?? 0)
+    : 0;
+  const progressPercent = profile
+    ? Math.min((effectivePoints / maxTierPoints) * 100, 100)
+    : 0;
 
   const totalPages = Math.ceil(transactions.length / PAGE_SIZE);
   const paginatedActivity = transactions.slice(
@@ -208,17 +212,6 @@ export default function LoyaltyRewards() {
   return (
     <main className="min-h-screen bg-surface py-8">
       <div className="mx-auto flex max-w-[1200px] flex-col gap-8 px-6">
-        {/* ─── Breadcrumbs ─────────────────────────────────────────────── */}
-        <nav className="flex items-center gap-2 text-xs font-semibold text-on-surface-variant">
-          <Link to="/" className="hover:text-primary">
-            Home
-          </Link>
-          <ChevronRight className="size-3 text-outline-variant" />
-          <span>Membership</span>
-          <ChevronRight className="size-3 text-outline-variant" />
-          <span className="font-bold text-primary">Loyalty Details</span>
-        </nav>
-
         {/* ─── Page header + Points badge ──────────────────────────────── */}
         <div className="flex flex-col gap-6">
           <div className="flex flex-col gap-1">
@@ -261,7 +254,7 @@ export default function LoyaltyRewards() {
                 </p>
                 <p className="flex items-baseline gap-1">
                   <span className="font-heading text-2xl font-semibold text-on-surface">
-                    {profile.currentTotalSpending.toLocaleString("vi-VN")}
+                    {profile.retentionCurrentAmount.toLocaleString("vi-VN")}
                   </span>
                   <span className="text-sm font-medium tracking-wide text-on-surface">
                     ₫
@@ -340,15 +333,32 @@ export default function LoyaltyRewards() {
                   ? index > currentTierIndex
                   : tier.minPoints > profile.totalPoints;
               const leftPercent = (tier.minPoints / maxTierPoints) * 100;
+              const isFirst = index === 0;
+              const isLast = index === sortedTiers.length - 1;
+              const alignItems = isFirst
+                ? "items-start"
+                : isLast
+                  ? "items-end"
+                  : "items-center";
+              const textAlign = isFirst
+                ? "text-left"
+                : isLast
+                  ? "text-right"
+                  : "text-center";
+              const translateX = isFirst
+                ? "translateX(0)"
+                : isLast
+                  ? "translateX(-100%)"
+                  : "translateX(-50%)";
               return (
                 <div
                   key={tier.tierName}
-                  className={`absolute flex flex-col items-center ${
+                  className={`absolute flex w-32 flex-col ${alignItems} ${
                     isDimmed ? "opacity-40" : ""
                   }`}
                   style={{
                     left: `${leftPercent}%`,
-                    transform: "translateX(-50%)",
+                    transform: translateX,
                   }}
                 >
                   <span
@@ -357,7 +367,7 @@ export default function LoyaltyRewards() {
                     }`}
                   />
                   <span
-                    className={`text-sm font-medium ${
+                    className={`block w-full min-w-0 truncate ${textAlign} text-sm font-medium ${
                       isActive ? "font-bold text-primary" : "text-on-surface"
                     }`}
                   >
@@ -404,7 +414,8 @@ export default function LoyaltyRewards() {
                 0,
               );
               const retentionPercent = Math.min(
-                (profile.retentionCurrentAmount / profile.retentionTargetAmount) *
+                (profile.retentionCurrentAmount /
+                  profile.retentionTargetAmount) *
                   100,
                 100,
               );
@@ -528,7 +539,8 @@ export default function LoyaltyRewards() {
             <div className="flex flex-wrap items-center gap-4">
               {!historyError && !isHistoryLoading && (
                 <span className="text-sm font-medium text-on-surface-variant">
-                  Total spending: {historyTotalSpending.toLocaleString("vi-VN")} ₫
+                  Total spending: {historyTotalSpending.toLocaleString("vi-VN")}{" "}
+                  ₫
                 </span>
               )}
               <select
@@ -545,7 +557,9 @@ export default function LoyaltyRewards() {
               <select
                 value={month ?? ""}
                 onChange={(e) =>
-                  handleMonthChange(e.target.value ? Number(e.target.value) : null)
+                  handleMonthChange(
+                    e.target.value ? Number(e.target.value) : null,
+                  )
                 }
                 className="rounded-lg border border-outline-variant bg-white px-3 py-2 text-sm font-medium text-on-surface"
               >
@@ -594,7 +608,8 @@ export default function LoyaltyRewards() {
                         key={`${row.createdAt}-${i}`}
                         onClick={
                           row.bookingId != null
-                            ? () => navigate(`/booking/history/${row.bookingId}`)
+                            ? () =>
+                                navigate(`/booking/history/${row.bookingId}`)
                             : undefined
                         }
                         className={`${
@@ -613,7 +628,9 @@ export default function LoyaltyRewards() {
                         </td>
                         <td
                           className={`px-6 py-6 text-right text-base font-bold ${
-                            row.points < 0 ? "text-error" : "text-tertiary-container"
+                            row.points < 0
+                              ? "text-error"
+                              : "text-tertiary-container"
                           }`}
                         >
                           {row.points < 0
@@ -743,7 +760,7 @@ export default function LoyaltyRewards() {
                         Change
                       </th>
                       <th className="px-6 py-4 text-right text-sm font-medium uppercase tracking-wider text-on-surface-variant">
-                        Points
+                        Value
                       </th>
                       <th className="px-6 py-4 text-right text-sm font-medium uppercase tracking-wider text-on-surface-variant">
                         Type
@@ -767,7 +784,7 @@ export default function LoyaltyRewards() {
                             : `Joined as ${row.newTierName}`}
                         </td>
                         <td className="px-6 py-6 text-right text-base font-bold text-on-surface">
-                          {row.pointsAtTransition.toLocaleString()}
+                          {row.valueAtTransition.toLocaleString()}
                         </td>
                         <td className="px-6 py-6 text-right">
                           <span

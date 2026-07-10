@@ -5,6 +5,8 @@ import Login from "../features/auth/pages/Login";
 import Register from "../features/auth/pages/Register";
 import SelectStation from "../features/station/components/SelectStation";
 import BookingCreate from "../features/booking/pages/BookingCreate";
+import BookingPayment from "../features/booking/pages/BookingPayment";
+import TransactionHistory from "../features/transaction/pages/TransactionHistory";
 import BookingHistory from "../features/booking/pages/BookingHistory";
 import BookingDetail from "../features/booking/pages/BookingDetail";
 import VehicleCreate from "../features/vehicles/pages/VehicleCreate";
@@ -32,6 +34,9 @@ import PromotionOverview from "../features/promotion/pages/PromotionOverview";
 import PromotionDetail from "../features/promotion/pages/PromotionDetail";
 import PromotionCreate from "../features/promotion/pages/PromotionCreate";
 import PromotionEdit from "../features/promotion/pages/PromotionEdit";
+import AdminTransactionHistory from "../features/adminTransaction/pages/AdminTransactionHistory";
+import AdminCustomers from "../features/adminCustomer/pages/AdminCustomers";
+import AdminCustomerBookingHistory from "../features/adminCustomer/pages/AdminCustomerBookingHistory";
 
 export default function AppRouter() {
   return (
@@ -51,6 +56,10 @@ export default function AppRouter() {
           <Route element={<RoleRoute allowedRoles={["CUSTOMER"]} />}>
             <Route path="/booking/location" element={<SelectStation />} />
             <Route path="/booking/details" element={<BookingCreate />} />
+            <Route
+              path="/booking/payment/:bookingId"
+              element={<BookingPayment />}
+            />
             <Route path="/booking/history" element={<BookingHistory />} />
             <Route
               path="/booking/history/:bookingId"
@@ -60,6 +69,10 @@ export default function AppRouter() {
             <Route path="/vehicles/edit/:vehicleId" element={<VehicleEdit />} />
             <Route path="/customer/profile" element={<CustomerProfile />} />
             <Route path="/customer/loyalty" element={<LoyaltyRewards />} />
+            <Route
+              path="/customer/transactions"
+              element={<TransactionHistory />}
+            />
             <Route
               path="/customer/profile/change-password"
               element={<ChangePassword />}
@@ -86,10 +99,10 @@ export default function AppRouter() {
 
       <Route element={<PrivateRoute />}>
         <Route element={<RoleRoute allowedRoles={["ADMIN"]} />}>
-          {/* Admin login về thẳng trang quản lý add-on, không có dashboard riêng */}
+          {/* Admin login về thẳng Transaction History, không qua dashboard placeholder */}
           <Route
             path="/admin"
-            element={<Navigate to="/admin/add-ons" replace />}
+            element={<Navigate to="/admin/transactions" replace />}
           />
           <Route element={<AdminLayout />}>
             <Route path="/admin/add-ons" element={<AddonList />} />
@@ -123,6 +136,15 @@ export default function AppRouter() {
             <Route
               path="/admin/promotions/:id/edit"
               element={<PromotionEdit />}
+            />
+            <Route
+              path="/admin/transactions"
+              element={<AdminTransactionHistory />}
+            />
+            <Route path="/admin/customers" element={<AdminCustomers />} />
+            <Route
+              path="/admin/customers/:customerId/bookings"
+              element={<AdminCustomerBookingHistory />}
             />
           </Route>
         </Route>

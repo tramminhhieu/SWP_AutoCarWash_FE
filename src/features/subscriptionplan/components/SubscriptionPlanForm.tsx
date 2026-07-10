@@ -1,13 +1,13 @@
 import { useEffect, useState, type ReactNode } from "react";
-import { CarFront, ChevronDown, Info, Save, Tag } from "lucide-react";
+import { CarFront, ChevronDown, Info, Save, Sparkles, Tag } from "lucide-react";
 import { getApiErrorInfo } from "../../../lib/axiosClient";
 import { getSubscriptionTypeLabel } from "../../../constants/subscriptionStyles";
-import { create, getServicePackageOptions, update } from "../api/subscriptionPlanApi";
+import { create, getAddonServiceOptions, update } from "../api/subscriptionPlanApi";
 import {
   SUBSCRIPTION_PLAN_ERROR_CODES,
+  type AddonServiceOption,
   type PlanStatus,
   type PlanType,
-  type ServicePackageOption,
 } from "../types/subscriptionPlan";
 
 const PLAN_TYPES: PlanType[] = ["UNLIMIT", "FAMILY"];
@@ -112,10 +112,10 @@ interface SubscriptionPlanFormProps {
     price: number;
     durationDays: number;
     description: string;
-    servicePackageId: number;
     planType: PlanType;
     maxVehicleCount: number | null;
     status: PlanStatus;
+    addonServiceIds: number[];
   };
   // Chỉ dùng ở chế độ Create, khi đi vào từ màn "chọn loại" (SubscriptionPlanTypeSelect) -
   // planType đã được quyết định trước theo đường link (Unlimited/Family), nên ẩn hẳn dropdown
@@ -138,9 +138,6 @@ export default function SubscriptionPlanForm({
     initialData?.durationDays?.toString() ?? "",
   );
   const [description, setDescription] = useState(initialData?.description ?? "");
-  const [servicePackageId, setServicePackageId] = useState(
-    initialData?.servicePackageId?.toString() ?? "",
-  );
   const [planType, setPlanType] = useState<PlanType>(
     initialData?.planType ?? fixedPlanType ?? "UNLIMIT",
   );
@@ -152,14 +149,17 @@ export default function SubscriptionPlanForm({
       : "",
   );
   const [status, setStatus] = useState<PlanStatus>(initialData?.status ?? "ACTIVE");
+  const [addonServiceIds, setAddonServiceIds] = useState<number[]>(
+    initialData?.addonServiceIds ?? [],
+  );
 
-  const [servicePackages, setServicePackages] = useState<ServicePackageOption[]>([]);
+  const [addonOptions, setAddonOptions] = useState<AddonServiceOption[]>([]);
 
   // Lỗi riêng từng field
   const [planNameError, setPlanNameError] = useState<string | null>(null);
   const [priceError, setPriceError] = useState<string | null>(null);
   const [durationDaysError, setDurationDaysError] = useState<string | null>(null);
-  const [servicePackageError, setServicePackageError] = useState<string | null>(null);
+  const [addonServicesError, setAddonServicesError] = useState<string | null>(null);
   const [maxVehicleCountError, setMaxVehicleCountError] = useState<string | null>(
     null,
   );
@@ -167,26 +167,32 @@ export default function SubscriptionPlanForm({
 
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  // AC02 US-02: dropdown service package chỉ hiển thị các gói đang ACTIVE.
-  // Hiện lấy từ mock trong subscriptionPlanApi.ts (xem comment đầu file đó để bật lại API thật).
+  // Add-on tạo nên nội dung gói (thay cho việc chọn 1 Service Package có sẵn) - BE sẽ tự tạo
+  // 1 Service Package riêng cho gói này từ danh sách add-on được chọn.
   useEffect(() => {
-    getServicePackageOptions().then(setServicePackages);
+    getAddonServiceOptions().then(setAddonOptions);
   }, []);
+
+  const toggleAddon = (id: number) => {
+    setAddonServiceIds((prev) =>
+      prev.includes(id) ? prev.filter((a) => a !== id) : [...prev, id],
+    );
+  };
 
   const validate = (): boolean => {
     let isValid = true;
     setPlanNameError(null);
     setPriceError(null);
     setDurationDaysError(null);
-    setServicePackageError(null);
+    setAddonServicesError(null);
     setMaxVehicleCountError(null);
 
     if (!planName.trim()) {
       setPlanNameError("Plan name is required.");
       isValid = false;
     }
-    if (!servicePackageId) {
-      setServicePackageError("Service package is required.");
+    if (addonServiceIds.length === 0) {
+      setAddonServicesError("Select at least one add-on.");
       isValid = false;
     }
     const priceNum = Number(price);
@@ -223,9 +229,9 @@ export default function SubscriptionPlanForm({
         price: Number(price),
         durationDays: Number(durationDays),
         description: description.trim(),
-        servicePackageId: Number(servicePackageId),
         planType,
         maxVehicleCount: planType === "FAMILY" ? Number(maxVehicleCount) : 1,
+        addonServiceIds,
       };
 
       const result = isEditMode
@@ -241,9 +247,9 @@ export default function SubscriptionPlanForm({
         case codes.PLAN_NAME_REQUIRED:
           setPlanNameError(message ?? "Plan name is required.");
           break;
-        case codes.SERVICE_PACKAGE_REQUIRED:
-        case codes.INVALID_SERVICE_PACKAGE:
-          setServicePackageError(message ?? "Invalid service package.");
+        case codes.ADDON_SERVICES_REQUIRED:
+        case codes.INVALID_ADDON_SERVICE:
+          setAddonServicesError(message ?? "Invalid add-on selection.");
           break;
         case codes.INVALID_PRICE:
           setPriceError(message ?? "Price must be greater than 0.");
@@ -289,20 +295,6 @@ export default function SubscriptionPlanForm({
               {planNameError && <p className={errorTextClass}>{planNameError}</p>}
             </div>
 
-            <SelectField
-              label="Service Package"
-              value={servicePackageId}
-              onChange={(e) => setServicePackageId(e.target.value)}
-              error={servicePackageError}
-            >
-              <option value="">Select a service package</option>
-              {servicePackages.map((p) => (
-                <option key={p.id} value={p.id}>
-                  {p.name}
-                </option>
-              ))}
-            </SelectField>
-
             {/* Đã chọn loại (Unlimited/Family) từ màn trước đó (SubscriptionPlanTypeSelect) ->
                 khoá cứng, không hiện dropdown nữa. Chỉ hiện dropdown khi Edit (đổi qua lại loại
                 vẫn được phép theo AC02 US-03) hoặc khi form dùng độc lập, không qua fixedPlanType. */}
@@ -331,6 +323,46 @@ export default function SubscriptionPlanForm({
               />
             </div>
           </FormSection>
+
+          {/* Add-ons tạo nên nội dung gói (thay cho việc chọn 1 Service Package có sẵn) - BE sẽ
+              tự tạo 1 Service Package riêng cho gói này từ danh sách đã chọn ở đây. Bắt buộc
+              chọn ít nhất 1. */}
+          <div className="mt-6">
+            <FormSection icon={<Sparkles size={18} />} title="Add-ons">
+              {addonOptions.length === 0 ? (
+                <p className="text-body-md text-on-surface-variant">
+                  No add-ons available.
+                </p>
+              ) : (
+                <div className="grid grid-cols-1 gap-2.5 sm:grid-cols-2">
+                  {addonOptions.map((a) => {
+                    const checked = addonServiceIds.includes(a.id);
+                    return (
+                      <label
+                        key={a.id}
+                        className={`flex cursor-pointer items-center gap-2.5 rounded-lg border px-3.5 py-2.5 text-body-md transition-colors ${
+                          checked
+                            ? "border-primary bg-primary/5"
+                            : "border-outline-variant hover:border-primary/40"
+                        }`}
+                      >
+                        <input
+                          type="checkbox"
+                          checked={checked}
+                          onChange={() => toggleAddon(a.id)}
+                          className="size-4 rounded border-outline-variant text-primary focus:ring-primary"
+                        />
+                        <span className="text-on-surface">{a.name}</span>
+                      </label>
+                    );
+                  })}
+                </div>
+              )}
+              {addonServicesError && (
+                <p className="mt-1.5 text-label-sm text-error">{addonServicesError}</p>
+              )}
+            </FormSection>
+          </div>
         </div>
 
         {/* Pricing & Rules */}

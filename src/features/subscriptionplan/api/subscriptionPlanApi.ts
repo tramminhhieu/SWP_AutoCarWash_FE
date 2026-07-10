@@ -1,22 +1,21 @@
 import { API } from "../../../constants/apiEndpoints";
 import axiosClient from "../../../lib/axiosClient";
-import * as servicePackageApi from "../../servicepackage/api/servicePackageApi";
 import type { ApiSuccessResponse } from "../../../types/apiResponse";
 import type {
+  AddonServiceOption,
   CreateSubscriptionPlanRequest,
   PlanStatusFilter,
-  ServicePackageOption,
   SubscriptionPlan,
   SubscriptionPlanDetail,
   UpdateSubscriptionPlanRequest,
 } from "../types/subscriptionPlan";
 
-// AC02 US-02: dropdown chỉ hiển thị service package ACTIVE
-export const getServicePackageOptions = async (): Promise<ServicePackageOption[]> => {
-  const packages = await servicePackageApi.getAll();
-  return packages
-    .filter((p) => p.status !== "INACTIVE")
-    .map((p) => ({ id: p.id, name: p.name }));
+// GET /api/admin/addon-services/active - checkbox list add-on cho form Create/Update
+export const getAddonServiceOptions = async (): Promise<AddonServiceOption[]> => {
+  const res = await axiosClient.get<ApiSuccessResponse<AddonServiceOption[]>>(
+    API.ADMIN.ADDON_SERVICE.LIST,
+  );
+  return res.data.data;
 };
 
 // FE-53-US-01

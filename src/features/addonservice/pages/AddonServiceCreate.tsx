@@ -69,8 +69,6 @@ function FieldWithSuffix({
   );
 }
 
-// ⚠️ Chưa có AC/API chính thức cho Add-on trong Note.md - xem comment trong
-// addonService.ts / addonServiceApi.ts. Layout tham khảo prototype "Add New Add-on".
 export default function AddonServiceCreate() {
   const navigate = useNavigate();
 

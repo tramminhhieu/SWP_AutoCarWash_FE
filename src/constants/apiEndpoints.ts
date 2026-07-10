@@ -59,6 +59,8 @@ export const API = {
   },
   PAYMENTS: {
     CASH: "/api/payments/cash",
+    // GET admin/staff-wide transaction list + KPI summary (?method=&status=&type=&fromDate=&toDate=&bookingId=&transactionId=&stationId=)
+    TRANSACTIONS: "/api/payments/transactions",
     // GET invoice detail after payment (FE-63-US-01 AC02)
     INVOICE_DETAIL: (invoiceId: number | string) =>
       `/api/payments/invoices/${invoiceId}`,

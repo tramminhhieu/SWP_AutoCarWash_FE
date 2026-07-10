@@ -57,6 +57,12 @@ export const API = {
   },
   PAYMENTS: {
     CASH: "/api/payments/cash",
+    // GET payment history for the logged-in customer (?type=&fromDate=&toDate=)
+    HISTORY: "/api/payments/history",
+  },
+  SUBSCRIPTIONS: {
+    // GET the customer's currently active subscription (204 if none)
+    ACTIVE: "/api/subscriptions/active",
   },
   LOYALTY: {
     // GET loyalty profile (points, tier, spending)

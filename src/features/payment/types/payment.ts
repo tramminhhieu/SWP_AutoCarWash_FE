@@ -77,3 +77,37 @@ export interface CashPaymentResponse {
   bookingStatus: string;
   paymentStatus: string;
 }
+
+export interface InvoiceService {
+  name: string;
+  price: number;
+}
+
+/**
+ * Hoá đơn hiện sau khi Confirm Payment. Hiện tại BE chưa có endpoint trả đúng
+ * shape này (chỉ có CashPaymentResponse ở trên) - FE tự dựng object này từ dữ
+ * liệu PaymentBookingDetail đã load + invoiceId thật từ processCashPayment,
+ * chỉ invoiceStatus/paidAt là tự gán tạm ở client. Sẽ thay bằng gọi API thật
+ * khi BE bổ sung endpoint.
+ */
+export interface InvoiceDetail {
+  invoiceId: number;
+  bookingId: number;
+  invoiceStatus: string;
+  paidAt: string;
+  paymentMethod: string;
+  appointmentDate: string;
+  checkInAt: string | null;
+  checkOutAt: string | null;
+  vehicleBrand: string | null;
+  vehicleLicensePlate: string;
+  servicePackageName: string;
+  services: InvoiceService[];
+  serviceAmount: number;
+  addonAmount: number;
+  rawAmount: number;
+  discountAmount: number;
+  voucherDiscount: number;
+  pointDiscount: number;
+  finalAmount: number;
+}

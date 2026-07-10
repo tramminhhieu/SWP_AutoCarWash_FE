@@ -6,6 +6,8 @@ import {
   LogOut,
   User as UserIcon,
   Tag,
+  Receipt,
+  Users,
 } from "lucide-react";
 import { useAuth } from "../hooks/useAuth";
 
@@ -15,6 +17,8 @@ const navItems = [
   { path: "/admin/add-ons", label: "Add-on", icon: Puzzle },
   { path: "/admin/wash-lanes", label: "Wash Lane", icon: Waves },
   { path: "/admin/promotions", label: "Promotions", icon: Tag },
+  { path: "/admin/transactions", label: "Transaction History", icon: Receipt },
+  { path: "/admin/customers", label: "Customers", icon: Users },
 ];
 
 export default function AdminSidebar() {

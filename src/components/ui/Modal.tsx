@@ -13,6 +13,7 @@ interface ModalProps {
   isOpen: boolean;
   onClose: () => void; // gọi khi bấm nút X, nút "Cancel", hoặc nút duy nhất (success)
   variant?: ModalVariant; // mặc định "confirm"
+  size?: "sm" | "lg"; // mặc định "sm" (max-w-sm) - "lg" (max-w-3xl) dùng cho nội dung rộng, vd overlay chi tiết nhiều cột
   icon?: ReactNode | null;
   title?: string;
   message?: ReactNode;
@@ -34,6 +35,7 @@ const Modal = ({
   isOpen,
   onClose,
   variant = "confirm",
+  size = "sm",
   icon,
   title,
   message,
@@ -67,7 +69,11 @@ const Modal = ({
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
       {/* Thêm "relative" để chứa nút X absolute ở góc */}
-      <div className="relative flex flex-col items-center gap-4 rounded-2xl bg-surface-container-lowest px-8 py-8 shadow-xl max-w-sm w-full mx-4 text-center">
+      <div
+        className={`relative flex flex-col items-center gap-4 rounded-2xl bg-surface-container-lowest px-8 py-8 shadow-xl w-full mx-4 text-center ${
+          size === "lg" ? "max-w-3xl" : "max-w-sm"
+        }`}
+      >
         {/* Nút X - luôn hiện ở mọi variant, gọi onClose giống nút Cancel */}
         <button
           type="button"

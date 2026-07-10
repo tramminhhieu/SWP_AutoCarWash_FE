@@ -164,109 +164,112 @@ export default function BookingDetail() {
           </div>
 
           <div className="flex flex-col rounded-[8px] border border-outline-variant/50 bg-white shadow-[0px_10px_25px_-5px_rgba(17,24,39,0.05)]">
-            <div className="flex flex-col gap-4 p-8">
-              <h3 className="font-heading text-lg font-semibold text-on-surface">
-                Price Breakdown
-              </h3>
-
-              {booking.customerTier && (
-                <div className="flex items-center justify-between text-sm">
-                  <span className="text-on-surface-variant">Customer Tier</span>
-                  <span className="font-semibold text-on-surface">{booking.customerTier}</span>
-                </div>
-              )}
-
-              <div className="flex items-center justify-between border-t border-outline-variant/20 pt-4 text-sm">
-                <span className="text-on-surface-variant">
-                  {booking.serviceName}
-                </span>
-                <span className="font-semibold text-on-surface">
-                  {formatCurrency(booking.servicePrice)}
-                </span>
+            <div className="flex flex-col gap-6 p-8">
+              <div className="flex items-center justify-between">
+                <h3 className="font-heading text-lg font-semibold text-on-surface">
+                  Price Breakdown
+                </h3>
+                {booking.customerTier && (
+                  <span className="rounded-[6px] border border-primary/10 bg-primary/5 px-2 py-1 text-xs font-semibold text-primary">
+                    {booking.customerTier}
+                  </span>
+                )}
               </div>
 
-              {booking.addons.map((addon, index) => (
-                <div
-                  key={`${addon.addonName}-${index}`}
-                  className="flex items-center justify-between text-sm"
-                >
+              <div className="flex flex-col gap-2 border-t border-outline-variant/20 pt-4">
+                <div className="flex items-center justify-between text-sm">
                   <span className="text-on-surface-variant">
-                    {addon.addonName}
+                    {booking.serviceName}
                   </span>
                   <span className="font-semibold text-on-surface">
-                    {formatCurrency(addon.addonPrice)}
+                    {formatCurrency(booking.servicePrice)}
                   </span>
                 </div>
-              ))}
 
-              <div className="flex items-center justify-between text-sm">
-                <span className="text-on-surface-variant">
-                  Voucher{booking.voucherCode ? ` (${booking.voucherCode}${booking.voucherDiscountPercent ? ` -${booking.voucherDiscountPercent}%` : ""})` : ""}
-                </span>
-                <span className="font-semibold text-error">
-                  -{formatCurrency(booking.voucherDiscountAmount)}
-                </span>
-              </div>
+                {booking.addons.map((addon, index) => (
+                  <div
+                    key={`${addon.addonName}-${index}`}
+                    className="flex items-center justify-between text-sm"
+                  >
+                    <span className="text-on-surface-variant">
+                      {addon.addonName}
+                    </span>
+                    <span className="font-semibold text-on-surface">
+                      {formatCurrency(addon.addonPrice)}
+                    </span>
+                  </div>
+                ))}
 
-              <div className="flex items-center justify-between text-sm">
-                <span className="text-on-surface-variant">Point Discount</span>
-                <span className="font-semibold text-error">-{formatCurrency(booking.pointDiscountAmount)}</span>
-              </div>
-
-              {booking.pointsEarned != null && (
                 <div className="flex items-center justify-between text-sm">
-                  <span className="text-on-surface-variant">Points Earned</span>
-                  <span className="font-semibold text-on-surface">
-                    {booking.pointsEarned.toLocaleString()}
+                  <span className="text-on-surface-variant">
+                    Voucher{booking.voucherCode ? ` (${booking.voucherCode}${booking.voucherDiscountPercent ? ` -${booking.voucherDiscountPercent}%` : ""})` : ""}
                   </span>
+                  <span className="font-semibold text-error">
+                    -{formatCurrency(booking.voucherDiscountAmount)}
+                  </span>
+                </div>
+
+                <div className="flex items-center justify-between text-sm">
+                  <span className="text-on-surface-variant">Point Discount</span>
+                  <span className="font-semibold text-error">-{formatCurrency(booking.pointDiscountAmount)}</span>
+                </div>
+
+                <div className="flex items-center justify-between text-sm">
+                  <span className="text-on-surface-variant">Discount</span>
+                  <span className="font-semibold text-error">-{formatCurrency(booking.discountAmount)}</span>
+                </div>
+              </div>
+
+              <div className="flex flex-col gap-2 border-t border-outline-variant/20 pt-4">
+                <div className="flex items-center justify-between text-base">
+                  <span className="font-semibold text-on-surface">Total</span>
+                  <span className="font-bold text-on-surface">
+                    {formatCurrency(booking.totalAmount)}
+                  </span>
+                </div>
+
+                <div className="flex items-center justify-between text-sm">
+                  <span className="text-on-surface-variant">
+                    Deposit {booking.isDepositPaid ? "(paid)" : "(unpaid)"}
+                  </span>
+                  <span className="font-semibold text-on-surface">
+                    {formatCurrency(booking.depositAmount ?? 0)}
+                  </span>
+                </div>
+
+                <div className="flex items-center justify-between pt-2">
+                  <span className="text-base font-bold text-on-surface">Remaining</span>
+                  <span className="text-xl font-bold text-primary">
+                    {formatCurrency(booking.remainingAmount)}
+                  </span>
+                </div>
+              </div>
+
+              {(booking.pointsEarned != null ||
+                booking.pointsRedeemed != null ||
+                booking.loyaltyPoint != null) && (
+                <div className="flex items-center justify-between rounded-[8px] bg-primary/5 p-4">
+                  <span className="text-sm text-on-surface-variant">
+                    {booking.pointsEarned != null &&
+                      `+${booking.pointsEarned.toLocaleString()} earned`}
+                    {booking.pointsEarned != null &&
+                      booking.pointsRedeemed != null &&
+                      " · "}
+                    {booking.pointsRedeemed != null &&
+                      `-${booking.pointsRedeemed.toLocaleString()} redeemed`}
+                  </span>
+                  {booking.loyaltyPoint != null && (
+                    <div className="text-right">
+                      <p className="text-xs text-on-surface-variant">
+                        Loyalty Points
+                      </p>
+                      <p className="text-lg font-bold text-on-surface">
+                        {booking.loyaltyPoint.toLocaleString()}
+                      </p>
+                    </div>
+                  )}
                 </div>
               )}
-
-              {booking.pointsRedeemed != null && (
-                <div className="flex items-center justify-between text-sm">
-                  <span className="text-on-surface-variant">Points Redeemed</span>
-                  <span className="font-semibold text-on-surface">
-                    {booking.pointsRedeemed.toLocaleString()}
-                  </span>
-                </div>
-              )}
-
-              {booking.loyaltyPoint != null && (
-                <div className="flex items-center justify-between text-sm">
-                  <span className="text-on-surface-variant">Loyalty Points</span>
-                  <span className="font-semibold text-on-surface">
-                    {booking.loyaltyPoint.toLocaleString()}
-                  </span>
-                </div>
-              )}
-
-              <div className="flex items-center justify-between text-sm">
-                <span className="text-on-surface-variant">Discount</span>
-                <span className="font-semibold text-error">-{formatCurrency(booking.discountAmount)}</span>
-              </div>
-
-              <div className="flex items-center justify-between border-t border-outline-variant/20 pt-4 text-base">
-                <span className="font-semibold text-on-surface">Total</span>
-                <span className="font-bold text-on-surface">
-                  {formatCurrency(booking.totalAmount)}
-                </span>
-              </div>
-
-              <div className="flex items-center justify-between text-sm">
-                <span className="text-on-surface-variant">
-                  Deposit {booking.isDepositPaid ? "(paid)" : "(unpaid)"}
-                </span>
-                <span className="font-semibold text-on-surface">
-                  {formatCurrency(booking.depositAmount ?? 0)}
-                </span>
-              </div>
-
-              <div className="flex items-center justify-between text-sm">
-                <span className="text-on-surface-variant">Remaining</span>
-                <span className="font-semibold text-on-surface">
-                  {formatCurrency(booking.remainingAmount)}
-                </span>
-              </div>
             </div>
           </div>
 

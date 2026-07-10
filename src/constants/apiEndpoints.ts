@@ -54,8 +54,47 @@ export const API = {
     UPDATE_PROFILE: "/api/customers/profile",
     // API-05-03: CHANGE PASSWORD — endpoint nằm trong namespace /auth, KHÔNG phải /customers
     CHANGE_PASSWORD: "/api/auth/change-password",
-    // API-06-01:: TRANSFER SUBSCRIPTION PLAN
+    // API-06-01:: TRANSFER SUBSCRIPTION PLAN — path đoán theo spec cũ, CHƯA confirm với BE,
+    // không còn dùng ở đâu (transfer vehicle thật đã dùng UNLIMITED_SUBSCRIPTION.TRANSFER_VEHICLE
+    // bên dưới, path xác nhận từ code BE thật). Giữ lại theo yêu cầu, không xoá nữa.
     TRANSFER_SUBSCRIPTION: "/api/subscriptions/transfer",
+    SUBSCRIPTION_PLAN: {
+      // FE-60-US-01: GET /api/customer/subscription-plans
+      LIST: "/api/customer/subscription-plans",
+    },
+    UNLIMITED_SUBSCRIPTION: {
+      // FE-60-US-05: GET /api/customer/unlimited-subscriptions
+      LIST: "/api/customer/unlimited-subscriptions",
+      // FE-58-US-01: PATCH /api/customer/unlimited-subscriptions/{id}/cancel
+      CANCEL: (id: number | string) =>
+        `/api/customer/unlimited-subscriptions/${id}/cancel`,
+      // FE-59-US-01: PATCH /api/customer/unlimited-subscriptions/{id}/transfer-vehicle
+      TRANSFER_VEHICLE: (id: number | string) =>
+        `/api/customer/unlimited-subscriptions/${id}/transfer-vehicle`,
+    },
+    // FE-US-56-04: mua/gia hạn gói Unlimited CÓ thanh toán QR thật (tách khỏi
+    // UNLIMITED_SUBSCRIPTION ở trên - đăng ký cũ không QR đã bị thay thế).
+    SUBSCRIPTION_PURCHASE: {
+      REGISTER: "/api/customer/subscriptions/unlimited",
+      RENEW: (subscriptionId: number | string) =>
+        `/api/customer/subscriptions/unlimited/${subscriptionId}/renew`,
+      INVOICE_STATUS: (invoiceId: number | string) =>
+        `/api/subscriptions/invoices/${invoiceId}`,
+    },
+    // ⚠️ CHƯA có contract từ BE (không có trong Note.md/spec Sprint 3) - path tự đoán theo
+    // đúng pattern REST của UNLIMITED_SUBSCRIPTION ở trên. Sửa lại ngay khi BE có API thật.
+    FAMILY_GROUP: {
+      DETAIL: (subscriptionId: number | string) =>
+        `/api/customer/family-groups/${subscriptionId}`,
+      ADD_MEMBER: (subscriptionId: number | string) =>
+        `/api/customer/family-groups/${subscriptionId}/members`,
+      REMOVE_MEMBER: (subscriptionId: number | string, memberId: number | string) =>
+        `/api/customer/family-groups/${subscriptionId}/members/${memberId}`,
+      UPDATE_MEMBER_VEHICLE: (subscriptionId: number | string, memberId: number | string) =>
+        `/api/customer/family-groups/${subscriptionId}/members/${memberId}/vehicle`,
+      DISSOLVE: (subscriptionId: number | string) =>
+        `/api/customer/family-groups/${subscriptionId}`,
+    },
   },
   PAYMENTS: {
     CASH: "/api/payments/cash",
@@ -80,6 +119,35 @@ export const API = {
     // (?page=&size=&vehicleKeyword=&serviceCategoryId=&active=&stationId=)
     BOOKINGS: (customerId: number | string) =>
       `/api/customers/${customerId}/bookings`,
+  },
+  SERVICE_PACKAGE: {
+    // API-05-01: GET /api/service-packages
+    LIST: "/api/service-packages",
+  },
+  ADMIN: {
+    SUBSCRIPTION_PLAN: {
+      // FE-53-US-01: GET /api/admin/subscription-plans?status=ACTIVE/INACTIVE/ALL
+      LIST: "/api/admin/subscription-plans",
+      // FE-53-US-03: GET /api/admin/subscription-plans/{id}
+      DETAIL: (id: number | string) => `/api/admin/subscription-plans/${id}`,
+      // FE-53-US-02: POST /api/admin/subscription-plans
+      CREATE: "/api/admin/subscription-plans",
+      // FE-53-US-03: PUT /api/admin/subscription-plans/{id}
+      UPDATE: (id: number | string) => `/api/admin/subscription-plans/${id}`,
+      // FE-53-US-04: DELETE /api/admin/subscription-plans/{id} (soft delete -> INACTIVE)
+      DELETE: (id: number | string) => `/api/admin/subscription-plans/${id}`,
+    },
+    ADDON_SERVICE: {
+      // GET /api/admin/addon-services/active - danh sách add-on để chọn nhiều khi tạo/sửa
+      // subscription plan (khác Service Package - add-on chỉ là quyền lợi kèm theo).
+      LIST: "/api/admin/addon-services/active",
+      // POST /api/admin/addon-services - tạo add-on mới, dùng chung được ngay cho mọi gói khác.
+      CREATE: "/api/admin/addon-services",
+    },
+    SERVICE_CATEGORY: {
+      // GET /api/admin/service-categories - danh sách category cho form tạo Add-on.
+      LIST: "/api/admin/service-categories",
+    },
   },
   LOYALTY: {
     // GET loyalty profile (points, tier, spending)

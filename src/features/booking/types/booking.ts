@@ -76,6 +76,10 @@ export interface CreateBookingResponse {
   status: string;
   totalAmount: number;
   slotIds: number[];
+  depositAmount: number;
+  transferContent: string;
+  // Ảnh QR VietQR (qua SePay) đã điền sẵn số tài khoản/số tiền/nội dung - FE chỉ cần <img src>
+  qrImageUrl: string;
 }
 
 // ====== API-02-04: PREVIEW BOOKING PRICE ======

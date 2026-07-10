@@ -17,9 +17,10 @@ import {
 } from "lucide-react";
 import {
   getCustomerProfile,
-  transferSubscription,
+  transferVehicle,
   updateCustomerProfile,
 } from "../api/profileApi";
+import { getMySubscriptions } from "../../subscription/api/subscriptionApi";
 import type {
   CustomerProfileData,
   CustomerTier,
@@ -590,17 +591,24 @@ export default function CustomerProfile() {
     setOpenMenuId(null);
   };
 
-  // Confirm Transfer — mock: chuyển subscription từ xe nguồn sang xe đích trong local state
-  // Thay bằng gọi POST /api/subscriptions/transfer (API-06-01) khi có BE
+  // Confirm Transfer — FE-59-US-01: PATCH .../unlimited-subscriptions/{id}/transfer-vehicle.
+  // Endpoint thật nhận subscriptionId (không phải sourceVehicleId) trong path - profile chỉ
+  // biết vehicle, nên phải tra lại subscriptionId qua getMySubscriptions() (đã wire API thật)
+  // trước khi gọi transfer, match theo vehicle.id + status ACTIVE.
   const handleConfirmTransfer = async () => {
     if (!transferSourceVehicle || !selectedTargetId) return;
     setIsTransferring(true);
     setTransferError(null);
     try {
-      await transferSubscription({
-        sourceVehicleId: transferSourceVehicle.id,
-        targetVehicleId: selectedTargetId,
-      });
+      const subscriptions = await getMySubscriptions();
+      const activeSub = subscriptions.find(
+        (s) => s.vehicle.id === transferSourceVehicle.id && s.status === "ACTIVE",
+      );
+      if (!activeSub) {
+        setTransferError("Active subscription not found for this vehicle.");
+        return;
+      }
+      await transferVehicle(activeSub.id, selectedTargetId);
       // Thành công: đóng modal + gọi lại GET profile để refresh cả 2 xe cùng lúc
       setTransferSourceVehicle(null);
       const res = await getCustomerProfile();

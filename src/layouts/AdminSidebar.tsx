@@ -1,9 +1,11 @@
 import { NavLink, useNavigate } from "react-router-dom";
 import { LogOut, Receipt } from "lucide-react";
+import { LogOut, Users } from "lucide-react";
 import { useAuth } from "../hooks/useAuth";
 
 const navItems = [
   { path: "/admin/transactions", label: "Transaction History", icon: Receipt },
+  { path: "/admin/customers", label: "Customers", icon: Users },
 ];
 
 export default function AdminSidebar() {

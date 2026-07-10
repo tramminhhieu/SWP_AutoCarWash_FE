@@ -1,6 +1,5 @@
 import { NavLink, useNavigate } from "react-router-dom";
-import { LogOut, Receipt } from "lucide-react";
-import { LogOut, Users } from "lucide-react";
+import { LogOut, Receipt, Users } from "lucide-react";
 import { useAuth } from "../hooks/useAuth";
 
 const navItems = [

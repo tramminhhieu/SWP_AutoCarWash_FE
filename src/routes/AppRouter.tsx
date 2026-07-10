@@ -85,18 +85,12 @@ export default function AppRouter() {
         </Route>
       </Route>
 
-      {/* TODO: nhóm route ADMIN - tương tự STAFF, chưa có AdminLayout/page nào:
       <Route element={<PrivateRoute />}>
         <Route element={<RoleRoute allowedRoles={["ADMIN"]} />}>
           {/* Admin login về thẳng Transaction History, không qua dashboard placeholder */}
           <Route
             path="/admin"
             element={<Navigate to="/admin/transactions" replace />}
-          />
-          {/* Admin login về thẳng Customer Management, không qua dashboard placeholder */}
-          <Route
-            path="/admin"
-            element={<Navigate to="/admin/customers" replace />}
           />
           <Route element={<AdminLayout />}>
             <Route
@@ -111,7 +105,6 @@ export default function AppRouter() {
           </Route>
         </Route>
       </Route>
-      */}
 
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>

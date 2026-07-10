@@ -70,9 +70,3 @@ export interface ChangePasswordRequest {
   newPassword: string;
   confirmNewPassword: string;
 }
-
-// Request cho POST /api/subscriptions/transfer (API-06-01)
-export interface TransferPlanRequest {
-  sourceVehicleId: number;
-  targetVehicleId: number;
-}

@@ -1,10 +1,8 @@
 import { NavLink, useNavigate } from "react-router-dom";
-import { LogOut, Receipt, Users, Wallet } from "lucide-react";
+import { LogOut, Receipt, Users } from "lucide-react";
 import { useAuth } from "../hooks/useAuth";
 
-// Nhãn "Service" theo yêu cầu Nora (gộp chung Subscription Plan + Add-on dưới 1 mục menu).
 const navItems = [
-  { path: "/admin/subscription-plans", label: "Service", icon: Wallet },
   { path: "/admin/transactions", label: "Transaction History", icon: Receipt },
   { path: "/admin/customers", label: "Customers", icon: Users },
 ];
@@ -17,9 +15,7 @@ export default function AdminSidebar() {
     <aside className="fixed top-0 left-0 z-20 flex h-screen w-56 flex-col py-6 px-4 bg-surface-container-lowest border-r border-outline-variant">
       {/* Logo */}
       <div className="mb-8 px-2">
-        <h1 className="text-xl font-bold leading-tight font-heading text-primary">
-          HydroLux
-        </h1>
+        <h1 className="text-xl font-bold leading-tight font-heading text-primary">HydroLux</h1>
         <p className="text-xs mt-1 text-on-surface-variant">Admin Portal</p>
       </div>
 
@@ -61,10 +57,7 @@ export default function AdminSidebar() {
         )}
 
         <button
-          onClick={() => {
-            logout();
-            navigate("/login");
-          }}
+          onClick={() => { logout(); navigate("/login"); }}
           className="flex items-center gap-2 px-2 py-1.5 rounded-lg w-full text-xs transition-colors hover:bg-surface-container text-on-surface-variant"
         >
           <LogOut className="w-3.5 h-3.5" strokeWidth={1.75} />

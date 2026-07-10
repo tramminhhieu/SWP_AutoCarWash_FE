@@ -17,10 +17,9 @@ import {
 } from "lucide-react";
 import {
   getCustomerProfile,
-  transferVehicle,
+  transferSubscription,
   updateCustomerProfile,
 } from "../api/profileApi";
-import { getMySubscriptions } from "../../subscription/api/subscriptionApi";
 import type {
   CustomerProfileData,
   CustomerTier,
@@ -29,10 +28,7 @@ import type {
 } from "../types/profile";
 import Modal from "../../../components/ui/Modal";
 import { getTierStyle, normalizeTierName } from "../../../constants/tierStyles";
-import {
-  getSubscriptionStyle,
-  getSubscriptionTypeLabel,
-} from "../../../constants/subscriptionStyles";
+import { getSubscriptionStyle } from "../../../constants/subscriptionStyles";
 import { deleteVehicle } from "../../vehicles/api/vehicleApi";
 import { useAuth } from "../../../hooks/useAuth";
 
@@ -157,7 +153,7 @@ function VehicleItem({
             className={`mt-1 inline-flex items-center gap-1 rounded-full border px-2 py-0.5 ${subStyle.badge} ${subStyle.border}`}
           >
             <span className="text-[10px] font-bold uppercase tracking-wider">
-              {getSubscriptionTypeLabel(sub.type)}
+              {sub.type}
             </span>
           </div>
         )}
@@ -310,7 +306,7 @@ function TransferPlanModal({
                 <span
                   className={`rounded-full border px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider ${subStyle.badge} ${subStyle.border}`}
                 >
-                  {getSubscriptionTypeLabel(sub.type)}
+                  {sub.type}
                 </span>
               )}
             </div>
@@ -591,24 +587,17 @@ export default function CustomerProfile() {
     setOpenMenuId(null);
   };
 
-  // Confirm Transfer — FE-59-US-01: PATCH .../unlimited-subscriptions/{id}/transfer-vehicle.
-  // Endpoint thật nhận subscriptionId (không phải sourceVehicleId) trong path - profile chỉ
-  // biết vehicle, nên phải tra lại subscriptionId qua getMySubscriptions() (đã wire API thật)
-  // trước khi gọi transfer, match theo vehicle.id + status ACTIVE.
+  // Confirm Transfer — mock: chuyển subscription từ xe nguồn sang xe đích trong local state
+  // Thay bằng gọi POST /api/subscriptions/transfer (API-06-01) khi có BE
   const handleConfirmTransfer = async () => {
     if (!transferSourceVehicle || !selectedTargetId) return;
     setIsTransferring(true);
     setTransferError(null);
     try {
-      const subscriptions = await getMySubscriptions();
-      const activeSub = subscriptions.find(
-        (s) => s.vehicle.id === transferSourceVehicle.id && s.status === "ACTIVE",
-      );
-      if (!activeSub) {
-        setTransferError("Active subscription not found for this vehicle.");
-        return;
-      }
-      await transferVehicle(activeSub.id, selectedTargetId);
+      await transferSubscription({
+        sourceVehicleId: transferSourceVehicle.id,
+        targetVehicleId: selectedTargetId,
+      });
       // Thành công: đóng modal + gọi lại GET profile để refresh cả 2 xe cùng lúc
       setTransferSourceVehicle(null);
       const res = await getCustomerProfile();

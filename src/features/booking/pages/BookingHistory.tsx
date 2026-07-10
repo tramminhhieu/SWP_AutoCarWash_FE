@@ -2,7 +2,6 @@ import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../../../hooks/useAuth";
 import {
-  AlertTriangle,
   Calendar,
   CalendarPlus,
   Car,
@@ -152,22 +151,6 @@ export default function BookingHistory() {
   const [bookings, setBookings] = useState<BookingCard[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [noShowCount, setNoShowCount] = useState<number | null>(null);
-
-  // BL-AC-13: BE tự khóa chức năng booking khi NO_SHOW >= 3 lần, nhưng FE chưa có cảnh báo
-  // chủ động nào cho khách biết họ đang gần bị khóa - đếm riêng (độc lập với tab
-  // upcoming/past đang chọn) để luôn hiện cảnh báo ngay khi vào trang, không cần đợi khách
-  // bấm qua tab "Past Services".
-  useEffect(() => {
-    if (!user?.userId) return;
-    getPastBookings(user.userId)
-      .then((data) => {
-        setNoShowCount(data.filter((b) => b.status === "NO_SHOW").length);
-      })
-      .catch(() => {
-        // Không chặn UI chính nếu đếm NO_SHOW thất bại - chỉ là banner cảnh báo phụ.
-      });
-  }, [user?.userId]);
 
   useEffect(() => {
     if (!user?.userId) return;
@@ -215,24 +198,6 @@ export default function BookingHistory() {
           </span>
         </button>
       </div>
-
-      {/* BL-AC-13: cảnh báo khi gần/đã đạt ngưỡng khóa booking do NO_SHOW nhiều lần */}
-      {noShowCount !== null && noShowCount >= 2 && (
-        <div
-          className={`flex items-start gap-3 rounded-lg border px-4 py-3 text-sm ${
-            noShowCount >= 3
-              ? "border-error/30 bg-error-container text-on-error-container"
-              : "border-outline-variant bg-surface-container text-on-surface"
-          }`}
-        >
-          <AlertTriangle size={18} className="mt-0.5 shrink-0" />
-          <span>
-            {noShowCount >= 3
-              ? `You have ${noShowCount} no-show(s) on record. Your booking privileges may be restricted - contact support if you believe this is an error.`
-              : `You have ${noShowCount} no-show(s) on record. One more no-show may result in your booking privileges being restricted.`}
-          </span>
-        </div>
-      )}
 
       <div className="flex gap-8 border-b border-outline-variant/30">
         <button

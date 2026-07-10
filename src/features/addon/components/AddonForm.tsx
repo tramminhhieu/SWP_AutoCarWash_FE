@@ -185,8 +185,6 @@ const AddonForm = ({
           <input
             id="addonDuration"
             type="number"
-            min="0"
-            step="15"
             value={duration}
             onChange={(e) => setDuration(e.target.value)}
             placeholder="15"

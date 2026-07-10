@@ -27,7 +27,11 @@ import AddonEdit from "../features/addon/pages/AddonEdit";
 import ServicePackageList from "../features/servicepackage/pages/ServicePackageList";
 import ServicePackageCreate from "../features/servicepackage/pages/ServicePackageCreate";
 import ServicePackageEdit from "../features/servicepackage/pages/ServicePackageEdit";
-import WashLanePage from "../features/washlanes/pages/WashLanePage";
+import WashLaneManagement from "../features/washlanes/pages/WashLaneManagement";
+import PromotionOverview from "../features/promotion/pages/PromotionOverview";
+import PromotionDetail from "../features/promotion/pages/PromotionDetail";
+import PromotionCreate from "../features/promotion/pages/PromotionCreate";
+import PromotionEdit from "../features/promotion/pages/PromotionEdit";
 
 export default function AppRouter() {
   return (
@@ -106,7 +110,20 @@ export default function AppRouter() {
               path="/admin/service-packages/edit/:servicePackageId"
               element={<ServicePackageEdit />}
             />
-            <Route path="/admin/wash-lanes" element={<WashLanePage />} />
+            <Route path="/admin/wash-lanes" element={<WashLaneManagement />} />
+            <Route path="/admin/promotions" element={<PromotionOverview />} />
+            <Route
+              path="/admin/promotions/station/:stationId"
+              element={<PromotionDetail />}
+            />
+            <Route
+              path="/admin/promotions/create"
+              element={<PromotionCreate />}
+            />
+            <Route
+              path="/admin/promotions/:id/edit"
+              element={<PromotionEdit />}
+            />
           </Route>
         </Route>
       </Route>

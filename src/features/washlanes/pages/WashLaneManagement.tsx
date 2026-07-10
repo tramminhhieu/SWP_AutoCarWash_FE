@@ -5,7 +5,7 @@ import type { Station } from "../../station/types/station";
 import { Plus } from "lucide-react";
 import WashLaneCreateModal from "../components/WashLaneCreateModal";
 
-const WashLanePage = () => {
+const WashLaneManagement = () => {
   const [selectedStation, setSelectedStation] = useState<Station | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [refreshKey, setRefreshKey] = useState(0);
@@ -17,7 +17,7 @@ const WashLanePage = () => {
           Wash Lane Management
         </h1>
         <p className="mt-1 text-body-md text-on-surface-variant">
-          Chọn trạm để xem và quản lý các làn rửa.
+          Select a station to view and manage its wash lanes.
         </p>
       </div>
 
@@ -27,10 +27,10 @@ const WashLanePage = () => {
 
       {selectedStation ? (
         <>
-          {/* Tiêu đề bảng + nút Add New */}
+          {/* Table header + Add New button */}
           <div className="mt-6 flex items-center justify-between">
             <h2 className="text-headline-md font-semibold text-on-surface">
-              Danh sách làn — {selectedStation.stationName}
+              Lanes — {selectedStation.stationName}
             </h2>
             <button
               type="button"
@@ -50,12 +50,12 @@ const WashLanePage = () => {
       ) : (
         <div className="mt-8 rounded-2xl border border-outline-variant bg-surface-container-lowest p-10 text-center">
           <p className="text-body-md text-on-surface-variant">
-            Vui lòng chọn trạm để xem danh sách làn rửa.
+            Please select a station to view its wash lanes.
           </p>
         </div>
       )}
 
-      {/* Modal tạo làn mới */}
+      {/* Create lane modal */}
       {isModalOpen && selectedStation && (
         <WashLaneCreateModal
           stationId={selectedStation.id}
@@ -68,4 +68,4 @@ const WashLanePage = () => {
   );
 };
 
-export default WashLanePage;
+export default WashLaneManagement;

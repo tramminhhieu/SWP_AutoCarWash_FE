@@ -3,19 +3,19 @@ import { X } from "lucide-react";
 import { createLane } from "../api/washlaneApi";
 import { getApiErrorInfo } from "../../../lib/axiosClient";
 
-// Map errorCode BE → message tiếng Việt hiển thị trên form
+// Map errorCode from BE → user-facing error message
 const API_ERROR_MAP: Record<string, string> = {
-  LANE_NAME_ALREADY_EXISTS: "Tên làn rửa xe đã tồn tại trong trạm này.",
+  LANE_NAME_ALREADY_EXISTS: "Lane name already exists in this station.",
   INVALID_PRIORITY_VALUE:
-    "Số lượt xe đặt trước ưu tiên phải là một số nguyên dương lớn hơn 0.",
-  STATION_NOT_AVAILABLE: "Trạm không tồn tại hoặc đã ngừng hoạt động.",
+    "Booking priority ratio must be a positive integer greater than 0.",
+  STATION_NOT_AVAILABLE: "Station does not exist or is no longer operating.",
 };
 
 interface CreateLaneModalProps {
   stationId: number;
   stationName: string;
   onClose: () => void;
-  /** Gọi sau khi tạo thành công — page dùng để refresh bảng lanes */
+  /** Called after successful creation — page uses this to refresh the lane table */
   onSuccess: () => void;
 }
 
@@ -26,30 +26,28 @@ const CreateLaneModal = ({
   onSuccess,
 }: CreateLaneModalProps) => {
   const [laneName, setLaneName] = useState("");
-  const [status, setStatus] = useState<"AVAILABLE" | "MAINTENANCE">(
-    "AVAILABLE",
-  );
+  const STATUS_ON_CREATE = "AVAILABLE" as const;
   const [ratio, setRatio] = useState("");
+
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  // Lỗi validate FE (theo field) + lỗi từ BE (chung)
+  // FE field-level errors + BE error
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
   const [apiError, setApiError] = useState<string | null>(null);
-  // Toast thành công
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
 
-  // Validate FE — chặn cứng trước khi gọi API
+  // FE validation — block submission if invalid
   const validate = (): boolean => {
     const errors: Record<string, string> = {};
 
     if (!laneName.trim()) {
-      errors.laneName = "Lane name must not be blank";
+      errors.laneName = "Lane name must not be blank.";
     }
 
     const ratioNum = Number(ratio);
     if (!ratio || !Number.isInteger(ratioNum) || ratioNum <= 0) {
       errors.ratio =
-        "Số lượt xe đặt trước ưu tiên phải là một số nguyên dương lớn hơn 0 (Tối thiểu là 1)";
+        "Booking priority ratio must be a positive integer greater than 0 (minimum 1).";
     }
 
     setFieldErrors(errors);
@@ -65,13 +63,12 @@ const CreateLaneModal = ({
       await createLane({
         stationId,
         laneName: laneName.trim(),
-        status,
+        status: STATUS_ON_CREATE,
         bookingWalkinRatio: Number(ratio),
       });
 
-      // Thành công → hiện toast rồi đóng modal
       setSuccessMessage(
-        `Thêm làn rửa xe và cấu hình tỷ lệ thành công tại ${stationName}!`,
+        `Wash lane created and ratio configured successfully at ${stationName}!`,
       );
       setTimeout(() => {
         onSuccess();
@@ -82,25 +79,23 @@ const CreateLaneModal = ({
       setApiError(
         API_ERROR_MAP[errorCode ?? ""] ??
           message ??
-          "Có lỗi xảy ra. Vui lòng thử lại.",
+          "Something went wrong. Please try again.",
       );
     } finally {
       setIsSubmitting(false);
     }
   };
 
-  // Style chung cho input
   const inputClass =
     "w-full rounded-lg border bg-surface-container-lowest px-4 py-3 text-body-md text-on-surface outline-none transition-colors focus:border-primary focus:ring-1 focus:ring-primary";
 
   return (
-    // Backdrop
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
       <div className="w-full max-w-md rounded-2xl bg-surface-container-lowest p-6 shadow-[0_10px_25px_-5px_rgba(29,78,216,0.12)]">
         {/* Header */}
         <div className="mb-5 flex items-center justify-between">
           <h2 className="font-headline text-headline-md text-on-surface">
-            Thêm làn rửa mới
+            Add New Wash Lane
           </h2>
           <button
             type="button"
@@ -111,14 +106,14 @@ const CreateLaneModal = ({
           </button>
         </div>
 
-        {/* Toast thành công */}
+        {/* Success toast */}
         {successMessage && (
           <div className="mb-4 rounded-lg border border-tertiary/20 bg-tertiary-fixed/15 px-4 py-3 text-body-md font-medium text-tertiary-fixed-dim">
             {successMessage}
           </div>
         )}
 
-        {/* Lỗi từ BE */}
+        {/* BE error */}
         {apiError && (
           <div className="mb-4 rounded-lg border border-error/20 bg-error/10 px-4 py-3 text-body-md text-error">
             {apiError}
@@ -127,14 +122,14 @@ const CreateLaneModal = ({
 
         {/* Form fields */}
         <div className="space-y-4">
-          {/* Tên làn */}
+          {/* Lane name */}
           <div>
             <label className="mb-1.5 block text-label-md font-semibold text-on-surface-variant">
-              Tên làn <span className="text-error">*</span>
+              Lane Name <span className="text-error">*</span>
             </label>
             <input
               type="text"
-              placeholder="VD: Làn 01"
+              placeholder="e.g. Lane 01"
               value={laneName}
               onChange={(e) => {
                 setLaneName(e.target.value);
@@ -149,24 +144,7 @@ const CreateLaneModal = ({
             )}
           </div>
 
-          {/* Trạng thái */}
-          <div>
-            <label className="mb-1.5 block text-label-md font-semibold text-on-surface-variant">
-              Trạng thái
-            </label>
-            <select
-              value={status}
-              onChange={(e) =>
-                setStatus(e.target.value as "AVAILABLE" | "MAINTENANCE")
-              }
-              className={`${inputClass} border-outline-variant`}
-            >
-              <option value="AVAILABLE">Sẵn sàng (Available)</option>
-              <option value="MAINTENANCE">Bảo trì (Maintenance)</option>
-            </select>
-          </div>
-
-          {/* Tỷ lệ booking/walk-in */}
+          {/* Booking / Walk-in Ratio */}
           <div>
             <label className="mb-1.5 block text-label-md font-semibold text-on-surface-variant">
               Booking / Walk-in Ratio <span className="text-error">*</span>
@@ -174,7 +152,7 @@ const CreateLaneModal = ({
             <input
               type="number"
               min={1}
-              placeholder="VD: 3"
+              placeholder="e.g. 3"
               value={ratio}
               onChange={(e) => {
                 setRatio(e.target.value);
@@ -198,7 +176,7 @@ const CreateLaneModal = ({
             disabled={isSubmitting}
             className="rounded-lg border border-outline-variant px-5 py-2.5 text-body-md font-semibold text-on-surface-variant transition-colors hover:bg-surface-container-high"
           >
-            Hủy
+            Cancel
           </button>
           <button
             type="button"
@@ -206,7 +184,7 @@ const CreateLaneModal = ({
             disabled={isSubmitting}
             className="rounded-lg bg-primary px-5 py-2.5 text-body-md font-semibold text-on-primary transition-opacity hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-60"
           >
-            {isSubmitting ? "Đang tạo..." : "Tạo làn"}
+            {isSubmitting ? "Creating..." : "Create Lane"}
           </button>
         </div>
       </div>

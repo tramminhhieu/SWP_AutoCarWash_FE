@@ -56,7 +56,7 @@ const AddonCard = ({
         <button
           type="button"
           onClick={() => onDelete(addon)}
-          className="flex flex-1 items-center justify-center gap-1.5 rounded-lg border border-error/30 px-3 py-2 text-body-md font-medium text-error transition-colors hover:bg-error-container"
+          className="flex flex-1 items-center justify-center gap-1.5 rounded-md border border-error/30 px-3 py-2 text-body-md font-medium text-error transition-colors hover:bg-error-container"
         >
           <Trash2 size={14} />
           Delete
@@ -64,7 +64,7 @@ const AddonCard = ({
         <button
           type="button"
           onClick={() => onEdit(addon)}
-          className="flex flex-1 items-center justify-center gap-1.5 rounded-lg border border-outline-variant px-3 py-2 text-body-md font-medium text-on-surface-variant transition-colors hover:bg-surface-container hover:text-on-surface"
+          className="flex flex-1 items-center justify-center gap-1.5 rounded-md border border-outline-variant px-3 py-2 text-body-md font-medium text-on-surface-variant transition-colors hover:bg-surface-container hover:text-on-surface"
         >
           <Pencil size={14} />
           Edit
@@ -234,7 +234,7 @@ export default function AddonList() {
           <button
             type="button"
             onClick={() => navigate("/admin/add-ons/create")}
-            className="flex shrink-0 items-center gap-2 rounded-lg bg-primary px-5 py-2.5 text-body-md font-semibold text-on-primary shadow-[0_10px_25px_-5px_rgba(29,78,216,0.05)] transition-colors hover:bg-primary/90"
+            className="flex shrink-0 items-center gap-2 rounded-md bg-primary px-5 py-2.5 text-body-md font-semibold text-on-primary shadow-[0_10px_25px_-5px_rgba(29,78,216,0.05)] transition-colors hover:bg-primary/90"
           >
             <Plus size={16} strokeWidth={2.5} />
             Add New
@@ -251,7 +251,7 @@ export default function AddonList() {
             <button
               type="button"
               onClick={() => window.location.reload()}
-              className="mt-4 rounded-lg border border-error/30 px-4 py-2 text-body-md font-medium text-error transition-colors hover:bg-error-container"
+              className="mt-4 rounded-md border border-error/30 px-4 py-2 text-body-md font-medium text-error transition-colors hover:bg-error-container"
             >
               Retry
             </button>

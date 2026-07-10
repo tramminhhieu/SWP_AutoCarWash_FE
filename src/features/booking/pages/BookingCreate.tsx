@@ -32,6 +32,7 @@ import type {
 import { NO_VEHICLE_REGISTERED } from "../types/booking";
 import type { BookingSlot } from "../types/bookingSlot";
 import { getSubscriptionStyle } from "../../../constants/subscriptionStyles";
+import { saveBookingDraft, loadBookingDraft } from "../utils/bookingDraft";
 
 // Format số tiền VND, vd 110000 -> "110,000 VND"
 const formatCurrency = (amount: number) =>
@@ -112,6 +113,88 @@ const BookingCreate = () => {
   const [isBookingSubmitting, setIsBookingSubmitting] = useState(false);
   const [bookingError, setBookingError] = useState<string | null>(null);
 
+  // Chỉ bắt đầu lưu draft (useEffect bên dưới) SAU KHI đã thử khôi phục draft cũ xong -
+  // tránh effect lưu chạy trước (với state rỗng ban đầu) và ghi đè mất draft trước khi
+  // restoreDraft kịp đọc nó (network round-trip của getBookingContext chưa xong)
+  const [isDraftReady, setIsDraftReady] = useState(false);
+
+  // Khôi phục lựa chọn đã lưu (nếu có) sau khi context đã tải xong - bỏ qua id không còn
+  // tồn tại trong context mới (xe/gói/addon bị xoá), slot hết hạn thì đơn giản để trống
+  const restoreDraft = async (data: BookingContext) => {
+    const draft = loadBookingDraft(stationId);
+    if (!draft) return;
+
+    const vehicleId =
+      draft.vehicleId && data.vehicles.some((v) => v.id === draft.vehicleId)
+        ? draft.vehicleId
+        : null;
+    if (vehicleId) setSelectedVehicleId(vehicleId);
+
+    const serviceId =
+      draft.serviceId &&
+      data.servicePackages.some((s) => s.id === draft.serviceId)
+        ? draft.serviceId
+        : null;
+    if (serviceId) setSelectedServiceId(serviceId);
+
+    const addonIds = (draft.addonIds ?? []).filter((id) =>
+      data.addonServices.some((a) => a.id === id),
+    );
+    if (addonIds.length) setSelectedAddonIds(addonIds);
+
+    if (draft.dateKey && serviceId) {
+      const date = new Date(`${draft.dateKey}T00:00:00`);
+      setSelectedDate(date);
+      setIsLoadingSlots(true);
+      try {
+        const slotsData = await getAvailableSlots(stationId, {
+          servicePackageId: serviceId,
+          addonServiceIds: addonIds,
+          appointmentDate: draft.dateKey,
+        });
+        setSlots(slotsData);
+        if (draft.slotIds?.length) {
+          const matchedSlot = slotsData.find(
+            (s) =>
+              s.slotIds.length === draft.slotIds!.length &&
+              s.slotIds.every((id) => draft.slotIds!.includes(id)),
+          );
+          if (matchedSlot) setSelectedSlot(matchedSlot);
+        }
+      } catch {
+        // Bỏ qua - user tự chọn lại ngày/giờ nếu slot cũ không còn khả dụng
+      } finally {
+        setIsLoadingSlots(false);
+      }
+
+      if (draft.voucherCode && vehicleId) {
+        const voucher = data.vouchers.find(
+          (v) => v.voucherCode === draft.voucherCode,
+        );
+        if (voucher) {
+          try {
+            const result = await previewPrice({
+              stationId,
+              vehicleId,
+              servicePackageId: serviceId,
+              addonServiceIds: addonIds,
+              appointmentDate: draft.dateKey,
+              voucherCode: voucher.voucherCode,
+            });
+            setPreviewTotal(result.breakdown.finalTotal);
+            setVoucherDiscount(result.breakdown.voucherDiscount);
+            setAppliedVoucherCode(voucher.voucherCode);
+            setSubscriptionUsedToday(
+              result.isVehicleBookingOnDateAndHasSubscription,
+            );
+          } catch {
+            // Bỏ qua - voucher cũ không còn hợp lệ thì thôi, không áp lại
+          }
+        }
+      }
+    }
+  };
+
   // Load booking context khi vào trang
   useEffect(() => {
     if (!stationId) return;
@@ -126,6 +209,7 @@ const BookingCreate = () => {
         if (cancelled) return;
         setContext(data);
         setWeekStart(new Date(data.bookingWindow.minDate));
+        await restoreDraft(data);
       } catch (error) {
         if (cancelled) return;
         const { errorCode, message: beMessage } = getApiErrorInfo(error);
@@ -142,14 +226,41 @@ const BookingCreate = () => {
           );
         }
       } finally {
-        if (!cancelled) setIsLoadingContext(false);
+        if (!cancelled) {
+          setIsLoadingContext(false);
+          setIsDraftReady(true);
+        }
       }
     })();
 
     return () => {
       cancelled = true;
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [stationId, contextRefresh]);
+
+  // Lưu lại lựa chọn hiện tại vào sessionStorage mỗi khi thay đổi, để không mất khi
+  // navigate sang màn thanh toán QR rồi back lại (BookingCreate bị unmount/remount)
+  useEffect(() => {
+    if (!stationId || !isDraftReady) return;
+    saveBookingDraft(stationId, {
+      vehicleId: selectedVehicleId,
+      serviceId: selectedServiceId,
+      addonIds: selectedAddonIds,
+      dateKey: selectedDate ? formatDateKey(selectedDate) : null,
+      slotIds: selectedSlot ? selectedSlot.slotIds : null,
+      voucherCode: appliedVoucherCode,
+    });
+  }, [
+    stationId,
+    isDraftReady,
+    selectedVehicleId,
+    selectedServiceId,
+    selectedAddonIds,
+    selectedDate,
+    selectedSlot,
+    appliedVoucherCode,
+  ]);
 
   const loadSlots = async (
     date: Date,
@@ -383,9 +494,12 @@ const BookingCreate = () => {
         voucherCode: appliedVoucherCode ?? undefined,
       });
 
-      navigate("/", {
+      navigate(`/booking/payment/${result.bookingId}`, {
         state: {
-          bookingSuccessMessage: `Booking confirmed! Booking ID: ${result.bookingId}.`,
+          stationId,
+          depositAmount: result.depositAmount,
+          transferContent: result.transferContent,
+          qrImageUrl: result.qrImageUrl,
         },
       });
     } catch (error) {

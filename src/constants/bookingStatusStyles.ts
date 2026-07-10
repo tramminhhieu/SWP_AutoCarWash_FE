@@ -78,4 +78,11 @@ export const BOOKING_STATUS_STYLES: Record<BookingStatus, BookingStatusStyle> =
       bgClassName: "bg-tertiary-fixed/20",
       borderClassName: "border-tertiary/20",
     },
+    COMPLETED: {
+      label: "COMPLETED",
+      dotClassName: "bg-[#22c55e]",
+      textClassName: "text-[#22c55e]",
+      bgClassName: "bg-tertiary-fixed/20",
+      borderClassName: "border-tertiary/20",
+    },
   };

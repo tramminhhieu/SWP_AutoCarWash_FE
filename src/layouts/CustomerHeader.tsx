@@ -8,6 +8,7 @@ import {
   Car,
   Calendar,
   Award,
+  Receipt,
 } from "lucide-react";
 import NotificationBell from "../features/crm/components/NotificationBell";
 
@@ -166,6 +167,18 @@ export default function CustomerHeader({
                         strokeWidth={1.75}
                       />
                       My Booking
+                    </Link>
+                    <Link
+                      to="/customer/transactions"
+                      role="menuitem"
+                      className="flex items-center gap-2 px-4 py-2 font-body text-sm text-on-surface hover:bg-surface-container-low"
+                      onClick={() => setIsProfileOpen(false)}
+                    >
+                      <Receipt
+                        className="h-4 w-4 text-outline"
+                        strokeWidth={1.75}
+                      />
+                      My Transaction
                     </Link>
                     <Link
                       to="/customer/loyalty"

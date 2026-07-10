@@ -42,7 +42,7 @@ export interface TierHistoryEntry {
   id: number;
   oldTierName: string | null;
   newTierName: string;
-  pointsAtTransition: number;
+  valueAtTransition: number;
   changeType: "UPGRADE" | "DOWNGRADE" | "INITIAL";
   createdAt: string;
   bookingId: number | null;

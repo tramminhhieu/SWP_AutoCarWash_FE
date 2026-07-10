@@ -144,6 +144,7 @@ export default function SubscriptionPlanList() {
                 <th className="px-4 py-3 font-semibold">Type</th>
                 <th className="px-4 py-3 font-semibold">Max Vehicles</th>
                 <th className="px-4 py-3 font-semibold">Service Package</th>
+                <th className="px-4 py-3 font-semibold">Add-ons</th>
                 <th className="px-4 py-3 font-semibold">Status</th>
                 <th className="px-4 py-3 font-semibold text-right">Actions</th>
               </tr>
@@ -167,6 +168,9 @@ export default function SubscriptionPlanList() {
                     </td>
                     <td className="px-4 py-3">{plan.maxVehicleCount ?? "—"}</td>
                     <td className="px-4 py-3">{plan.servicePackageName}</td>
+                    <td className="px-4 py-3 text-on-surface-variant">
+                      {plan.addonNames.length > 0 ? plan.addonNames.join(", ") : "—"}
+                    </td>
                     <td className="px-4 py-3">
                       <span
                         className={`inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-label-sm font-bold uppercase tracking-wider ${STATUS_BADGE[plan.status]}`}

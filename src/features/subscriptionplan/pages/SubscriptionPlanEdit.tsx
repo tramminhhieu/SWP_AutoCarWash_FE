@@ -57,10 +57,10 @@ export default function SubscriptionPlanEdit() {
               price: plan.price,
               durationDays: plan.durationDays,
               description: plan.description,
-              servicePackageId: plan.servicePackageId,
               planType: plan.planType,
               maxVehicleCount: plan.maxVehicleCount,
               status: plan.status,
+              addonServiceIds: plan.addonServiceIds,
             }}
             // AC05: cập nhật thành công -> thông báo + refresh list
             onSuccess={() =>

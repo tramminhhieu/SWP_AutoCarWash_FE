@@ -52,7 +52,9 @@ export const API = {
     UPDATE_PROFILE: "/api/customers/profile",
     // API-05-03: CHANGE PASSWORD — endpoint nằm trong namespace /auth, KHÔNG phải /customers
     CHANGE_PASSWORD: "/api/auth/change-password",
-    // API-06-01:: TRANSFER SUBSCRIPTION PLAN
+    // API-06-01:: TRANSFER SUBSCRIPTION PLAN — path đoán theo spec cũ, CHƯA confirm với BE,
+    // không còn dùng ở đâu (transfer vehicle thật đã dùng UNLIMITED_SUBSCRIPTION.TRANSFER_VEHICLE
+    // bên dưới, path xác nhận từ code BE thật). Giữ lại theo yêu cầu, không xoá nữa.
     TRANSFER_SUBSCRIPTION: "/api/subscriptions/transfer",
     SUBSCRIPTION_PLAN: {
       // FE-60-US-01: GET /api/customer/subscription-plans
@@ -64,6 +66,9 @@ export const API = {
       // FE-58-US-01: PATCH /api/customer/unlimited-subscriptions/{id}/cancel
       CANCEL: (id: number | string) =>
         `/api/customer/unlimited-subscriptions/${id}/cancel`,
+      // FE-59-US-01: PATCH /api/customer/unlimited-subscriptions/{id}/transfer-vehicle
+      TRANSFER_VEHICLE: (id: number | string) =>
+        `/api/customer/unlimited-subscriptions/${id}/transfer-vehicle`,
     },
     // FE-US-56-04: mua/gia hạn gói Unlimited CÓ thanh toán QR thật (tách khỏi
     // UNLIMITED_SUBSCRIPTION ở trên - đăng ký cũ không QR đã bị thay thế).
@@ -108,6 +113,17 @@ export const API = {
       UPDATE: (id: number | string) => `/api/admin/subscription-plans/${id}`,
       // FE-53-US-04: DELETE /api/admin/subscription-plans/{id} (soft delete -> INACTIVE)
       DELETE: (id: number | string) => `/api/admin/subscription-plans/${id}`,
+    },
+    ADDON_SERVICE: {
+      // GET /api/admin/addon-services/active - danh sách add-on để chọn nhiều khi tạo/sửa
+      // subscription plan (khác Service Package - add-on chỉ là quyền lợi kèm theo).
+      LIST: "/api/admin/addon-services/active",
+      // POST /api/admin/addon-services - tạo add-on mới, dùng chung được ngay cho mọi gói khác.
+      CREATE: "/api/admin/addon-services",
+    },
+    SERVICE_CATEGORY: {
+      // GET /api/admin/service-categories - danh sách category cho form tạo Add-on.
+      LIST: "/api/admin/service-categories",
     },
   },
   LOYALTY: {

@@ -22,6 +22,9 @@ import WalkInPage from "../features/queue/pages/WalkInPage";
 import PaymentPage from "../features/payment/pages/PaymentPage";
 import ChangePassword from "../features/customer/pages/ChangePassword";
 import LoyaltyRewards from "../features/customer/pages/LoyaltyRewards";
+import AdminLayout from "../layouts/AdminLayout";
+import AdminCustomers from "../features/adminCustomer/pages/AdminCustomers";
+import AdminCustomerBookingHistory from "../features/adminCustomer/pages/AdminCustomerBookingHistory";
 
 export default function AppRouter() {
   return (
@@ -81,15 +84,22 @@ export default function AppRouter() {
         </Route>
       </Route>
 
-      {/* TODO: nhóm route ADMIN - tương tự STAFF, chưa có AdminLayout/page nào:
       <Route element={<PrivateRoute />}>
         <Route element={<RoleRoute allowedRoles={["ADMIN"]} />}>
+          {/* Admin login về thẳng Customer Management, không qua dashboard placeholder */}
+          <Route
+            path="/admin"
+            element={<Navigate to="/admin/customers" replace />}
+          />
           <Route element={<AdminLayout />}>
-            <Route path="/admin" element={<...>} />
+            <Route path="/admin/customers" element={<AdminCustomers />} />
+            <Route
+              path="/admin/customers/:customerId/bookings"
+              element={<AdminCustomerBookingHistory />}
+            />
           </Route>
         </Route>
       </Route>
-      */}
 
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>

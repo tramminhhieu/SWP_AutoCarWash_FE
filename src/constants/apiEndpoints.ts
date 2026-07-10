@@ -59,6 +59,9 @@ export const API = {
   },
   PAYMENTS: {
     CASH: "/api/payments/cash",
+    // GET invoice detail after payment (FE-63-US-01 AC02)
+    INVOICE_DETAIL: (invoiceId: number | string) =>
+      `/api/payments/invoices/${invoiceId}`,
     // GET payment history for the logged-in customer (?type=&fromDate=&toDate=)
     HISTORY: "/api/payments/history",
   },

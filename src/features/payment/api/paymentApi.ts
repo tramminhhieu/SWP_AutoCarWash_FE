@@ -6,6 +6,7 @@ import type {
   PaymentBookingDetail,
   CashPaymentRequest,
   CashPaymentResponse,
+  InvoiceDetail,
 } from "../types/payment";
 
 // ── API calls ──────────────────────────────────────────────────────────────
@@ -27,6 +28,16 @@ export const processCashPayment = async (
   const res = await axiosClient.post<ApiSuccessResponse<CashPaymentResponse>>(
     API.PAYMENTS.CASH,
     data,
+  );
+  return res.data.data;
+};
+
+/** Lấy chi tiết hoá đơn sau khi thanh toán (FE-63-US-01 AC02). */
+export const getInvoiceDetail = async (
+  invoiceId: number,
+): Promise<InvoiceDetail> => {
+  const res = await axiosClient.get<ApiSuccessResponse<InvoiceDetail>>(
+    API.PAYMENTS.INVOICE_DETAIL(invoiceId),
   );
   return res.data.data;
 };

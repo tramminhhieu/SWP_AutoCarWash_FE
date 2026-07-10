@@ -91,4 +91,30 @@ export const API = {
     // GET tier change history (upgrade/downgrade log)
     TIER_HISTORY: "/api/loyalty/tier-history",
   },
+  ADDON: {
+    LIST: "/api/addon-services",
+  },
+  SERVICE_PACKAGE: {
+    LIST: "/api/service-packages",
+  },
+  WASHLANE: {
+    // GET /api/admin/stations/{stationId}/lanes — danh sách wash lane theo station (Admin)
+    LIST_BY_STATION: (stationId: number | string) =>
+      `/api/admin/stations/${stationId}/lanes`,
+  },
+  PROMOTION: {
+    // API-02-01: Tổng hợp số lượng promotion theo từng chi nhánh
+    BRANCHES_SUMMARY: "/api/admin/promotions/branches-summary",
+
+    // API-02-02: Danh sách promotion/voucher phân trang (hỗn hợp CAMPAIGN + STANDALONE_VOUCHER)
+    DASHBOARD_LIST: "/api/admin/promotions",
+
+    CREATE: "/api/admin/promotions/config",
+
+    UPDATE_CAMPAIGN: "/api/admin/promotions", // + /{promotionId} append trong hàm
+    UPDATE_VOUCHER: "/api/admin/promotions/vouchers", // + /{voucherId} append trong hàm
+
+    SOFT_DELETE_CAMPAIGN: "/api/admin/promotions", // + /{promotionId}/soft-delete
+    SOFT_DELETE_VOUCHER: "/api/admin/vouchers", // + /{voucherId}/soft-delete
+  },
 };

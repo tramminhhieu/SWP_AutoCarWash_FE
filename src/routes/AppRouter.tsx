@@ -3,7 +3,7 @@ import CustomerLayout from "../layouts/CustomerLayout";
 import Home from "../features/customer/pages/Home";
 import Login from "../features/auth/pages/Login";
 import Register from "../features/auth/pages/Register";
-import SelectStation from "../features/booking/pages/SelectStation";
+import SelectStation from "../features/station/components/SelectStation";
 import BookingCreate from "../features/booking/pages/BookingCreate";
 import BookingPayment from "../features/booking/pages/BookingPayment";
 import TransactionHistory from "../features/transaction/pages/TransactionHistory";
@@ -14,7 +14,6 @@ import VehicleEdit from "../features/vehicles/pages/VehicleEdit";
 import CustomerProfile from "../features/customer/pages/Profile";
 import PrivateRoute from "./PrivateRoute";
 import RoleRoute from "./RoleRoute";
-import ServicePackageList from "../features/servicepackage/pages/ServicePackageList";
 // ported from feature/FE-queue-management (working-tree only, chưa merge vào dev)
 import StaffLayout from "../layouts/StaffLayout";
 import QueuePage from "../features/queue/pages/QueuePage";
@@ -22,7 +21,19 @@ import WalkInPage from "../features/queue/pages/WalkInPage";
 import PaymentPage from "../features/payment/pages/PaymentPage";
 import ChangePassword from "../features/customer/pages/ChangePassword";
 import LoyaltyRewards from "../features/customer/pages/LoyaltyRewards";
+//Admin
 import AdminLayout from "../layouts/AdminLayout";
+import AddonList from "../features/addon/pages/AddonList";
+import AddonCreate from "../features/addon/pages/AddonCreate";
+import AddonEdit from "../features/addon/pages/AddonEdit";
+import ServicePackageList from "../features/servicepackage/pages/ServicePackageList";
+import ServicePackageCreate from "../features/servicepackage/pages/ServicePackageCreate";
+import ServicePackageEdit from "../features/servicepackage/pages/ServicePackageEdit";
+import WashLaneManagement from "../features/washlanes/pages/WashLaneManagement";
+import PromotionOverview from "../features/promotion/pages/PromotionOverview";
+import PromotionDetail from "../features/promotion/pages/PromotionDetail";
+import PromotionCreate from "../features/promotion/pages/PromotionCreate";
+import PromotionEdit from "../features/promotion/pages/PromotionEdit";
 import AdminTransactionHistory from "../features/adminTransaction/pages/AdminTransactionHistory";
 import AdminCustomers from "../features/adminCustomer/pages/AdminCustomers";
 import AdminCustomerBookingHistory from "../features/adminCustomer/pages/AdminCustomerBookingHistory";
@@ -34,7 +45,8 @@ export default function AppRouter() {
         <Route path="/" element={<Home />} />
         <Route path="/login" element={<Login />} />
         <Route path="/register" element={<Register />} />
-        <Route path="/servicePackages" element={<ServicePackageList />} />
+        <Route path="/add-ons" element={<AddonList />} />
+        <Route path="/service-packages" element={<ServicePackageList />} />
 
         {/* Toàn bộ flow đặt lịch yêu cầu đăng nhập - bọc trong PrivateRoute,
             chưa login bấm vào sẽ bị redirect về /login (xử lý trong PrivateRoute.tsx) */}
@@ -93,6 +105,38 @@ export default function AppRouter() {
             element={<Navigate to="/admin/transactions" replace />}
           />
           <Route element={<AdminLayout />}>
+            <Route path="/admin/add-ons" element={<AddonList />} />
+            <Route path="/admin/add-ons/create" element={<AddonCreate />} />
+            <Route
+              path="/admin/add-ons/edit/:addonId"
+              element={<AddonEdit />}
+            />
+            <Route
+              path="/admin/service-packages"
+              element={<ServicePackageList />}
+            />
+            <Route
+              path="/admin/service-packages/create"
+              element={<ServicePackageCreate />}
+            />
+            <Route
+              path="/admin/service-packages/edit/:servicePackageId"
+              element={<ServicePackageEdit />}
+            />
+            <Route path="/admin/wash-lanes" element={<WashLaneManagement />} />
+            <Route path="/admin/promotions" element={<PromotionOverview />} />
+            <Route
+              path="/admin/promotions/station/:stationId"
+              element={<PromotionDetail />}
+            />
+            <Route
+              path="/admin/promotions/create"
+              element={<PromotionCreate />}
+            />
+            <Route
+              path="/admin/promotions/:id/edit"
+              element={<PromotionEdit />}
+            />
             <Route
               path="/admin/transactions"
               element={<AdminTransactionHistory />}

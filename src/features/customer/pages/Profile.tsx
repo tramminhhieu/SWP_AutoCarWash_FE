@@ -40,7 +40,13 @@ function formatBirthday(iso: string): string {
 }
 
 // ─── Sub-component: Tier progress card ───────────────────────────────────────
-function TierCard({ tier }: { tier: CustomerTier }) {
+function TierCard({
+  tier,
+  onClick,
+}: {
+  tier: CustomerTier;
+  onClick?: () => void;
+}) {
   const style = getTierStyle(tier.currentTierName);
   // Progress bar: tính % điểm hiện tại so với mốc tier tiếp theo
   const progress = tier.nextTierMinPoints
@@ -48,7 +54,10 @@ function TierCard({ tier }: { tier: CustomerTier }) {
     : 100;
 
   return (
-    <div className="rounded-2xl border border-outline-variant/30 bg-white p-5 shadow-[0_10px_25px_-5px_rgba(29,78,216,0.05)]">
+    <div
+      onClick={onClick}
+      className="cursor-pointer rounded-2xl border border-outline-variant/30 bg-white p-5 shadow-[0_10px_25px_-5px_rgba(29,78,216,0.05)]"
+    >
       {/* Header: label + tên tier hiện tại */}
       <div className="mb-4 flex items-center justify-between">
         <div className="flex items-center gap-2">
@@ -682,7 +691,12 @@ export default function CustomerProfile() {
             </div>
 
             {/* Tier progress card (ẩn khi tier === null — BE chưa code) */}
-            {tier && <TierCard tier={tier} />}
+            {tier && (
+              <TierCard
+                tier={tier}
+                onClick={() => navigate("/customer/loyalty")}
+              />
+            )}
           </div>
 
           {/* ═══ CỘT PHẢI: form + vehicles ══════════════════════════════════ */}

@@ -150,7 +150,10 @@ export default function AdminTransactionHistory() {
       status: status || undefined,
       fromDate: fromDate ? `${fromDate}T00:00:00` : undefined,
       toDate: toDate ? `${toDate}T23:59:59` : undefined,
-      phone: appliedSearch && "phone" in appliedSearch ? appliedSearch.phone : undefined,
+      phone:
+        appliedSearch && "phone" in appliedSearch
+          ? appliedSearch.phone
+          : undefined,
       bookingId:
         appliedSearch && "bookingId" in appliedSearch
           ? appliedSearch.bookingId
@@ -191,8 +194,12 @@ export default function AdminTransactionHistory() {
           .flatMap((r) => r.transactions)
           .sort((a, b) => b.paidAt.localeCompare(a.paidAt));
         setRows(mergedTransactions);
-        setTotalRevenue(results.reduce((sum, r) => sum + r.summary.totalRevenue, 0));
-        setTotalCount(results.reduce((sum, r) => sum + r.summary.totalCount, 0));
+        setTotalRevenue(
+          results.reduce((sum, r) => sum + r.summary.totalRevenue, 0),
+        );
+        setTotalCount(
+          results.reduce((sum, r) => sum + r.summary.totalCount, 0),
+        );
       })
       .catch(() => {
         if (isMounted)
@@ -243,7 +250,7 @@ export default function AdminTransactionHistory() {
   }
 
   return (
-    <div className="flex flex-col gap-8">
+    <div className="mx-auto flex max-w-[1440px] flex-col gap-8 px-12 py-8">
       <div className="flex flex-col gap-2">
         <h1 className="font-heading text-headline-xl font-bold tracking-[-1.2px] text-on-surface">
           Transaction History
@@ -323,9 +330,7 @@ export default function AdminTransactionHistory() {
             Search
           </button>
         </div>
-        {searchHint && (
-          <span className="text-xs text-error">{searchHint}</span>
-        )}
+        {searchHint && <span className="text-xs text-error">{searchHint}</span>}
       </div>
 
       {/* ─── Filter bar ───────────────────────────────────────────── */}
@@ -560,7 +565,9 @@ export default function AdminTransactionHistory() {
               <div className="flex justify-between">
                 <span className="text-on-surface-variant">Booking ID</span>
                 <span className="font-semibold text-on-surface">
-                  {viewingRow.bookingId != null ? `#${viewingRow.bookingId}` : "—"}
+                  {viewingRow.bookingId != null
+                    ? `#${viewingRow.bookingId}`
+                    : "—"}
                 </span>
               </div>
             )}

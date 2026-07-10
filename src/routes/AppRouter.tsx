@@ -23,6 +23,7 @@ import PaymentPage from "../features/payment/pages/PaymentPage";
 import ChangePassword from "../features/customer/pages/ChangePassword";
 import LoyaltyRewards from "../features/customer/pages/LoyaltyRewards";
 import AdminLayout from "../layouts/AdminLayout";
+import AdminTransactionHistory from "../features/adminTransaction/pages/AdminTransactionHistory";
 import AdminCustomers from "../features/adminCustomer/pages/AdminCustomers";
 import AdminCustomerBookingHistory from "../features/adminCustomer/pages/AdminCustomerBookingHistory";
 
@@ -86,12 +87,16 @@ export default function AppRouter() {
 
       <Route element={<PrivateRoute />}>
         <Route element={<RoleRoute allowedRoles={["ADMIN"]} />}>
-          {/* Admin login về thẳng Customer Management, không qua dashboard placeholder */}
+          {/* Admin login về thẳng Transaction History, không qua dashboard placeholder */}
           <Route
             path="/admin"
-            element={<Navigate to="/admin/customers" replace />}
+            element={<Navigate to="/admin/transactions" replace />}
           />
           <Route element={<AdminLayout />}>
+            <Route
+              path="/admin/transactions"
+              element={<AdminTransactionHistory />}
+            />
             <Route path="/admin/customers" element={<AdminCustomers />} />
             <Route
               path="/admin/customers/:customerId/bookings"

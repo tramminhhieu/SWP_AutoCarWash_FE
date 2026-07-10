@@ -22,7 +22,23 @@ import WalkInPage from "../features/queue/pages/WalkInPage";
 import PaymentPage from "../features/payment/pages/PaymentPage";
 import ChangePassword from "../features/customer/pages/ChangePassword";
 import LoyaltyRewards from "../features/customer/pages/LoyaltyRewards";
+// FE-53: Admin - Subscription Plan management
 import AdminLayout from "../layouts/AdminLayout";
+import SubscriptionPlanList from "../features/subscriptionplan/pages/SubscriptionPlanList";
+import SubscriptionPlanTypeSelect from "../features/subscriptionplan/pages/SubscriptionPlanTypeSelect";
+import SubscriptionPlanCreate from "../features/subscriptionplan/pages/SubscriptionPlanCreate";
+import SubscriptionPlanEdit from "../features/subscriptionplan/pages/SubscriptionPlanEdit";
+// Add-on service (chưa có AC/API chính thức - xem comment trong addonservice/)
+import AddonServiceCreate from "../features/addonservice/pages/AddonServiceCreate";
+// FE-60/56/58: Customer - browse/register/manage Subscription (khác admin CRUD ở trên).
+// FE-59 (transfer vehicle) đã có sẵn trong CustomerProfile, không có route riêng.
+import CustomerSubscriptionPlanList from "../features/subscription/pages/SubscriptionPlanList";
+import SubscriptionRegister from "../features/subscription/pages/SubscriptionRegister";
+import SubscriptionPayment from "../features/subscription/pages/SubscriptionPayment";
+import MySubscriptions from "../features/subscription/pages/MySubscriptions";
+// Family Group management (không có trong Note.md - xem comment trong familyGroupApi.ts)
+import FamilyGroupManage from "../features/subscription/pages/FamilyGroupManage";
+// Admin - Transaction History + Customer management (từ origin/dev)
 import AdminTransactionHistory from "../features/adminTransaction/pages/AdminTransactionHistory";
 import AdminCustomers from "../features/adminCustomer/pages/AdminCustomers";
 import AdminCustomerBookingHistory from "../features/adminCustomer/pages/AdminCustomerBookingHistory";
@@ -35,6 +51,12 @@ export default function AppRouter() {
         <Route path="/login" element={<Login />} />
         <Route path="/register" element={<Register />} />
         <Route path="/servicePackages" element={<ServicePackageList />} />
+        {/* FE-60-US-01: public, giống pattern /servicePackages - chưa login vẫn xem được,
+            chỉ bắt login khi bấm Subscribe (xử lý trong SubscriptionPlanList.tsx) */}
+        <Route
+          path="/subscription-plans"
+          element={<CustomerSubscriptionPlanList />}
+        />
 
         {/* Toàn bộ flow đặt lịch yêu cầu đăng nhập - bọc trong PrivateRoute,
             chưa login bấm vào sẽ bị redirect về /login (xử lý trong PrivateRoute.tsx) */}
@@ -65,6 +87,24 @@ export default function AppRouter() {
               path="/customer/profile/change-password"
               element={<ChangePassword />}
             />
+            {/* FE-60-US-02.1: chọn xe -> QR payment. FE-56: renew dùng chung route payment. */}
+            <Route
+              path="/subscription-plans/:planId/register"
+              element={<SubscriptionRegister />}
+            />
+            <Route
+              path="/subscription-plans/payment/:invoiceId"
+              element={<SubscriptionPayment />}
+            />
+            {/* FE-60-US-05 + FE-58 + FE-56 entry point - khớp href "/subscription" đã có
+                sẵn trong CustomerHeader NAV_LINKS ("My Subscription") */}
+            <Route path="/subscription" element={<MySubscriptions />} />
+            {/* Family Group management - vào từ nút "Manage Family" trên card FAMILY
+                đang ACTIVE ở MySubscriptions.tsx, subscriptionId = id của UnlimitedSubscription */}
+            <Route
+              path="/subscription/family/:subscriptionId"
+              element={<FamilyGroupManage />}
+            />
           </Route>
         </Route>
       </Route>
@@ -85,14 +125,35 @@ export default function AppRouter() {
         </Route>
       </Route>
 
+      {/* FE-53: nhóm route ADMIN, theo đúng pattern STAFF ở trên */}
       <Route element={<PrivateRoute />}>
         <Route element={<RoleRoute allowedRoles={["ADMIN"]} />}>
-          {/* Admin login về thẳng Transaction History, không qua dashboard placeholder */}
           <Route
             path="/admin"
-            element={<Navigate to="/admin/transactions" replace />}
+            element={<Navigate to="/admin/subscription-plans" replace />}
           />
           <Route element={<AdminLayout />}>
+            <Route
+              path="/admin/subscription-plans"
+              element={<SubscriptionPlanList />}
+            />
+            {/* Màn chọn loại (Unlimited/Family/Add-on) trước khi vào form tạo tương ứng */}
+            <Route
+              path="/admin/subscription-plans/create"
+              element={<SubscriptionPlanTypeSelect />}
+            />
+            <Route
+              path="/admin/subscription-plans/create/:type"
+              element={<SubscriptionPlanCreate />}
+            />
+            <Route
+              path="/admin/subscription-plans/:id/edit"
+              element={<SubscriptionPlanEdit />}
+            />
+            <Route
+              path="/admin/addon-services/create"
+              element={<AddonServiceCreate />}
+            />
             <Route
               path="/admin/transactions"
               element={<AdminTransactionHistory />}

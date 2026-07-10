@@ -5,7 +5,7 @@ export interface BookingVehicle {
   licensePlate: string;
   brandName: string;
   activeSubscription?: {
-    type: "UNLIMITED" | "FAMILY";
+    type: "UNLIMIT" | "FAMILY";
     servicePackageId: number;
     // Danh sách các ngày (ISO, "yyyy-MM-dd") trong bookingWindow mà gói này đã được
     // dùng cho 1 booking khác rồi. FE so ngày đang chọn với mảng này để biết hiện

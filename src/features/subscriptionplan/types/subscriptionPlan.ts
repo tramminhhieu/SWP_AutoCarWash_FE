@@ -18,9 +18,6 @@ export interface SubscriptionPlan {
   description: string;
   maxVehicleCount: number | null; // 1 khi planType = UNLIMITED (data.sql thật cũng luôn để 1, không null)
   servicePackageName: string;
-  // Tên các add-on đi kèm gói (quyền lợi hiển thị) - riêng biệt với servicePackageName ở trên
-  // (servicePackageName vẫn quyết định hạng dịch vụ rửa xe cho booking/walk-in).
-  addonNames: string[];
   status: PlanStatus;
 }
 
@@ -31,13 +28,10 @@ export interface SubscriptionPlanDetail {
   price: number;
   durationDays: number;
   description: string;
-  // BE tự tạo/gán Service Package riêng cho gói dựa trên add-on đã chọn - không còn cho admin
-  // chọn/sửa trực tiếp nữa, chỉ giữ lại để tham khảo nếu cần.
   servicePackageId: number;
   planType: PlanType;
   maxVehicleCount: number | null;
   status: PlanStatus;
-  addonServiceIds: number[];
 }
 
 // POST /api/admin/subscription-plans
@@ -46,13 +40,11 @@ export interface CreateSubscriptionPlanRequest {
   price: number;
   durationDays: number;
   description: string;
+  servicePackageId: number;
   planType: PlanType;
   // UNLIMITED: FE tự gán 1 (ẩn field, không cho sửa) theo comment trong Note.md + data.sql thật
   // FAMILY: bắt buộc > 1, do người dùng nhập
   maxVehicleCount: number;
-  // Add-on tạo nên nội dung gói (thay cho việc chọn 1 Service Package có sẵn) - BE sẽ tự tạo
-  // 1 Service Package mới riêng cho gói này từ danh sách add-on được chọn. Bắt buộc chọn >= 1.
-  addonServiceIds: number[];
 }
 
 // PUT /api/admin/subscription-plans/{id}
@@ -60,26 +52,22 @@ export interface UpdateSubscriptionPlanRequest extends CreateSubscriptionPlanReq
   status: PlanStatus;
 }
 
-// Add-on để chọn nhiều (checkbox) trong form Create/Update - GET /api/admin/addon-services/active
-export interface AddonServiceOption {
+// Service package để chọn trong dropdown form Create/Update - chỉ lấy status = ACTIVE
+export interface ServicePackageOption {
   id: number;
   name: string;
-  price: number;
-  durationMinutes: number;
 }
 
-// errorCode nghiệp vụ BE trả về = ErrorCode enum's "code" field (vd "SUBSCRIPTION_004"), KHÔNG
-// phải tên hằng số enum - xem GlobalExceptionHandler.handleBaseException/handleValidation
-// (BE) để đối chiếu khi thêm/sửa mã lỗi mới.
+// Các errorCode nghiệp vụ BE trả về (theo Note.md) - dùng để map lỗi vào đúng field trên form
 export const SUBSCRIPTION_PLAN_ERROR_CODES = {
-  PLAN_NAME_REQUIRED: "SUBSCRIPTION_004",
-  ADDON_SERVICES_REQUIRED: "SUBSCRIPTION_032",
-  INVALID_ADDON_SERVICE: "SUBSCRIPTION_031",
-  INVALID_PRICE: "SUBSCRIPTION_006",
-  INVALID_DURATION_DAYS: "SUBSCRIPTION_007",
-  INVALID_MAX_VEHICLE_COUNT: "SUBSCRIPTION_008",
-  INVALID_PLAN_TYPE: "SUBSCRIPTION_010",
-  INVALID_STATUS: "SUBSCRIPTION_011",
-  SUBSCRIPTION_PLAN_NOT_FOUND: "SUBSCRIPTION_002",
-  SUBSCRIPTION_PLAN_ALREADY_INACTIVE: "SUBSCRIPTION_013",
+  PLAN_NAME_REQUIRED: "PLAN_NAME_REQUIRED",
+  SERVICE_PACKAGE_REQUIRED: "SERVICE_PACKAGE_REQUIRED",
+  INVALID_PRICE: "INVALID_PRICE",
+  INVALID_DURATION_DAYS: "INVALID_DURATION_DAYS",
+  INVALID_MAX_VEHICLE_COUNT: "INVALID_MAX_VEHICLE_COUNT",
+  INVALID_PLAN_TYPE: "INVALID_PLAN_TYPE",
+  INVALID_STATUS: "INVALID_STATUS",
+  INVALID_SERVICE_PACKAGE: "INVALID_SERVICE_PACKAGE",
+  SUBSCRIPTION_PLAN_NOT_FOUND: "SUBSCRIPTION_PLAN_NOT_FOUND",
+  SUBSCRIPTION_PLAN_ALREADY_INACTIVE: "SUBSCRIPTION_PLAN_ALREADY_INACTIVE",
 } as const;

@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { getWashLanesByStation, deleteLane } from "../api/washlaneApi";
 import type { WashLane, LaneStatus } from "../types/washlane";
 import { getApiErrorInfo } from "../../../lib/axiosClient";
+import Modal from "../../../components/ui/Modal";
 
 // Map errorCode from BE → user-facing error message
 const DELETE_ERROR_MAP: Record<string, string> = {
@@ -96,7 +97,7 @@ const WashLaneList = ({ stationId, refreshKey }: WashLaneListProps) => {
           message ??
           "Failed to delete lane. Please try again.",
       );
-      setTimeout(() => setToastMessage(null), 4000);
+      setTimeout(() => setToastMessage(null), 1000);
       setLaneToDelete(null);
     } finally {
       setIsDeleting(false);
@@ -136,17 +137,23 @@ const WashLaneList = ({ stationId, refreshKey }: WashLaneListProps) => {
 
   return (
     <div className="mt-6">
-      {successMessage && (
-        <div className="mb-4 rounded-lg border border-tertiary/20 bg-tertiary-fixed/15 px-4 py-3 text-body-md font-medium text-tertiary-fixed-dim">
-          {successMessage}
-        </div>
-      )}
+      <Modal
+        isOpen={!!successMessage}
+        onClose={() => setSuccessMessage(null)}
+        variant="success"
+        title="Success"
+        message={successMessage}
+      />
 
-      {toastMessage && (
-        <div className="mb-4 rounded-lg border border-error/20 bg-error/10 px-4 py-3 text-body-md text-error">
-          {toastMessage}
-        </div>
-      )}
+      <Modal
+        isOpen={!!toastMessage}
+        onClose={() => setToastMessage(null)}
+        variant="danger"
+        title="Unable to Delete"
+        message={toastMessage ?? ""}
+        confirmText="Got it"
+        onConfirm={() => setToastMessage(null)}
+      />
 
       <div className="overflow-hidden rounded-2xl border border-outline-variant bg-surface-container-lowest shadow-[0_10px_25px_-5px_rgba(29,78,216,0.05)]">
         <table className="w-full text-left">

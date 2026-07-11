@@ -1,12 +1,6 @@
 import { useEffect, useState } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
-import {
-  ChevronRight,
-  ArrowLeft,
-  AlertCircle,
-  CheckCircle2,
-  Lock,
-} from "lucide-react";
+import { ArrowLeft, AlertCircle, Lock } from "lucide-react";
 import { updateCampaign, updateVoucher } from "../api/promotionApi";
 import {
   getProvinces,
@@ -21,11 +15,12 @@ import type {
   UpdateVoucherRequest,
   DiscountType,
 } from "../types/promotion";
+import Modal from "../../../components/ui/Modal";
 
 // ─── Constants ───────────────────────────────────────────────────────────────
 
 const CUSTOMER_TIERS = [
-  { id: 1, name: "Bronze" },
+  { id: 1, name: "Member" },
   { id: 2, name: "Silver" },
   { id: 3, name: "Gold" },
   { id: 4, name: "Platinum" },
@@ -40,7 +35,6 @@ const AUTO_PROMO_PREFIX = "AUTO_PROMO_";
 
 function FormField({
   label,
-  required,
   error,
   hint,
   children,
@@ -55,7 +49,6 @@ function FormField({
     <div className="flex flex-col gap-1.5">
       <label className="text-xs font-semibold uppercase tracking-[1px] text-outline">
         {label}
-        {required && <span className="ml-0.5 text-error">*</span>}
       </label>
       {children}
       {hint && <span className="text-xs text-outline">{hint}</span>}
@@ -259,7 +252,7 @@ export default function PromotionEdit() {
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
-  const [submitSuccess, setSubmitSuccess] = useState(false);
+
   // Guard: sau tất cả hooks mới được early return
   if (!state) {
     navigate("/admin/promotions");
@@ -369,7 +362,10 @@ export default function PromotionEdit() {
 
       // Gọi song song cả 2 API
       await Promise.all(promises);
-      setSubmitSuccess(true);
+      navigate(`/admin/promotions/station/${stationId}`, {
+        state: { stationName, successMessage: "Changes saved successfully!" },
+      });
+      return;
     } catch (err: unknown) {
       const msg =
         (err as { response?: { data?: { message?: string } } })?.response?.data
@@ -385,60 +381,11 @@ export default function PromotionEdit() {
   const errorClass = "border-error focus:border-error";
   const lockedClass = "cursor-not-allowed bg-surface-container-high opacity-60";
 
-  // ── Success state ──
-  if (submitSuccess) {
-    return (
-      <div className="mx-auto flex max-w-[1440px] flex-col items-center gap-6 px-12 py-24">
-        <div className="flex size-16 items-center justify-center rounded-full bg-tertiary/10">
-          <CheckCircle2 className="size-8 text-tertiary" />
-        </div>
-        <h2 className="font-heading text-2xl font-bold text-on-surface">
-          Changes Saved Successfully!
-        </h2>
-        <button
-          onClick={() =>
-            navigate(`/admin/promotions/station/${stationId}`, {
-              state: { stationName },
-            })
-          }
-          className="rounded-[8px] bg-primary px-6 py-3 text-sm font-bold text-white"
-        >
-          Back to {stationName}
-        </button>
-      </div>
-    );
-  }
-
   return (
     <div className="mx-auto flex max-w-[1440px] flex-col gap-8 px-12 py-8">
       {/* ── Header ── */}
       <div className="flex items-end justify-between">
         <div className="flex flex-col gap-2">
-          <div className="flex items-center gap-1">
-            <span className="text-xs font-semibold text-outline">Admin</span>
-            <ChevronRight className="size-3 text-outline" />
-            <button
-              onClick={() => navigate("/admin/promotions")}
-              className="text-xs font-semibold text-outline hover:text-primary"
-            >
-              Promotions
-            </button>
-            <ChevronRight className="size-3 text-outline" />
-            <button
-              onClick={() =>
-                navigate(`/admin/promotions/station/${stationId}`, {
-                  state: { stationName },
-                })
-              }
-              className="text-xs font-semibold text-outline hover:text-primary"
-            >
-              {stationName}
-            </button>
-            <ChevronRight className="size-3 text-outline" />
-            <span className="text-xs font-semibold text-on-surface-variant">
-              Edit
-            </span>
-          </div>
           <h1 className="font-heading text-headline-xl font-bold tracking-[-1.2px] text-on-surface">
             Edit Promotion
           </h1>
@@ -712,7 +659,7 @@ export default function PromotionEdit() {
                   className={`relative h-6 w-11 rounded-full transition-colors ${reusable ? "bg-primary" : "bg-outline-variant"}`}
                 >
                   <span
-                    className={`absolute top-0.5 size-5 rounded-full bg-white shadow transition-transform ${reusable ? "translate-x-5" : "translate-x-0.5"}`}
+                    className={`absolute left-0.5 top-0.5 size-5 rounded-full bg-white shadow transition-transform ${reusable ? "translate-x-5" : "translate-x-0"}`}
                   />
                 </button>
                 <span className="text-sm font-medium text-on-surface">
@@ -724,12 +671,15 @@ export default function PromotionEdit() {
         )}
 
         {/* ── Submit ── */}
-        {submitError && (
-          <div className="flex items-center gap-2 rounded-[8px] border border-error/30 bg-error/5 px-4 py-3 text-sm text-error">
-            <AlertCircle className="size-4 shrink-0" />
-            {submitError}
-          </div>
-        )}
+        <Modal
+          isOpen={!!submitError}
+          onClose={() => setSubmitError(null)}
+          variant="danger"
+          title="Unable to Save Changes"
+          message={submitError ?? ""}
+          confirmText="Got it"
+          onConfirm={() => setSubmitError(null)}
+        />
 
         <div className="flex items-center justify-end gap-3">
           <button

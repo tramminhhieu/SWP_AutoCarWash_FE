@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
-import { ArrowLeft, AlertCircle, Lock } from "lucide-react";
+import { AlertCircle, Lock } from "lucide-react";
 import { updateCampaign, updateVoucher } from "../api/promotionApi";
 import {
   getProvinces,
@@ -248,7 +248,6 @@ export default function PromotionEdit() {
   const [maxDiscount, setMaxDiscount] = useState("");
   const [minOrder, setMinOrder] = useState("");
   const [usageLimit, setUsageLimit] = useState("");
-  const [reusable, setReusable] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
@@ -291,6 +290,8 @@ export default function PromotionEdit() {
         errs.endDate = "End date must be after start date.";
       if (selectedStations.length === 0)
         errs.stationIds = "Please select at least one branch.";
+      if (tierIds.length === 0)
+        errs.targetCustomerTierIds = "Please select at least one tier.";
     }
 
     if ((configMode === 2 || configMode === 3) && !isAutoPromo) {
@@ -354,7 +355,7 @@ export default function PromotionEdit() {
               : `${startDate}T00:00:00`,
           expiryDate:
             configMode === 3 ? `${vEndDate}T23:59:59` : `${endDate}T23:59:59`,
-          reusable,
+          reusable: true,
         };
 
         promises.push(updateVoucher(voucherId, voucherBody));
@@ -363,8 +364,13 @@ export default function PromotionEdit() {
       // Gọi song song cả 2 API
       await Promise.all(promises);
       navigate(`/admin/promotions/station/${stationId}`, {
-        state: { stationName, successMessage: "Changes saved successfully!" },
+        state: {
+          stationName,
+          successMessage: "Changes saved successfully!",
+          from: "/admin/promotions",
+        },
       });
+
       return;
     } catch (err: unknown) {
       const msg =
@@ -391,17 +397,6 @@ export default function PromotionEdit() {
           </h1>
           <p className="text-sm text-on-surface-variant">{currentName}</p>
         </div>
-        <button
-          onClick={() =>
-            navigate(`/admin/promotions/station/${stationId}`, {
-              state: { stationName },
-            })
-          }
-          className="flex items-center gap-2 rounded-[8px] border border-outline-variant/30 bg-white px-5 py-3 text-sm font-semibold text-on-surface hover:bg-surface-container-low"
-        >
-          <ArrowLeft className="size-4" />
-          Back
-        </button>
       </div>
 
       <div className="flex flex-col gap-6">
@@ -474,7 +469,10 @@ export default function PromotionEdit() {
                 />
               </FormField>
 
-              <FormField label="Target Customer Tiers">
+              <FormField
+                label="Target Customer Tiers"
+                error={errors.targetCustomerTierIds}
+              >
                 <div className="flex gap-3">
                   {CUSTOMER_TIERS.map((tier) => (
                     <button
@@ -650,22 +648,6 @@ export default function PromotionEdit() {
                   </FormField>
                 </div>
               )}
-
-              {/* Reusable toggle */}
-              <div className="flex items-center gap-3">
-                <button
-                  type="button"
-                  onClick={() => !isAutoPromo && setReusable((v) => !v)}
-                  className={`relative h-6 w-11 rounded-full transition-colors ${reusable ? "bg-primary" : "bg-outline-variant"}`}
-                >
-                  <span
-                    className={`absolute left-0.5 top-0.5 size-5 rounded-full bg-white shadow transition-transform ${reusable ? "translate-x-5" : "translate-x-0"}`}
-                  />
-                </button>
-                <span className="text-sm font-medium text-on-surface">
-                  Allow reuse per customer
-                </span>
-              </div>
             </div>
           </div>
         )}
@@ -686,7 +668,7 @@ export default function PromotionEdit() {
             type="button"
             onClick={() =>
               navigate(`/admin/promotions/station/${stationId}`, {
-                state: { stationName },
+                state: { stationName, from: "/admin/promotions" },
               })
             }
             className="rounded-[8px] border border-outline-variant/30 px-6 py-3 text-sm font-semibold text-on-surface hover:bg-surface-container-low"

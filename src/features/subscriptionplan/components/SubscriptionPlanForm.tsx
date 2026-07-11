@@ -10,7 +10,6 @@ import {
   type ServicePackageOption,
 } from "../types/subscriptionPlan";
 
-const PLAN_TYPES: PlanType[] = ["UNLIMIT", "FAMILY"];
 const STATUSES: PlanStatus[] = ["ACTIVE", "INACTIVE"];
 
 // Style dùng chung cho input/select/label, theo đúng token trong index.css (@theme) +
@@ -141,9 +140,9 @@ export default function SubscriptionPlanForm({
   const [servicePackageId, setServicePackageId] = useState(
     initialData?.servicePackageId?.toString() ?? "",
   );
-  const [planType, setPlanType] = useState<PlanType>(
-    initialData?.planType ?? fixedPlanType ?? "UNLIMIT",
-  );
+  // planType không cho sửa ở cả Create (khoá theo fixedPlanType từ màn chọn loại) lẫn Edit
+  // (khoá theo initialData) - không có setter vì không còn UI nào đổi giá trị này.
+  const [planType] = useState<PlanType>(initialData?.planType ?? fixedPlanType ?? "UNLIMIT");
   // FAMILY: >1 do admin nhập. UNLIMITED: note + data.sql thật đều để 1, nên field bị ẩn và
   // luôn gửi 1 - xem quyết định đã báo Nora trong plan trước khi code phần này.
   const [maxVehicleCount, setMaxVehicleCount] = useState(
@@ -303,21 +302,18 @@ export default function SubscriptionPlanForm({
               ))}
             </SelectField>
 
-            {/* Đã chọn loại (Unlimited/Family) từ màn trước đó (SubscriptionPlanTypeSelect) ->
-                khoá cứng, không hiện dropdown nữa. Chỉ hiện dropdown khi Edit (đổi qua lại loại
-                vẫn được phép theo AC02 US-03) hoặc khi form dùng độc lập, không qua fixedPlanType. */}
-            {!fixedPlanType && (
-              <SelectField
-                label="Plan Type"
-                value={planType}
-                onChange={(e) => setPlanType(e.target.value as PlanType)}
-              >
-                {PLAN_TYPES.map((t) => (
-                  <option key={t} value={t}>
-                    {getSubscriptionTypeLabel(t)}
-                  </option>
-                ))}
-              </SelectField>
+            {/* planType không cho sửa: Create khoá theo loại đã chọn ở màn trước
+                (SubscriptionPlanTypeSelect), Edit hiển thị read-only - không cho đổi qua lại
+                loại nữa (BE không hỗ trợ update planType). */}
+            {isEditMode && (
+              <div>
+                <label className={labelClass}>Plan Type</label>
+                <div
+                  className={`${inputClass(false)} flex items-center bg-surface-container-high text-on-surface-variant`}
+                >
+                  {getSubscriptionTypeLabel(planType)}
+                </div>
+              </div>
             )}
 
             <div>

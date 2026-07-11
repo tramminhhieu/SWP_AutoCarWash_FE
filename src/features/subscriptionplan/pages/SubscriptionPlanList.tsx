@@ -1,13 +1,19 @@
 import { useCallback, useEffect, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
-import { Plus, Trash2 } from "lucide-react";
+import { ChevronDown, Plus, Trash2 } from "lucide-react";
 import Modal from "../../../components/ui/Modal";
 import Loading from "../../../components/ui/Loading";
 import { formatCurrency } from "../../../utils";
 import { getApiErrorInfo } from "../../../lib/axiosClient";
 import { getSubscriptionStyle, getSubscriptionTypeLabel } from "../../../constants/subscriptionStyles";
 import { getAll, remove } from "../api/subscriptionPlanApi";
-import type { PlanTypeFilter, SubscriptionPlan } from "../types/subscriptionPlan";
+import type {
+  PlanStatus,
+  PlanStatusFilter,
+  PlanType,
+  PlanTypeFilter,
+  SubscriptionPlan,
+} from "../types/subscriptionPlan";
 
 // Badge trạng thái (ACTIVE/INACTIVE) - is_deleted trong DB thật, không có style constant
 // riêng nên dùng cùng "ngôn ngữ" pill với subscriptionStyles.ts (tertiary = tích cực).
@@ -16,13 +22,59 @@ const STATUS_BADGE: Record<SubscriptionPlan["status"], string> = {
   INACTIVE: "bg-surface-container-high text-on-surface-variant border-outline-variant/30",
 };
 
-// Filter theo gói (Type): FAMILY / UNLIMIT - khớp query param `type` BE đã hỗ trợ sẵn.
-const TYPE_FILTERS: PlanTypeFilter[] = ["FAMILY", "UNLIMIT"];
+// 1 dropdown duy nhất gộp Status + Type, option phẳng - chọn 1 tại 1 thời điểm (không kết hợp được
+// Status + Type cùng lúc nữa, đổi lấy UI gọn hơn). BE vẫn nhận 2 param status/type riêng như cũ,
+// xem toStatusAndType() bên dưới để suy ra cặp giá trị gửi lên từ 1 lựa chọn duy nhất.
+type CombinedFilter = "ALL" | PlanStatus | PlanType;
+const FILTER_OPTIONS: CombinedFilter[] = ["ALL", "ACTIVE", "INACTIVE", "FAMILY", "UNLIMIT"];
+
+function toStatusAndType(
+  f: CombinedFilter,
+): { status: PlanStatusFilter; type: PlanTypeFilter } {
+  if (f === "ACTIVE" || f === "INACTIVE") return { status: f, type: "ALL" };
+  if (f === "FAMILY" || f === "UNLIMIT") return { status: "ALL", type: f };
+  return { status: "ALL", type: "ALL" };
+}
+
+// <select> dùng chung cho 2 dropdown filter bên dưới - cùng style input/select trong
+// SubscriptionPlanForm.tsx (appearance-none + icon ChevronDown tự vẽ để canh đều mọi trình duyệt).
+function FilterSelect<T extends string>({
+  value,
+  onChange,
+  options,
+  labelForOption,
+}: {
+  value: T;
+  onChange: (value: T) => void;
+  options: readonly T[];
+  labelForOption: (option: T) => string;
+}) {
+  return (
+    <div className="relative">
+      <select
+        value={value}
+        onChange={(e) => onChange(e.target.value as T)}
+        className="appearance-none rounded-lg border border-outline-variant bg-surface-container-lowest py-2 pl-4 pr-10 text-label-md font-semibold text-on-surface outline-none transition-colors focus:border-primary"
+      >
+        {options.map((o) => (
+          <option key={o} value={o}>
+            {labelForOption(o)}
+          </option>
+        ))}
+      </select>
+      <ChevronDown
+        size={16}
+        strokeWidth={2.25}
+        className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-on-surface-variant"
+      />
+    </div>
+  );
+}
 
 export default function SubscriptionPlanList() {
   const navigate = useNavigate();
   const location = useLocation();
-  const [typeFilter, setTypeFilter] = useState<PlanTypeFilter>("ALL");
+  const [filter, setFilter] = useState<CombinedFilter>("ALL");
   const [plans, setPlans] = useState<SubscriptionPlan[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -43,10 +95,11 @@ export default function SubscriptionPlanList() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const loadPlans = useCallback((type: PlanTypeFilter) => {
+  const loadPlans = useCallback((f: CombinedFilter) => {
     setIsLoading(true);
     setError(null);
-    getAll("ALL", type)
+    const { status, type } = toStatusAndType(f);
+    getAll(status, type)
       .then((data) => setPlans(data))
       .catch((err) => {
         const { message } = getApiErrorInfo(err);
@@ -56,8 +109,8 @@ export default function SubscriptionPlanList() {
   }, []);
 
   useEffect(() => {
-    loadPlans(typeFilter);
-  }, [typeFilter, loadPlans]);
+    loadPlans(filter);
+  }, [filter, loadPlans]);
 
   const handleConfirmDelete = async () => {
     if (!planToDelete) return;
@@ -66,7 +119,7 @@ export default function SubscriptionPlanList() {
       const res = await remove(planToDelete.id);
       setPlanToDelete(null);
       setSuccessMessage(res.message ?? "Subscription plan deleted successfully.");
-      loadPlans(typeFilter);
+      loadPlans(filter);
     } catch (err) {
       const { message } = getApiErrorInfo(err);
       setError(message ?? "Failed to delete subscription plan.");
@@ -97,33 +150,14 @@ export default function SubscriptionPlanList() {
         </button>
       </div>
 
-      {/* Filter theo gói (Type): ALL/FAMILY/UNLIMIT */}
-      <div className="mt-6 flex flex-wrap items-center gap-2">
-        <button
-          type="button"
-          onClick={() => setTypeFilter("ALL")}
-          className={`rounded-full px-4 py-1.5 text-label-sm font-semibold transition-colors ${
-            typeFilter === "ALL"
-              ? "bg-primary text-on-primary"
-              : "bg-surface-container text-on-surface-variant hover:bg-surface-container-high"
-          }`}
-        >
-          ALL
-        </button>
-        {TYPE_FILTERS.map((f) => (
-          <button
-            key={f}
-            type="button"
-            onClick={() => setTypeFilter(f)}
-            className={`rounded-full px-4 py-1.5 text-label-sm font-semibold transition-colors ${
-              typeFilter === f
-                ? "bg-primary text-on-primary"
-                : "bg-surface-container text-on-surface-variant hover:bg-surface-container-high"
-            }`}
-          >
-            {getSubscriptionTypeLabel(f)}
-          </button>
-        ))}
+      {/* AC01: 1 dropdown duy nhất gộp Status + Type */}
+      <div className="mt-6 flex flex-wrap items-center gap-3">
+        <FilterSelect
+          value={filter}
+          onChange={setFilter}
+          options={FILTER_OPTIONS}
+          labelForOption={(f) => (f === "FAMILY" || f === "UNLIMIT" ? getSubscriptionTypeLabel(f) : f)}
+        />
       </div>
 
       {successMessage && (

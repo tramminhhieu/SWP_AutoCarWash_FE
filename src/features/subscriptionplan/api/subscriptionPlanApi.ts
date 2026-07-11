@@ -1,6 +1,5 @@
 import { API } from "../../../constants/apiEndpoints";
 import axiosClient from "../../../lib/axiosClient";
-import * as servicePackageApi from "../../servicepackage/api/servicePackageApi";
 import type { ApiSuccessResponse } from "../../../types/apiResponse";
 import type {
   CreateSubscriptionPlanRequest,
@@ -12,12 +11,12 @@ import type {
   UpdateSubscriptionPlanRequest,
 } from "../types/subscriptionPlan";
 
-// AC02 US-02: dropdown chỉ hiển thị service package ACTIVE
+// AC02 US-02: dropdown chỉ hiển thị service package ACTIVE - BE đã lọc sẵn ACTIVE ở endpoint này
 export const getServicePackageOptions = async (): Promise<ServicePackageOption[]> => {
-  const packages = await servicePackageApi.getAll();
-  return packages
-    .filter((p) => p.status !== "INACTIVE")
-    .map((p) => ({ id: p.id, name: p.name }));
+  const res = await axiosClient.get<ApiSuccessResponse<ServicePackageOption[]>>(
+    API.ADMIN.SERVICE_PACKAGE.ACTIVE,
+  );
+  return res.data.data.map((p) => ({ id: p.id, name: p.name }));
 };
 
 // FE-53-US-01

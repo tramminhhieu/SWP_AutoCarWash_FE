@@ -25,6 +25,9 @@ export interface AdminCustomerFilters {
   month?: number;
   tier?: string;
   active?: boolean;
+  stationId?: number;
+  communeId?: number;
+  provinceId?: number;
 }
 
 export async function getAdminCustomers(

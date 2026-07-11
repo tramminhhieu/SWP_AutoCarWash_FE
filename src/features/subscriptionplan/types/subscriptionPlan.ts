@@ -6,6 +6,7 @@
 export type PlanType = "FAMILY" | "UNLIMIT";
 export type PlanStatus = "ACTIVE" | "INACTIVE";
 export type PlanStatusFilter = "ALL" | PlanStatus;
+export type PlanTypeFilter = "ALL" | PlanType;
 
 // GET /api/admin/subscription-plans - 1 dòng trong danh sách (id không hiển thị trên UI
 // nhưng BE cần trả về để FE điều hướng Edit/Delete - xem note "Contradiction #4" đã báo Nora)

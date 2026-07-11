@@ -5,6 +5,7 @@ import type { ApiSuccessResponse } from "../../../types/apiResponse";
 import type {
   CreateSubscriptionPlanRequest,
   PlanStatusFilter,
+  PlanTypeFilter,
   ServicePackageOption,
   SubscriptionPlan,
   SubscriptionPlanDetail,
@@ -22,10 +23,11 @@ export const getServicePackageOptions = async (): Promise<ServicePackageOption[]
 // FE-53-US-01
 export const getAll = async (
   status: PlanStatusFilter = "ALL",
+  type: PlanTypeFilter = "ALL",
 ): Promise<SubscriptionPlan[]> => {
   const res = await axiosClient.get<ApiSuccessResponse<SubscriptionPlan[]>>(
     API.ADMIN.SUBSCRIPTION_PLAN.LIST,
-    { params: { status } },
+    { params: { status, type } },
   );
   return res.data.data;
 };

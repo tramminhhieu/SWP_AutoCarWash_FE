@@ -2,6 +2,7 @@ import { useState } from "react";
 import { X } from "lucide-react";
 import { createLane } from "../api/washlaneApi";
 import { getApiErrorInfo } from "../../../lib/axiosClient";
+import Modal from "../../../components/ui/Modal";
 
 // Map errorCode from BE → user-facing error message
 const API_ERROR_MAP: Record<string, string> = {
@@ -106,30 +107,34 @@ const CreateLaneModal = ({
           </button>
         </div>
 
-        {/* Success toast */}
-        {successMessage && (
-          <div className="mb-4 rounded-lg border border-tertiary/20 bg-tertiary-fixed/15 px-4 py-3 text-body-md font-medium text-tertiary-fixed-dim">
-            {successMessage}
-          </div>
-        )}
+        <Modal
+          isOpen={!!successMessage}
+          onClose={() => setSuccessMessage(null)}
+          variant="success"
+          title="Success"
+          message={successMessage}
+        />
 
-        {/* BE error */}
-        {apiError && (
-          <div className="mb-4 rounded-lg border border-error/20 bg-error/10 px-4 py-3 text-body-md text-error">
-            {apiError}
-          </div>
-        )}
+        <Modal
+          isOpen={!!apiError}
+          onClose={() => setApiError(null)}
+          variant="danger"
+          title="Unable to Create Lane"
+          message={apiError ?? ""}
+          confirmText="Got it"
+          onConfirm={() => setApiError(null)}
+        />
 
         {/* Form fields */}
         <div className="space-y-4">
           {/* Lane name */}
           <div>
             <label className="mb-1.5 block text-label-md font-semibold text-on-surface-variant">
-              Lane Name <span className="text-error">*</span>
+              Lane Name
             </label>
             <input
               type="text"
-              placeholder="e.g. Lane 01"
+              placeholder="Lane 1"
               value={laneName}
               onChange={(e) => {
                 setLaneName(e.target.value);
@@ -147,12 +152,12 @@ const CreateLaneModal = ({
           {/* Booking / Walk-in Ratio */}
           <div>
             <label className="mb-1.5 block text-label-md font-semibold text-on-surface-variant">
-              Booking / Walk-in Ratio <span className="text-error">*</span>
+              Booking / Walk-in Ratio
             </label>
             <input
               type="number"
               min={1}
-              placeholder="e.g. 3"
+              placeholder="3"
               value={ratio}
               onChange={(e) => {
                 setRatio(e.target.value);

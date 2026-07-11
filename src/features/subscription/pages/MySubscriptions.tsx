@@ -48,10 +48,8 @@ function SubscriptionCard({
 
   const canManageFamily = sub.planType === "FAMILY" && sub.status === "ACTIVE";
   const canCancel = sub.status === "ACTIVE";
-  // Cho phép renew bất kỳ lúc nào khi gói còn ACTIVE, không chỉ trong 3 ngày cuối trước hết
-  // hạn (đã bỏ giới hạn AC01 cũ theo yêu cầu). Banner "Expiring soon" bên trên vẫn giữ
-  // ngưỡng 3 ngày riêng, chỉ là nhắc nhở chứ không còn gate nút Renew nữa.
-  const canRenew = sub.status === "ACTIVE";
+  // FE-56-US-02 AC01: chỉ hiện Renew khi ACTIVE và còn <=3 ngày trước hết hạn.
+  const canRenew = isExpiringSoon;
   const hasAnyAction = canManageFamily || canCancel || canRenew;
 
   return (

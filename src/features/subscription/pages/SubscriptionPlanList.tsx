@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { CalendarClock, CarFront } from "lucide-react";
 import { useAuth } from "../../../hooks/useAuth";
 import { formatCurrency } from "../../../utils";
@@ -129,6 +129,14 @@ function PlanGroupCard({
 export default function SubscriptionPlanList() {
   const navigate = useNavigate();
   const { isAuthenticated } = useAuth();
+  const [searchParams] = useSearchParams();
+  // Home.tsx "Get Started" theo từng loại (Unlimited/Family) truyền ?type=UNLIMIT|FAMILY để
+  // chỉ hiện đúng loại đó. Không truyền (vd link "Browse plans" khác) -> hiện cả 2 như cũ.
+  const typeParam = searchParams.get("type");
+  const sections =
+    typeParam === "UNLIMIT" || typeParam === "FAMILY"
+      ? SECTION_ORDER.filter((s) => s.type === typeParam)
+      : SECTION_ORDER;
   const [plans, setPlans] = useState<CustomerSubscriptionPlan[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -187,7 +195,7 @@ export default function SubscriptionPlanList() {
           </div>
         ) : (
           <div className="space-y-14">
-            {SECTION_ORDER.map((section) => {
+            {sections.map((section) => {
               const sectionPlans = plans.filter((p) => p.planType === section.type);
               if (sectionPlans.length === 0) return null;
 

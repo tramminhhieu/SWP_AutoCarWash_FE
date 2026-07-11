@@ -1,12 +1,6 @@
 import { useEffect, useState } from "react";
 import { useNavigate, useParams, useLocation } from "react-router-dom";
-import {
-  ArrowLeft,
-  ChevronLeft,
-  ChevronRight,
-  Pencil,
-  Trash2,
-} from "lucide-react";
+import { ChevronLeft, ChevronRight, Pencil, Trash2 } from "lucide-react";
 import {
   getPromotionDashboardList,
   softDeleteCampaign,
@@ -17,6 +11,8 @@ import type {
   PromotionEditNavState,
 } from "../types/promotion";
 import type { PromotionStatus, PromotionType } from "../types/enums";
+import Modal from "../../../components/ui/Modal";
+import BackButton from "../../../components/ui/BackButton";
 
 // ─── Constants ───────────────────────────────────────────────────────────────
 
@@ -134,6 +130,22 @@ export default function PromotionDetail() {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
+  const [toast, setToast] = useState<string | null>(
+    () =>
+      (locationState as { successMessage?: string })?.successMessage ?? null,
+  );
+  const [deleteTarget, setDeleteTarget] =
+    useState<PromotionDashboardItem | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!toast) return;
+    window.history.replaceState({}, "");
+    const timer = setTimeout(() => setToast(null), 1000);
+    return () => clearTimeout(timer);
+  }, [toast]);
+
   useEffect(() => {
     // Guard: stationId phải là số hợp lệ
     if (!stationId || isNaN(Number(stationId))) return;
@@ -173,27 +185,65 @@ export default function PromotionDetail() {
     setIsLoading(true);
     setCurrentPage(newPage);
   }
+  async function confirmDelete() {
+    if (!deleteTarget) return;
+    setIsDeleting(true);
+    setDeleteError(null);
+    try {
+      if (deleteTarget.type === "CAMPAIGN") {
+        await softDeleteCampaign(deleteTarget.id);
+      } else {
+        await softDeleteVoucher(deleteTarget.id);
+      }
+      setItems((prev) => prev.filter((i) => i.id !== deleteTarget.id));
+      setDeleteTarget(null);
+    } catch {
+      setDeleteError("Failed to delete. Please try again.");
+    } finally {
+      setIsDeleting(false);
+    }
+  }
 
   return (
     <div className="mx-auto flex max-w-[1440px] flex-col gap-8 px-12 py-8">
+      <Modal
+        isOpen={!!toast}
+        onClose={() => setToast(null)}
+        variant="success"
+        title="Success"
+        message={toast}
+      />
+
+      <Modal
+        isOpen={!!deleteTarget}
+        onClose={() => setDeleteTarget(null)}
+        variant="danger"
+        title="Delete this promotion?"
+        message={
+          <>
+            Are you sure you want to delete{" "}
+            <strong className="text-on-surface">{deleteTarget?.name}</strong>?
+            This action cannot be undone.
+          </>
+        }
+        onConfirm={confirmDelete}
+        isConfirmLoading={isDeleting}
+      />
+
+      <Modal
+        isOpen={!!deleteError}
+        onClose={() => setDeleteError(null)}
+        variant="danger"
+        title="Unable to Delete"
+        message={deleteError ?? ""}
+        confirmText="Got it"
+        onConfirm={() => setDeleteError(null)}
+      />
+
       {/* ── Header ── */}
-      <div className="flex items-end justify-between">
+      <div className="flex flex-col items-start gap-4">
+        <BackButton />
         <div className="flex flex-col gap-2">
-          {/* Breadcrumb */}
-          <div className="flex items-center gap-1">
-            <span className="text-xs font-semibold text-outline">Admin</span>
-            <ChevronRight className="size-3 text-outline" />
-            <button
-              onClick={() => navigate("/admin/promotions")}
-              className="text-xs font-semibold text-outline hover:text-primary"
-            >
-              Promotions
-            </button>
-            <ChevronRight className="size-3 text-outline" />
-            <span className="text-xs font-semibold text-on-surface-variant">
-              {stationName}
-            </span>
-          </div>
           <h1 className="font-heading text-headline-xl font-bold tracking-[-1.2px] text-on-surface">
             {stationName}
           </h1>
@@ -201,15 +251,6 @@ export default function PromotionDetail() {
             Promotions and vouchers active at this branch.
           </p>
         </div>
-
-        {/* Nút Back */}
-        <button
-          onClick={() => navigate("/admin/promotions")}
-          className="flex items-center gap-2 rounded-[8px] border border-outline-variant/30 bg-white px-5 py-3 text-sm font-semibold text-on-surface transition-colors hover:bg-surface-container-low"
-        >
-          <ArrowLeft className="size-4" />
-          Back to Overview
-        </button>
       </div>
 
       {/* ── Status Filter ── */}
@@ -375,29 +416,7 @@ export default function PromotionDetail() {
                           Edit
                         </button>
                         <button
-                          onClick={async () => {
-                            if (
-                              !window.confirm(
-                                `Delete "${item.name}"? This action cannot be undone.`,
-                              )
-                            )
-                              return;
-                            try {
-                              if (item.type === "CAMPAIGN") {
-                                await softDeleteCampaign(item.id);
-                              } else {
-                                await softDeleteVoucher(item.id);
-                              }
-                              // Reload lại danh sách sau khi xóa
-                              setItems((prev) =>
-                                prev.filter((i) => i.id !== item.id),
-                              );
-                            } catch {
-                              window.alert(
-                                "Failed to delete. Please try again.",
-                              );
-                            }
-                          }}
+                          onClick={() => setDeleteTarget(item)}
                           className="flex items-center gap-1.5 rounded-md border border-error/20 px-2.5 py-1.5 text-xs font-semibold text-error/70 transition-colors hover:border-error hover:text-error"
                         >
                           <Trash2 className="size-3" />

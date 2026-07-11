@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { X, Plus, AlertCircle, CheckCircle2 } from "lucide-react";
+import { X, Plus, AlertCircle } from "lucide-react";
 import { createPromotion } from "../api/promotionApi";
 import {
   getProvinces,
@@ -14,12 +14,13 @@ import type {
   DiscountType,
   CreatePromotionRequest,
 } from "../types/promotion";
+import Modal from "../../../components/ui/Modal";
 
 // ─── Constants ───────────────────────────────────────────────────────────────
 
 // Mock customer tiers — thay bằng API khi BE có endpoint riêng
 const CUSTOMER_TIERS = [
-  { id: 1, name: "Bronze" },
+  { id: 1, name: "Member" },
   { id: 2, name: "Silver" },
   { id: 3, name: "Gold" },
   { id: 4, name: "Platinum" },
@@ -97,7 +98,6 @@ function StationTag({
 // Label + input wrapper
 function FormField({
   label,
-  required,
   error,
   children,
 }: {
@@ -110,7 +110,6 @@ function FormField({
     <div className="flex flex-col gap-1.5">
       <label className="text-xs font-semibold uppercase tracking-[1px] text-outline">
         {label}
-        {required && <span className="ml-0.5 text-error">*</span>}
       </label>
       {children}
       {error && (
@@ -387,7 +386,6 @@ export default function PromotionCreate() {
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
-  const [submitSuccess, setSubmitSuccess] = useState(false);
 
   // Helper cập nhật 1 field
   const set = <K extends keyof FormState>(key: K, value: FormState[K]) =>
@@ -445,7 +443,15 @@ export default function PromotionCreate() {
     };
 
     createPromotion(body)
-      .then(() => setSubmitSuccess(true))
+      .then(() => {
+        const name =
+          form.configMode === 3 ? form.voucherCode : form.campaignName;
+        navigate("/admin/promotions", {
+          state: {
+            successMessage: `Promotion "${name}" created successfully!`,
+          },
+        });
+      })
       .catch((err) => {
         const msg =
           err?.response?.data?.message ??
@@ -460,40 +466,6 @@ export default function PromotionCreate() {
   const errorInputClass = "border-error focus:border-error";
 
   const mode = form.configMode;
-
-  // ── Success state ──
-  if (submitSuccess) {
-    return (
-      <div className="mx-auto flex max-w-[1440px] flex-col items-center gap-6 px-12 py-24">
-        <div className="flex size-16 items-center justify-center rounded-full bg-tertiary/10">
-          <CheckCircle2 className="size-8 text-tertiary" />
-        </div>
-        <h2 className="font-heading text-2xl font-bold text-on-surface">
-          Promotion Created Successfully!
-        </h2>
-        <p className="text-sm text-on-surface-variant">
-          The promotion has been configured and saved to the system.
-        </p>
-        <div className="flex gap-3">
-          <button
-            onClick={() => {
-              setForm(initialForm);
-              setSubmitSuccess(false);
-            }}
-            className="rounded-[8px] border border-outline-variant/30 px-6 py-3 text-sm font-semibold text-on-surface hover:bg-surface-container-low"
-          >
-            Create Another
-          </button>
-          <button
-            onClick={() => navigate("/admin/promotions")}
-            className="rounded-[8px] bg-primary px-6 py-3 text-sm font-bold text-white"
-          >
-            Back to Overview
-          </button>
-        </div>
-      </div>
-    );
-  }
 
   return (
     <div className="mx-auto flex max-w-[1440px] flex-col gap-8 px-12 py-8">
@@ -695,8 +667,8 @@ export default function PromotionCreate() {
                   }`}
                 >
                   <span
-                    className={`absolute top-0.5 size-5 rounded-full bg-white shadow transition-transform ${
-                      form.reusable ? "translate-x-5" : "translate-x-0.5"
+                    className={`absolute left-0.5 top-0.5 size-5 rounded-full bg-white shadow transition-transform ${
+                      form.reusable ? "translate-x-5" : "translate-x-0"
                     }`}
                   />
                 </button>
@@ -721,7 +693,16 @@ export default function PromotionCreate() {
                   <button
                     key={type}
                     type="button"
-                    onClick={() => set("discountType", type)}
+                    onClick={() =>
+                      setForm((prev) => ({
+                        ...prev,
+                        discountType: type,
+                        maxDiscountAmount:
+                          type === "FIXED"
+                            ? prev.discountValue
+                            : prev.maxDiscountAmount,
+                      }))
+                    }
                     className={`flex-1 rounded-[8px] border-2 py-2.5 text-sm font-semibold transition-colors ${
                       form.discountType === type
                         ? "border-primary bg-primary/5 text-primary"
@@ -730,7 +711,7 @@ export default function PromotionCreate() {
                   >
                     {type === "PERCENTAGE"
                       ? "Percentage (%)"
-                      : "Fixed Amount (₫)"}
+                      : "Fixed Amount (VND)"}
                   </button>
                 ))}
               </div>
@@ -741,7 +722,7 @@ export default function PromotionCreate() {
                 label={
                   form.discountType === "PERCENTAGE"
                     ? "Discount (%)"
-                    : "Discount (₫)"
+                    : "Discount (VND)"
                 }
                 required
                 error={errors.discountValue}
@@ -751,7 +732,17 @@ export default function PromotionCreate() {
                   min={0}
                   max={form.discountType === "PERCENTAGE" ? 100 : undefined}
                   value={form.discountValue}
-                  onChange={(e) => set("discountValue", e.target.value)}
+                  onChange={(e) => {
+                    const value = e.target.value;
+                    setForm((prev) => ({
+                      ...prev,
+                      discountValue: value,
+                      maxDiscountAmount:
+                        prev.discountType === "FIXED"
+                          ? value
+                          : prev.maxDiscountAmount,
+                    }));
+                  }}
                   placeholder={
                     form.discountType === "PERCENTAGE"
                       ? "e.g. 15"
@@ -762,7 +753,7 @@ export default function PromotionCreate() {
               </FormField>
 
               <FormField
-                label="Max Discount (₫)"
+                label="Max Discount (VND)"
                 required
                 error={errors.maxDiscountAmount}
               >
@@ -772,12 +763,17 @@ export default function PromotionCreate() {
                   value={form.maxDiscountAmount}
                   onChange={(e) => set("maxDiscountAmount", e.target.value)}
                   placeholder="e.g. 50000"
-                  className={`${inputClass} ${errors.maxDiscountAmount ? errorInputClass : ""}`}
+                  readOnly={form.discountType === "FIXED"}
+                  className={`${inputClass} ${errors.maxDiscountAmount ? errorInputClass : ""} ${
+                    form.discountType === "FIXED"
+                      ? "cursor-not-allowed bg-surface-container-low"
+                      : ""
+                  }`}
                 />
               </FormField>
 
               <FormField
-                label="Min Order Value (₫)"
+                label="Min Order Value (VND)"
                 required
                 error={errors.minOrderValue}
               >
@@ -824,12 +820,15 @@ export default function PromotionCreate() {
         </div>
 
         {/* ── Submit ── */}
-        {submitError && (
-          <div className="flex items-center gap-2 rounded-[8px] border border-error/30 bg-error/5 px-4 py-3 text-sm text-error">
-            <AlertCircle className="size-4 shrink-0" />
-            {submitError}
-          </div>
-        )}
+        <Modal
+          isOpen={!!submitError}
+          onClose={() => setSubmitError(null)}
+          variant="danger"
+          title="Unable to Create Promotion"
+          message={submitError ?? ""}
+          confirmText="Got it"
+          onConfirm={() => setSubmitError(null)}
+        />
 
         <div className="flex items-center justify-end gap-3">
           <button

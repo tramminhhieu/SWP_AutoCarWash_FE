@@ -5,9 +5,9 @@ import Modal from "../../../components/ui/Modal";
 import Loading from "../../../components/ui/Loading";
 import { formatCurrency } from "../../../utils";
 import { getApiErrorInfo } from "../../../lib/axiosClient";
-import { getSubscriptionStyle } from "../../../constants/subscriptionStyles";
+import { getSubscriptionStyle, getSubscriptionTypeLabel } from "../../../constants/subscriptionStyles";
 import { getAll, remove } from "../api/subscriptionPlanApi";
-import type { PlanStatusFilter, SubscriptionPlan } from "../types/subscriptionPlan";
+import type { PlanTypeFilter, SubscriptionPlan } from "../types/subscriptionPlan";
 
 // Badge trạng thái (ACTIVE/INACTIVE) - is_deleted trong DB thật, không có style constant
 // riêng nên dùng cùng "ngôn ngữ" pill với subscriptionStyles.ts (tertiary = tích cực).
@@ -16,13 +16,13 @@ const STATUS_BADGE: Record<SubscriptionPlan["status"], string> = {
   INACTIVE: "bg-surface-container-high text-on-surface-variant border-outline-variant/30",
 };
 
-// FE-53-US-01 AC01: filter ALL / ACTIVE / INACTIVE
-const STATUS_FILTERS: PlanStatusFilter[] = ["ALL", "ACTIVE", "INACTIVE"];
+// Filter theo gói (Type): FAMILY / UNLIMIT - khớp query param `type` BE đã hỗ trợ sẵn.
+const TYPE_FILTERS: PlanTypeFilter[] = ["FAMILY", "UNLIMIT"];
 
 export default function SubscriptionPlanList() {
   const navigate = useNavigate();
   const location = useLocation();
-  const [statusFilter, setStatusFilter] = useState<PlanStatusFilter>("ALL");
+  const [typeFilter, setTypeFilter] = useState<PlanTypeFilter>("ALL");
   const [plans, setPlans] = useState<SubscriptionPlan[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -43,10 +43,10 @@ export default function SubscriptionPlanList() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const loadPlans = useCallback((status: PlanStatusFilter) => {
+  const loadPlans = useCallback((type: PlanTypeFilter) => {
     setIsLoading(true);
     setError(null);
-    getAll(status)
+    getAll("ALL", type)
       .then((data) => setPlans(data))
       .catch((err) => {
         const { message } = getApiErrorInfo(err);
@@ -56,8 +56,8 @@ export default function SubscriptionPlanList() {
   }, []);
 
   useEffect(() => {
-    loadPlans(statusFilter);
-  }, [statusFilter, loadPlans]);
+    loadPlans(typeFilter);
+  }, [typeFilter, loadPlans]);
 
   const handleConfirmDelete = async () => {
     if (!planToDelete) return;
@@ -66,7 +66,7 @@ export default function SubscriptionPlanList() {
       const res = await remove(planToDelete.id);
       setPlanToDelete(null);
       setSuccessMessage(res.message ?? "Subscription plan deleted successfully.");
-      loadPlans(statusFilter);
+      loadPlans(typeFilter);
     } catch (err) {
       const { message } = getApiErrorInfo(err);
       setError(message ?? "Failed to delete subscription plan.");
@@ -97,20 +97,31 @@ export default function SubscriptionPlanList() {
         </button>
       </div>
 
-      {/* AC01: filter ALL/ACTIVE/INACTIVE */}
-      <div className="mt-6 flex gap-2">
-        {STATUS_FILTERS.map((f) => (
+      {/* Filter theo gói (Type): ALL/FAMILY/UNLIMIT */}
+      <div className="mt-6 flex flex-wrap items-center gap-2">
+        <button
+          type="button"
+          onClick={() => setTypeFilter("ALL")}
+          className={`rounded-full px-4 py-1.5 text-label-sm font-semibold transition-colors ${
+            typeFilter === "ALL"
+              ? "bg-primary text-on-primary"
+              : "bg-surface-container text-on-surface-variant hover:bg-surface-container-high"
+          }`}
+        >
+          ALL
+        </button>
+        {TYPE_FILTERS.map((f) => (
           <button
             key={f}
             type="button"
-            onClick={() => setStatusFilter(f)}
+            onClick={() => setTypeFilter(f)}
             className={`rounded-full px-4 py-1.5 text-label-sm font-semibold transition-colors ${
-              statusFilter === f
+              typeFilter === f
                 ? "bg-primary text-on-primary"
                 : "bg-surface-container text-on-surface-variant hover:bg-surface-container-high"
             }`}
           >
-            {f}
+            {getSubscriptionTypeLabel(f)}
           </button>
         ))}
       </div>

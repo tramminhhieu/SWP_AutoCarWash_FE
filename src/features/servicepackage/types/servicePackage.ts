@@ -17,6 +17,7 @@ export interface ServicePackage {
 export interface CreateServicePackageRequest {
   name: string;
   basePrice: number;
+  durationMinutes: number;
   description?: string | null;
   addonIds: number[];
 }

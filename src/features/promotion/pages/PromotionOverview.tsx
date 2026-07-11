@@ -231,6 +231,7 @@ export default function PromotionOverview() {
                     state: {
                       stationName: s.stationName,
                       defaultStatus: statusFilter,
+                      from: "/admin/promotions",
                     },
                   })
                 }

@@ -283,7 +283,6 @@ interface FormState {
   maxDiscountAmount: string;
   minOrderValue: string;
   usageLimit: string;
-  reusable: boolean;
   voucherStartDate: string;
   voucherEndDate: string;
   targetCustomerTierIds: number[];
@@ -302,7 +301,6 @@ const initialForm: FormState = {
   maxDiscountAmount: "",
   minOrderValue: "",
   usageLimit: "",
-  reusable: false,
   voucherStartDate: "",
   voucherEndDate: "",
   targetCustomerTierIds: [],
@@ -322,6 +320,8 @@ function validate(form: FormState): Record<string, string> {
     if (!form.campaignEndDate) errors.campaignEndDate = "End date is required.";
     if (form.selectedStations.length === 0)
       errors.stationIds = "Please select at least one branch.";
+    if (form.targetCustomerTierIds.length === 0)
+      errors.targetCustomerTierIds = "Please select at least one tier.";
   }
 
   // Mode 2 & 3: voucher fields bắt buộc
@@ -429,7 +429,7 @@ export default function PromotionCreate() {
       voucherCode:
         form.configMode !== 1 ? form.voucherCode.toUpperCase() : null,
       usageLimit: form.configMode !== 1 ? Number(form.usageLimit) : null,
-      reusable: form.configMode !== 1 ? form.reusable : null,
+      reusable: form.configMode !== 1 ? true : null,
       voucherStartDate: form.configMode === 3 ? form.voucherStartDate : null,
       voucherEndDate: form.configMode === 3 ? form.voucherEndDate : null,
       discountType: form.discountType,
@@ -528,7 +528,7 @@ export default function PromotionCreate() {
                   type="text"
                   value={form.campaignName}
                   onChange={(e) => set("campaignName", e.target.value)}
-                  placeholder="e.g. Summer Promo 2026"
+                  placeholder="Summer Promo 2026"
                   className={`${inputClass} ${errors.campaignName ? errorInputClass : ""}`}
                 />
               </FormField>
@@ -604,7 +604,7 @@ export default function PromotionCreate() {
                     onChange={(e) =>
                       set("voucherCode", e.target.value.toUpperCase())
                     }
-                    placeholder="e.g. SUMMER2026"
+                    placeholder="SUMMER2026"
                     className={`${inputClass} uppercase ${errors.voucherCode ? errorInputClass : ""}`}
                   />
                 </FormField>
@@ -619,7 +619,7 @@ export default function PromotionCreate() {
                     min={1}
                     value={form.usageLimit}
                     onChange={(e) => set("usageLimit", e.target.value)}
-                    placeholder="e.g. 200"
+                    placeholder="200"
                     className={`${inputClass} ${errors.usageLimit ? errorInputClass : ""}`}
                   />
                 </FormField>
@@ -656,26 +656,6 @@ export default function PromotionCreate() {
                   </FormField>
                 </div>
               )}
-
-              {/* Reusable toggle */}
-              <div className="flex items-center gap-3">
-                <button
-                  type="button"
-                  onClick={() => set("reusable", !form.reusable)}
-                  className={`relative h-6 w-11 rounded-full transition-colors ${
-                    form.reusable ? "bg-primary" : "bg-outline-variant"
-                  }`}
-                >
-                  <span
-                    className={`absolute left-0.5 top-0.5 size-5 rounded-full bg-white shadow transition-transform ${
-                      form.reusable ? "translate-x-5" : "translate-x-0"
-                    }`}
-                  />
-                </button>
-                <span className="text-sm font-medium text-on-surface">
-                  Allow reuse per customer
-                </span>
-              </div>
             </div>
           </div>
         )}
@@ -744,9 +724,7 @@ export default function PromotionCreate() {
                     }));
                   }}
                   placeholder={
-                    form.discountType === "PERCENTAGE"
-                      ? "e.g. 15"
-                      : "e.g. 30000"
+                    form.discountType === "PERCENTAGE" ? "15" : "30000"
                   }
                   className={`${inputClass} ${errors.discountValue ? errorInputClass : ""}`}
                 />
@@ -762,7 +740,7 @@ export default function PromotionCreate() {
                   min={0}
                   value={form.maxDiscountAmount}
                   onChange={(e) => set("maxDiscountAmount", e.target.value)}
-                  placeholder="e.g. 50000"
+                  placeholder="50000"
                   readOnly={form.discountType === "FIXED"}
                   className={`${inputClass} ${errors.maxDiscountAmount ? errorInputClass : ""} ${
                     form.discountType === "FIXED"
@@ -782,7 +760,7 @@ export default function PromotionCreate() {
                   min={0}
                   value={form.minOrderValue}
                   onChange={(e) => set("minOrderValue", e.target.value)}
-                  placeholder="e.g. 100000"
+                  placeholder="100000"
                   className={`${inputClass} ${errors.minOrderValue ? errorInputClass : ""}`}
                 />
               </FormField>
@@ -790,36 +768,42 @@ export default function PromotionCreate() {
           </div>
         </div>
 
-        {/* ── Target Customer Tiers (tất cả mode, optional) ── */}
-        <div className="rounded-[16px] border border-outline-variant/30 bg-white p-6 shadow-[0px_10px_25px_-5px_rgba(29,78,216,0.05)]">
-          <h2 className="mb-1 font-heading text-base font-semibold text-on-surface">
-            {mode === 1 ? "3." : mode === 2 ? "5." : "4."} Target Customer Tiers
-            <span className="ml-2 text-xs font-normal text-outline">
-              (Optional — leave empty for all customers)
-            </span>
-          </h2>
-          <div className="mt-4 flex gap-3">
-            {CUSTOMER_TIERS.map((tier) => (
-              <button
-                key={tier.id}
-                type="button"
-                onClick={() => toggleTier(tier.id)}
-                className={`flex items-center gap-2 rounded-[8px] border-2 px-4 py-2 text-sm font-semibold transition-colors ${
-                  form.targetCustomerTierIds.includes(tier.id)
-                    ? "border-primary bg-primary/5 text-primary"
-                    : "border-outline-variant/30 text-on-surface-variant hover:border-primary/30"
-                }`}
-              >
-                {form.targetCustomerTierIds.includes(tier.id) && (
-                  <Plus className="size-3.5 rotate-45" />
-                )}
-                {tier.name}
-              </button>
-            ))}
+        {/* ── Target Customer Tiers (chỉ mode 1 & 2 — mode 3 áp dụng toàn hệ thống) ── */}
+        {(mode === 1 || mode === 2) && (
+          <div className="rounded-[16px] border border-outline-variant/30 bg-white p-6 shadow-[0px_10px_25px_-5px_rgba(29,78,216,0.05)]">
+            <h2 className="mb-1 font-heading text-base font-semibold text-on-surface">
+              {mode === 1 ? "4." : "5."} Target Customer Tiers
+            </h2>
+            <div className="mt-4 flex gap-3">
+              {CUSTOMER_TIERS.map((tier) => (
+                <button
+                  key={tier.id}
+                  type="button"
+                  onClick={() => toggleTier(tier.id)}
+                  className={`flex items-center gap-2 rounded-[8px] border-2 px-4 py-2 text-sm font-semibold transition-colors ${
+                    form.targetCustomerTierIds.includes(tier.id)
+                      ? "border-primary bg-primary/5 text-primary"
+                      : "border-outline-variant/30 text-on-surface-variant hover:border-primary/30"
+                  }`}
+                >
+                  {form.targetCustomerTierIds.includes(tier.id) && (
+                    <Plus className="size-3.5 rotate-45" />
+                  )}
+                  {tier.name}
+                </button>
+              ))}
+            </div>
+            {errors.targetCustomerTierIds && (
+              <span className="mt-2 flex items-center gap-1 text-xs text-error">
+                <AlertCircle className="size-3" />
+                {errors.targetCustomerTierIds}
+              </span>
+            )}
           </div>
-        </div>
+        )}
 
         {/* ── Submit ── */}
+
         <Modal
           isOpen={!!submitError}
           onClose={() => setSubmitError(null)}

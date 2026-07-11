@@ -14,6 +14,9 @@ import {
   getAdminCustomerDetail,
   getAdminCustomers,
 } from "../api/adminCustomerApi";
+import BranchFilterDropdown, {
+  type BranchFilterSelection,
+} from "../../station/components/BranchFilterDropdown";
 import type {
   AdminCustomerDetail,
   AdminCustomerRow,
@@ -116,6 +119,10 @@ export default function AdminCustomers() {
   const [month, setMonth] = useState("");
   const [tier, setTier] = useState("");
   const [active, setActive] = useState("");
+
+  // Filter theo chi nhánh - chọn dừng ở cấp Province/Commune/Station nào thì
+  // lọc khách hàng theo phạm vi cấp đó (không chọn gì = tất cả).
+  const [branchFilter, setBranchFilter] = useState<BranchFilterSelection>(null);
 
   // Modal chi tiết khách hàng - mở khi click 1 row.
   const [viewingCustomerId, setViewingCustomerId] = useState<number | null>(
@@ -223,6 +230,9 @@ export default function AdminCustomers() {
       month: month ? Number(month) : undefined,
       tier: tier || undefined,
       active: active === "" ? undefined : active === "true",
+      provinceId: branchFilter?.level === "province" ? branchFilter.id : undefined,
+      communeId: branchFilter?.level === "commune" ? branchFilter.id : undefined,
+      stationId: branchFilter?.level === "station" ? branchFilter.id : undefined,
     })
       .then((res) => {
         if (!isMounted) return;
@@ -242,7 +252,7 @@ export default function AdminCustomers() {
     return () => {
       isMounted = false;
     };
-  }, [page, appliedKeyword, year, month, tier, active, refreshKey]);
+  }, [page, appliedKeyword, year, month, tier, active, branchFilter, refreshKey]);
 
   // Fetch chi tiết khách hàng khi mở modal.
   useEffect(() => {
@@ -361,6 +371,9 @@ export default function AdminCustomers() {
             </option>
           ))}
         </select>
+        <BranchFilterDropdown
+          onChange={(sel) => handleFilterChange(() => setBranchFilter(sel))}
+        />
       </div>
 
       {/* ─── Table ────────────────────────────────────────────────── */}

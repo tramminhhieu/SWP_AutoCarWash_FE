@@ -9,7 +9,9 @@ import {
   Wallet,
 } from "lucide-react";
 import { getAdminTransactions } from "../api/adminTransactionApi";
-import { MOCK_STATIONS } from "../api/mockStations";
+import BranchFilterDropdown, {
+  type BranchFilterSelection,
+} from "../../station/components/BranchFilterDropdown";
 import type {
   AdminPaymentRow,
   AdminPaymentMethod,
@@ -109,7 +111,7 @@ export default function AdminTransactionHistory() {
   const [status, setStatus] = useState<AdminPaymentStatus | "">("");
   // Chỉ dùng ở tab Single Wash
   const [typeFilter, setTypeFilter] = useState<SingleWashTypeFilter>("");
-  const [stationId, setStationId] = useState<number | "">("");
+  const [branchFilter, setBranchFilter] = useState<BranchFilterSelection>(null);
 
   const [page, setPage] = useState(1);
   const [viewingRow, setViewingRow] = useState<AdminPaymentRow | null>(null);
@@ -160,6 +162,13 @@ export default function AdminTransactionHistory() {
           : undefined,
     };
 
+    const branchFilters = {
+      stationId: branchFilter?.level === "station" ? branchFilter.id : undefined,
+      communeId: branchFilter?.level === "commune" ? branchFilter.id : undefined,
+      provinceId:
+        branchFilter?.level === "province" ? branchFilter.id : undefined,
+    };
+
     const request =
       activeTab === "subscription"
         ? getAdminTransactions({ ...commonFilters, type: "SUBSCRIPTION" }).then(
@@ -169,7 +178,7 @@ export default function AdminTransactionHistory() {
           ? getAdminTransactions({
               ...commonFilters,
               type: typeFilter,
-              stationId: stationId || undefined,
+              ...branchFilters,
             }).then((res) => [res])
           : // "All types" ở tab Single Wash: BE type filter chỉ nhận 1 giá trị,
             // nên gọi riêng DEPOSIT và FULL_PAYMENT rồi gộp lại - không để lẫn
@@ -178,12 +187,12 @@ export default function AdminTransactionHistory() {
               getAdminTransactions({
                 ...commonFilters,
                 type: "DEPOSIT",
-                stationId: stationId || undefined,
+                ...branchFilters,
               }),
               getAdminTransactions({
                 ...commonFilters,
                 type: "FULL_PAYMENT",
-                stationId: stationId || undefined,
+                ...branchFilters,
               }),
             ]);
 
@@ -219,7 +228,7 @@ export default function AdminTransactionHistory() {
     fromDate,
     toDate,
     typeFilter,
-    stationId,
+    branchFilter,
     appliedSearch,
   ]);
 
@@ -236,7 +245,7 @@ export default function AdminTransactionHistory() {
   function handleTabChange(tab: Tab) {
     setActiveTab(tab);
     setTypeFilter("");
-    setStationId("");
+    setBranchFilter(null);
     setPage(1);
     setIsLoading(true);
     setError(null);
@@ -398,22 +407,11 @@ export default function AdminTransactionHistory() {
                 </option>
               ))}
             </select>
-            <select
-              value={stationId}
-              onChange={(e) =>
-                handleFilterChange(() =>
-                  setStationId(e.target.value ? Number(e.target.value) : ""),
-                )
+            <BranchFilterDropdown
+              onChange={(sel) =>
+                handleFilterChange(() => setBranchFilter(sel))
               }
-              className="rounded-lg border border-outline-variant bg-white px-3 py-2 text-sm font-medium text-on-surface"
-            >
-              <option value="">All branches</option>
-              {MOCK_STATIONS.map((s) => (
-                <option key={s.id} value={s.id}>
-                  {s.name}
-                </option>
-              ))}
-            </select>
+            />
           </>
         )}
       </div>
@@ -440,14 +438,17 @@ export default function AdminTransactionHistory() {
                   <th className="px-6 py-4 text-left text-sm font-medium uppercase tracking-wider text-on-surface-variant">
                     Transaction ID
                   </th>
-                  <th className="px-6 py-4 text-left text-sm font-medium uppercase tracking-wider text-on-surface-variant">
-                    Phone
-                  </th>
                   {activeTab === "singleWash" && (
                     <th className="px-6 py-4 text-left text-sm font-medium uppercase tracking-wider text-on-surface-variant">
                       Booking ID
                     </th>
                   )}
+                  <th className="px-6 py-4 text-left text-sm font-medium uppercase tracking-wider text-on-surface-variant">
+                    Customer Name
+                  </th>
+                  <th className="px-6 py-4 text-left text-sm font-medium uppercase tracking-wider text-on-surface-variant">
+                    Phone
+                  </th>
                   <th className="px-6 py-4 text-left text-sm font-medium uppercase tracking-wider text-on-surface-variant">
                     Method
                   </th>
@@ -474,14 +475,17 @@ export default function AdminTransactionHistory() {
                     <td className="px-6 py-6 text-base font-medium text-on-surface">
                       #{row.id}
                     </td>
-                    <td className="px-6 py-6 text-base text-on-surface">
-                      {row.customerPhone ?? "—"}
-                    </td>
                     {activeTab === "singleWash" && (
                       <td className="px-6 py-6 text-base text-on-surface">
                         {row.bookingId != null ? `#${row.bookingId}` : "—"}
                       </td>
                     )}
+                    <td className="px-6 py-6 text-base text-on-surface">
+                      {row.customerName ?? "—"}
+                    </td>
+                    <td className="px-6 py-6 text-base text-on-surface">
+                      {row.customerPhone ?? "—"}
+                    </td>
                     <td className="px-6 py-6 text-base text-on-surface">
                       {row.paymentMethod}
                     </td>
@@ -555,6 +559,12 @@ export default function AdminTransactionHistory() {
             <p className="text-headline-md font-semibold text-on-surface">
               Transaction #{viewingRow.id}
             </p>
+            <div className="flex justify-between">
+              <span className="text-on-surface-variant">Customer Name</span>
+              <span className="font-semibold text-on-surface">
+                {viewingRow.customerName ?? "—"}
+              </span>
+            </div>
             <div className="flex justify-between">
               <span className="text-on-surface-variant">Phone</span>
               <span className="font-semibold text-on-surface">

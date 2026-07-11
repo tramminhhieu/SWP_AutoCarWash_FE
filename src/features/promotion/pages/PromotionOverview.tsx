@@ -1,9 +1,10 @@
 import { useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 import { Tag, Plus, Building2, TrendingUp } from "lucide-react";
 import { getBranchPromotionSummary } from "../api/promotionApi";
 import type { BranchPromotionSummary } from "../types/promotion";
 import type { PromotionStatus } from "../types/enums";
+import Modal from "../../../components/ui/Modal";
 
 // ─── Constants ───────────────────────────────────────────────────────────────
 
@@ -60,11 +61,24 @@ function StationCardSkeleton() {
 
 export default function PromotionOverview() {
   const navigate = useNavigate();
+  const location = useLocation();
 
   const [statusFilter, setStatusFilter] = useState<PromotionStatus>("ACTIVE");
   const [summary, setSummary] = useState<BranchPromotionSummary[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+
+  const [toast, setToast] = useState<string | null>(
+    () =>
+      (location.state as { successMessage?: string })?.successMessage ?? null,
+  );
+
+  useEffect(() => {
+    if (!toast) return;
+    window.history.replaceState({}, "");
+    const timer = setTimeout(() => setToast(null), 1000);
+    return () => clearTimeout(timer);
+  }, [toast]);
 
   useEffect(() => {
     let isMounted = true;
@@ -106,7 +120,16 @@ export default function PromotionOverview() {
 
   return (
     <div className="mx-auto flex max-w-[1440px] flex-col gap-8 px-12 py-8">
+      <Modal
+        isOpen={!!toast}
+        onClose={() => setToast(null)}
+        variant="success"
+        title="Success"
+        message={toast}
+      />
+
       {/* ── Header ── */}
+
       <div className="flex items-end justify-between">
         <div className="flex flex-col gap-2">
           <h1 className="font-heading text-headline-xl font-bold tracking-[-1.2px] text-on-surface">

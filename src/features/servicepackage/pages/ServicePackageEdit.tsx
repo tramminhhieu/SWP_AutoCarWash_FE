@@ -32,6 +32,7 @@ export default function ServicePackageEdit() {
       const result = await updateServicePackage(id, {
         name: data.name,
         basePrice: data.basePrice,
+        durationMinutes: data.durationMinutes,
         description: data.description,
         addonIds: data.addonIds,
       });
@@ -64,6 +65,7 @@ export default function ServicePackageEdit() {
           initialData={{
             name: pkg.name,
             basePrice: pkg.basePrice,
+            durationMinutes: pkg.durationMinutes,
             description: pkg.description,
             addonIds: pkg.addonIds,
           }}

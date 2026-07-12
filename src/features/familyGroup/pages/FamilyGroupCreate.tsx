@@ -8,6 +8,7 @@ import type { RegisterVehicleOption } from "../../subscription/types/subscriptio
 import { createFamilyGroup } from "../api/familyGroupApi";
 import { FAMILY_GROUP_ERROR_CODES } from "../types/familyGroup";
 import type { FamilyGroupFieldError } from "../types/familyGroup";
+import { getFamilyGroupErrorMessage } from "../utils/familyGroupErrorMessages";
 
 const labelClass = "mb-1.5 block text-label-md text-on-surface-variant";
 const errorTextClass = "mt-1.5 text-label-sm text-error";
@@ -17,23 +18,6 @@ const inputClass = (hasError: boolean) =>
   }`;
 
 const GROUP_NAME_MAX_LENGTH = 100;
-
-// UI luôn tiếng Anh (kể cả khi BE trả message tiếng Việt) - dùng message riêng theo errorCode
-// giống pattern applyServerFieldErrors ở Register.tsx, chỉ fallback về message thô của BE khi
-// gặp errorCode lạ chưa map.
-const FAMILY_GROUP_ERROR_MESSAGES: Record<string, string> = {
-  [FAMILY_GROUP_ERROR_CODES.GROUP_NAME_CANNOT_BE_EMPTY]: "Group name is required.",
-  [FAMILY_GROUP_ERROR_CODES.GROUP_NAME_TOO_LONG]: `Group name must be ${GROUP_NAME_MAX_LENGTH} characters or fewer.`,
-  [FAMILY_GROUP_ERROR_CODES.VEHICLE_REQUIRED]:
-    "Please select a vehicle to activate group ownership.",
-  [FAMILY_GROUP_ERROR_CODES.VEHICLE_ALREADY_IN_ANOTHER_GROUP]:
-    "This vehicle is already registered under another family group.",
-  [FAMILY_GROUP_ERROR_CODES.VEHICLE_INVALID]: "This vehicle is not available for selection.",
-  [FAMILY_GROUP_ERROR_CODES.CUSTOMER_ALREADY_HAS_FAMILY_GROUP]:
-    "You already own or belong to another family group. You cannot create a new one.",
-  [FAMILY_GROUP_ERROR_CODES.CUSTOMER_NOT_FOUND]:
-    "Unable to verify your account. Please sign in again.",
-};
 
 // API-17-01: AC01/AC02/AC05 - form tạo Family Group, chọn 1 xe của chính mình để kích hoạt
 // tư cách chủ nhóm. Sau khi tạo thành công, redirect sang /family (AC08).
@@ -115,7 +99,7 @@ export default function FamilyGroupCreate() {
       if (fieldErrors?.length) {
         const bannerMessages: string[] = [];
         fieldErrors.forEach(({ field, errorCode, message }) => {
-          const text = FAMILY_GROUP_ERROR_MESSAGES[errorCode] ?? message;
+          const text = getFamilyGroupErrorMessage(errorCode, message);
           if (field === "groupName") setGroupNameError(text);
           else if (field === "vehicleId") setVehicleError(text);
           else bannerMessages.push(text);
@@ -123,10 +107,7 @@ export default function FamilyGroupCreate() {
         if (bannerMessages.length) setFormError(bannerMessages.join(" "));
       } else {
         const { errorCode, message } = getApiErrorInfo(err);
-        const text =
-          (errorCode && FAMILY_GROUP_ERROR_MESSAGES[errorCode]) ??
-          message ??
-          "Unable to create family group. Please try again.";
+        const text = getFamilyGroupErrorMessage(errorCode, message);
         switch (errorCode) {
           case FAMILY_GROUP_ERROR_CODES.GROUP_NAME_CANNOT_BE_EMPTY:
           case FAMILY_GROUP_ERROR_CODES.GROUP_NAME_TOO_LONG:

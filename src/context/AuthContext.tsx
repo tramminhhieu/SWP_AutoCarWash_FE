@@ -10,6 +10,7 @@ import {
   setStationId,
 } from "../utils/storage";
 import type { AuthUser, JwtPayload } from "../features/auth/types/auth";
+import type { RoleType } from "../features/auth/types/enums";
 import { AuthContext } from "./AuthContextObject";
 
 // Decode JWT token thành AuthUser, trả về null nếu token không hợp lệ/hết hạn
@@ -22,11 +23,19 @@ const decodeUserFromToken = (token: string): AuthUser | null => {
       return null;
     }
 
+    // BE gần đây đổi JWT "roles" claim sang có tiền tố "ROLE_" (vd "ROLE_CUSTOMER") để khớp
+    // với Spring Security hasRole() - chuẩn hoá về dạng không tiền tố ở đây vì RoleType và
+    // mọi so sánh role trong FE (RoleRoute, v.v.) đều dùng dạng "CUSTOMER"/"STAFF"/"ADMIN".
+    const rawRole = payload.roles ?? "CUSTOMER";
+    const role = (
+      rawRole.startsWith("ROLE_") ? rawRole.slice(5) : rawRole
+    ) as RoleType;
+
     return {
       userId: Number(payload.sub),
       email: payload.email,
       name: payload.name,
-      role: payload.roles ?? "CUSTOMER",
+      role,
     };
   } catch {
     return null;

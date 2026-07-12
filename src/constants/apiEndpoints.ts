@@ -102,6 +102,16 @@ export const API = {
     LIST_BY_STATION: (stationId: number | string) =>
       `/api/admin/stations/${stationId}/lanes`,
   },
+  REFUNDS: {
+    // POST — tạo yêu cầu hoàn tiền khi customer hủy booking (US-04 AC3)
+    CREATE: "/api/refunds",
+    // GET — danh sách ngân hàng (BankEnum) { bin, name, code }[]
+    BANKS: "/api/refunds/banks",
+    // GET — tra cứu tên chủ tài khoản qua VietQR (proxy BE) ?bin=&accountNumber= (AC2.1)
+    ACCOUNT_LOOKUP: "/api/refunds/account-lookup",
+    // GET — số tiền cọc cố định toàn hệ thống để hiển thị read-only { amount }
+    DEPOSIT_AMOUNT: "/api/refunds/deposit-amount",
+  },
   PROMOTION: {
     // API-02-01: Tổng hợp số lượng promotion theo từng chi nhánh
     BRANCHES_SUMMARY: "/api/admin/promotions/branches-summary",

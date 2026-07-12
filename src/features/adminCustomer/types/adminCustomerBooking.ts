@@ -30,6 +30,8 @@ export interface AdminBookingHistoryFilters {
   serviceCategoryId?: number;
   status?: BookingStatus;
   stationId?: number;
+  communeId?: number;
+  provinceId?: number;
   year?: number;
   month?: number;
 }

@@ -34,6 +34,20 @@ const FAMILY_GROUP_ERROR_MESSAGES: Record<string, string> = {
     "Unable to verify your account. Please sign in again.",
   // BE dùng chung "VEHICLE_002" cho cả VEHICLE_NOT_FOUND lẫn VEHICLE_NOT_BELONG_TO_CUSTOMER.
   [FAMILY_GROUP_ERROR_CODES.VEHICLE_INVALID]: "This vehicle is not available for selection.",
+  // API-17-02 (Remove Member) / API-17-03 (Dissolve Group) - UNAUTHORIZED_ACTION dùng chung
+  // cho cả 2 luồng (không phải owner, hoặc chưa có group nào để thao tác) nên message để
+  // chung chung, không chỉ nói riêng về "remove members".
+  [FAMILY_GROUP_ERROR_CODES.UNAUTHORIZED_ACTION]:
+    "You don't have permission to do this, or you don't currently own a family group.",
+  [FAMILY_GROUP_ERROR_CODES.MEMBER_NOT_FOUND]:
+    "This member no longer exists in the group.",
+  [FAMILY_GROUP_ERROR_CODES.VEHICLE_HAS_ACTIVE_BOOKING]:
+    "This member's vehicle has an unfinished booking and can't be removed right now.",
+  [FAMILY_GROUP_ERROR_CODES.INVALID_ACTION]:
+    "You can't remove yourself as the owner this way. Dissolve the group instead.",
+  // API-17-03 (Dissolve Group)
+  [FAMILY_GROUP_ERROR_CODES.GROUP_HAS_ACTIVE_BOOKINGS]:
+    "This group has members with unfinished bookings. You can't dissolve the group until those bookings are completed or canceled.",
 };
 
 export function getFamilyGroupErrorMessage(

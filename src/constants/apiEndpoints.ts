@@ -103,6 +103,11 @@ export const API = {
     SEARCH_MEMBER: "/api/family-groups/search-member",
     // POST - chủ nhóm xác nhận thêm thành viên đã tra cứu được vào nhóm (AC09)
     ADD_MEMBER: "/api/family-groups/add-member",
+    // DELETE - owner xóa cứng 1 thành viên khỏi nhóm (Remove Member AC04)
+    REMOVE_MEMBER: (memberCustomerId: number | string) =>
+      `/api/family-groups/members/${memberCustomerId}`,
+    // DELETE - owner giải tán cả nhóm (API-17-03 AC04, hard delete)
+    DISSOLVE: "/api/family-groups/dissolve",
   },
   CUSTOMERS: {
     // GET admin customer list + KPI summary (?page=&size=&keyword=) - FE-US-09

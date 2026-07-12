@@ -41,7 +41,10 @@ export interface FamilyGroupDetails {
   familyGroupId: number;
   groupName: string;
   createdAt: string; // ISO datetime
-  isOwner: boolean;
+  // BE field Java là "isOwner" (boolean) nhưng Jackson serialize theo JavaBean convention tự
+  // cắt tiền tố "is" khỏi boolean getter -> JSON key thật là "owner", không phải "isOwner".
+  // Đã verify trực tiếp qua response thật từ BE (không phải suy đoán từ tài liệu API).
+  owner: boolean;
   subscription: GroupSubscriptionDto | null;
   members: GroupMemberDto[];
 }
@@ -80,6 +83,22 @@ export interface AddFamilyMemberRequest {
   vehicleId: number;
 }
 
+// API-17-02 (Remove Member): DELETE /api/family-groups/members/{memberCustomerId}
+export interface RemoveMemberResponse {
+  familyGroupId: number;
+  removedCustomerId: number;
+  newUsageSummary: string; // vd "2/5"
+}
+
+// API-17-03: DELETE /api/family-groups/dissolve - owner xóa cứng cả nhóm (family_member hard
+// delete, family_group soft delete, hủy subscription liên kết). Luôn có data, không có case null.
+export interface DissolveGroupResponse {
+  familyGroupId: number;
+  ownerCustomerId: number;
+  totalMembersKicked: number;
+  subscriptionStatus: string;
+}
+
 // Mirror pattern SUBSCRIPTION_ERROR_CODES (src/features/subscription/types/subscription.ts)
 export const FAMILY_GROUP_ERROR_CODES = {
   GROUP_NAME_CANNOT_BE_EMPTY: "FAMILY_SB__001",
@@ -102,4 +121,16 @@ export const FAMILY_GROUP_ERROR_CODES = {
   // BE dùng chung "VEHICLE_002" cho cả VEHICLE_NOT_FOUND lẫn VEHICLE_NOT_BELONG_TO_CUSTOMER -
   // với form này cả 2 đều là "xe không hợp lệ", gộp chung 1 xử lý.
   VEHICLE_INVALID: "VEHICLE_002",
+  // API-17-02 (Remove Member) - đã verify trực tiếp trong ErrorCode.java, khác với tài liệu
+  // API gửi (tài liệu ghi "VEHICLE_HAS_ACTIVE_BOOKING" nhưng code thật trả "VEHICLE_005").
+  UNAUTHORIZED_ACTION: "UNAUTHORIZED_ACTION",
+  MEMBER_NOT_FOUND: "MEMBER_NOT_FOUND",
+  VEHICLE_HAS_ACTIVE_BOOKING: "VEHICLE_005",
+  // Owner tự xóa chính mình qua API remove-member (phải dùng luồng dissolve group riêng).
+  INVALID_ACTION: "INVALID_ACTION",
+  // API-17-03 (Dissolve Group) - đã verify trực tiếp trong ErrorCode.java. Lưu ý: tài liệu API
+  // ghi có case riêng FAMILY_GROUP_NOT_FOUND (444) khi owner chưa từng tạo group, nhưng code
+  // thật dùng CHUNG UNAUTHORIZED_ACTION cho cả "không phải owner" lẫn "chưa có group" - không có
+  // path FAMILY_GROUP_NOT_FOUND riêng trong dissolveFamilyGroup().
+  GROUP_HAS_ACTIVE_BOOKINGS: "GROUP_HAS_ACTIVE_BOOKINGS",
 } as const;

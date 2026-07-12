@@ -287,9 +287,13 @@ export default function MySubscriptions() {
         title="Cancel Subscription"
         message={
           <>
-            Are you sure you want to cancel{" "}
-            <span className="font-semibold">{subToCancel?.planName}</span> for{" "}
-            <span className="font-semibold">{subToCancel?.vehicle.licensePlate}</span>?
+            You have{" "}
+            <span className="font-semibold">
+              {subToCancel ? daysUntil(subToCancel.endDate) : 0} day(s)
+            </span>{" "}
+            left on <span className="font-semibold">{subToCancel?.planName}</span> for{" "}
+            <span className="font-semibold">{subToCancel?.vehicle.licensePlate}</span>. Canceling
+            now forfeits all remaining benefits immediately — no refund.
           </>
         }
         confirmText="Cancel Subscription"

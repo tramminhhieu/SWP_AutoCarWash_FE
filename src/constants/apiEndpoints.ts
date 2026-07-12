@@ -91,12 +91,18 @@ export const API = {
     // GET the customer's currently active subscription (204 if none)
     ACTIVE: "/api/subscriptions/active",
   },
-  // API-17-01: base path /api/family-groups (KHÔNG nằm dưới /api/customer/...)
+  // API-17-01/02: base path /api/family-groups (KHÔNG nằm dưới /api/customer/..., và
+  // KHÔNG có tiền tố /v1/ dù tài liệu API-17-02 có ghi nhầm /api/v1/... - khớp đúng
+  // @RequestMapping("/api/family-groups") trong FamilyGroupController.java)
   FAMILY_GROUP: {
     // POST - tạo group mới, tự động thêm chủ nhóm làm thành viên đầu tiên
     CREATE: "/api/family-groups/create",
     // GET - xem group của chính mình (role CUSTOMER), data null nếu chưa có group
     MY_GROUP: "/api/family-groups/my-group",
+    // GET ?identifier= - tra cứu customer để mời bằng SĐT/email chính xác (AC01/AC02)
+    SEARCH_MEMBER: "/api/family-groups/search-member",
+    // POST - chủ nhóm xác nhận thêm thành viên đã tra cứu được vào nhóm (AC09)
+    ADD_MEMBER: "/api/family-groups/add-member",
   },
   CUSTOMERS: {
     // GET admin customer list + KPI summary (?page=&size=&keyword=) - FE-US-09

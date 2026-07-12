@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { Car, Crown } from "lucide-react";
 import Loading from "../../../components/ui/Loading";
@@ -6,10 +6,10 @@ import Modal from "../../../components/ui/Modal";
 import { formatDate, formatDateTime } from "../../../utils";
 import { getMyFamilyGroup } from "../api/familyGroupApi";
 import type { FamilyGroupDetails } from "../types/familyGroup";
+import AddMemberModal from "../components/AddMemberModal";
 
-// AC08: điểm đến sau khi tạo Family Group thành công - hiện danh sách thành viên (lúc này
-// chỉ có Owner) + 2 nút "Buy Family Plan"/"Invite Member". 2 nút này CHƯA nối logic - phần
-// mua gói Family và mời/xóa/sửa thành viên là task riêng, chưa làm ở đây.
+// AC08: điểm đến sau khi tạo Family Group thành công - hiện danh sách thành viên + nút "Buy
+// Family Plan" (task khác, chưa nối logic) và "Invite Member" (API-17-02, chỉ owner thấy được).
 export default function FamilyGroupDetail() {
   const navigate = useNavigate();
   const location = useLocation();
@@ -21,6 +21,7 @@ export default function FamilyGroupDetail() {
     () =>
       (location.state as { successMessage?: string } | null)?.successMessage ?? null,
   );
+  const [isAddMemberOpen, setIsAddMemberOpen] = useState(false);
 
   useEffect(() => {
     if (!toast) return;
@@ -29,12 +30,25 @@ export default function FamilyGroupDetail() {
     return () => clearTimeout(timer);
   }, [toast]);
 
-  useEffect(() => {
+  const load = useCallback(() => {
+    setIsLoading(true);
+    setError(null);
     getMyFamilyGroup()
       .then(setGroup)
       .catch(() => setError("Unable to load your family group. Please try again."))
       .finally(() => setIsLoading(false));
   }, []);
+
+  useEffect(() => {
+    load();
+  }, [load]);
+
+  // AC09: thêm thành công -> đóng modal, toast, tự refresh lại danh sách thành viên.
+  const handleMemberAdded = (memberName: string) => {
+    setIsAddMemberOpen(false);
+    setToast(`Added ${memberName} to the group successfully!`);
+    load();
+  };
 
   return (
     <div className="max-w-page mx-auto px-margin-mobile py-12 md:px-margin-desktop">
@@ -102,8 +116,8 @@ export default function FamilyGroupDetail() {
                 </div>
               )}
 
-              {/* Mua gói Family / Mời thành viên - task riêng, chưa nối logic ở đây */}
               <div className="mt-5 flex flex-wrap gap-3 border-t border-outline-variant pt-4">
+                {/* Mua gói Family - task khác, chưa nối logic */}
                 <button
                   type="button"
                   disabled
@@ -111,13 +125,16 @@ export default function FamilyGroupDetail() {
                 >
                   Buy Family Plan
                 </button>
-                <button
-                  type="button"
-                  disabled
-                  className="cursor-not-allowed rounded-lg border border-outline-variant px-4 py-2 text-label-md font-semibold text-on-surface-variant opacity-50"
-                >
-                  Invite Member
-                </button>
+                {/* API-17-02 AC01: chỉ owner mới thêm được thành viên */}
+                {group.isOwner && (
+                  <button
+                    type="button"
+                    onClick={() => setIsAddMemberOpen(true)}
+                    className="rounded-lg border border-outline-variant px-4 py-2 text-label-md font-semibold text-on-surface hover:border-primary/40 hover:text-primary"
+                  >
+                    Invite Member
+                  </button>
+                )}
               </div>
             </div>
 
@@ -162,6 +179,14 @@ export default function FamilyGroupDetail() {
           </>
         )}
       </div>
+
+      {isAddMemberOpen && group && (
+        <AddMemberModal
+          familyGroupId={group.familyGroupId}
+          onClose={() => setIsAddMemberOpen(false)}
+          onAdded={handleMemberAdded}
+        />
+      )}
     </div>
   );
 }

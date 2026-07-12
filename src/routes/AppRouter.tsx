@@ -37,6 +37,7 @@ import PromotionEdit from "../features/promotion/pages/PromotionEdit";
 import AdminTransactionHistory from "../features/adminTransaction/pages/AdminTransactionHistory";
 import AdminCustomers from "../features/adminCustomer/pages/AdminCustomers";
 import AdminCustomerBookingHistory from "../features/adminCustomer/pages/AdminCustomerBookingHistory";
+import RefundManagement from "../features/refund/pages/RefundManagement";
 
 export default function AppRouter() {
   return (
@@ -146,6 +147,7 @@ export default function AppRouter() {
               path="/admin/customers/:customerId/bookings"
               element={<AdminCustomerBookingHistory />}
             />
+            <Route path="/admin/refunds" element={<RefundManagement />} />
           </Route>
         </Route>
       </Route>

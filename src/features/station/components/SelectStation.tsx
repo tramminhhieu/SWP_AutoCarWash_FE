@@ -1,8 +1,11 @@
-import AddressSelector from "../components/AddressSelector";
+import { useNavigate } from "react-router-dom";
+import AddressSelector from "./AddressSelector";
 
 // Trang "Find a Service Center" - bước 1 trong flow đặt lịch (chọn station).
 // Toàn bộ logic cascading Province -> Commune -> Station nằm trong AddressSelector.
 const SelectStation = () => {
+  const navigate = useNavigate();
+
   return (
     <main className="bg-background">
       <div className="mx-auto max-w-container-max px-4 md:px-12">
@@ -40,7 +43,11 @@ const SelectStation = () => {
         </div>
 
         <div className="pb-16">
-          <AddressSelector />
+          <AddressSelector
+            onStationSelect={(station) =>
+              navigate(`/booking/details?stationId=${station.id}`)
+            }
+          />
         </div>
       </div>
     </main>

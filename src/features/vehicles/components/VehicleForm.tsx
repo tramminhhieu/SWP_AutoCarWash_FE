@@ -226,7 +226,7 @@ const VehicleForm = ({
           type="button"
           onClick={onCancel}
           disabled={isSubmitting}
-          className="text-body-md font-semibold text-on-surface-variant transition-colors hover:text-on-surface disabled:opacity-50"
+          className="rounded-lg border border-outline-variant px-5 py-2.5 text-sm font-semibold text-on-surface transition-colors hover:bg-surface-ice disabled:opacity-50"
         >
           Cancel
         </button>

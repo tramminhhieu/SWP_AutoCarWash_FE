@@ -3,7 +3,7 @@ import CustomerLayout from "../layouts/CustomerLayout";
 import Home from "../features/customer/pages/Home";
 import Login from "../features/auth/pages/Login";
 import Register from "../features/auth/pages/Register";
-import SelectStation from "../features/booking/pages/SelectStation";
+import SelectStation from "../features/station/components/SelectStation";
 import BookingCreate from "../features/booking/pages/BookingCreate";
 import BookingPayment from "../features/booking/pages/BookingPayment";
 import TransactionHistory from "../features/transaction/pages/TransactionHistory";
@@ -14,7 +14,6 @@ import VehicleEdit from "../features/vehicles/pages/VehicleEdit";
 import CustomerProfile from "../features/customer/pages/Profile";
 import PrivateRoute from "./PrivateRoute";
 import RoleRoute from "./RoleRoute";
-import ServicePackageList from "../features/servicepackage/pages/ServicePackageList";
 // ported from feature/FE-queue-management (working-tree only, chưa merge vào dev)
 import StaffLayout from "../layouts/StaffLayout";
 import QueuePage from "../features/queue/pages/QueuePage";
@@ -22,20 +21,30 @@ import WalkInPage from "../features/queue/pages/WalkInPage";
 import PaymentPage from "../features/payment/pages/PaymentPage";
 import ChangePassword from "../features/customer/pages/ChangePassword";
 import LoyaltyRewards from "../features/customer/pages/LoyaltyRewards";
-// FE-53: Admin - Subscription Plan management
+//Admin
 import AdminLayout from "../layouts/AdminLayout";
 import SubscriptionPlanList from "../features/subscriptionplan/pages/SubscriptionPlanList";
 import SubscriptionPlanTypeSelect from "../features/subscriptionplan/pages/SubscriptionPlanTypeSelect";
 import SubscriptionPlanCreate from "../features/subscriptionplan/pages/SubscriptionPlanCreate";
 import SubscriptionPlanEdit from "../features/subscriptionplan/pages/SubscriptionPlanEdit";
-// Add-on service (chưa có AC/API chính thức - xem comment trong addonservice/)
-import AddonServiceCreate from "../features/addonservice/pages/AddonServiceCreate";
 // FE-60/56/58: Customer - browse/register/manage Subscription (khác admin CRUD ở trên).
 // FE-59 (transfer vehicle) đã có sẵn trong CustomerProfile, không có route riêng.
 import CustomerSubscriptionPlanList from "../features/subscription/pages/SubscriptionPlanList";
 import SubscriptionRegister from "../features/subscription/pages/SubscriptionRegister";
 import SubscriptionPayment from "../features/subscription/pages/SubscriptionPayment";
 import MySubscriptions from "../features/subscription/pages/MySubscriptions";
+// Add-on + Service Package (từ origin/dev) - thay thế addonservice/ cũ (mock)
+import AddonList from "../features/addon/pages/AddonList";
+import AddonCreate from "../features/addon/pages/AddonCreate";
+import AddonEdit from "../features/addon/pages/AddonEdit";
+import ServicePackageList from "../features/servicepackage/pages/ServicePackageList";
+import ServicePackageCreate from "../features/servicepackage/pages/ServicePackageCreate";
+import ServicePackageEdit from "../features/servicepackage/pages/ServicePackageEdit";
+import WashLaneManagement from "../features/washlanes/pages/WashLaneManagement";
+import PromotionOverview from "../features/promotion/pages/PromotionOverview";
+import PromotionDetail from "../features/promotion/pages/PromotionDetail";
+import PromotionCreate from "../features/promotion/pages/PromotionCreate";
+import PromotionEdit from "../features/promotion/pages/PromotionEdit";
 // Admin - Transaction History + Customer management (từ origin/dev)
 import AdminTransactionHistory from "../features/adminTransaction/pages/AdminTransactionHistory";
 import AdminCustomers from "../features/adminCustomer/pages/AdminCustomers";
@@ -48,9 +57,10 @@ export default function AppRouter() {
         <Route path="/" element={<Home />} />
         <Route path="/login" element={<Login />} />
         <Route path="/register" element={<Register />} />
-        <Route path="/servicePackages" element={<ServicePackageList />} />
-        {/* FE-60-US-01: public, giống pattern /servicePackages - chưa login vẫn xem được,
-            chỉ bắt login khi bấm Subscribe (xử lý trong SubscriptionPlanList.tsx) */}
+        <Route path="/add-ons" element={<AddonList />} />
+        <Route path="/service-packages" element={<ServicePackageList />} />
+        {/* FE-60-US-01: public, chưa login vẫn xem được, chỉ bắt login khi bấm Subscribe
+            (xử lý trong SubscriptionPlanList.tsx) */}
         <Route
           path="/subscription-plans"
           element={<CustomerSubscriptionPlanList />}
@@ -117,14 +127,32 @@ export default function AppRouter() {
         </Route>
       </Route>
 
-      {/* FE-53: nhóm route ADMIN, theo đúng pattern STAFF ở trên */}
       <Route element={<PrivateRoute />}>
         <Route element={<RoleRoute allowedRoles={["ADMIN"]} />}>
+          {/* Admin login về thẳng Transaction History, không qua dashboard placeholder */}
           <Route
             path="/admin"
-            element={<Navigate to="/admin/subscription-plans" replace />}
+            element={<Navigate to="/admin/transactions" replace />}
           />
           <Route element={<AdminLayout />}>
+            <Route path="/admin/add-ons" element={<AddonList />} />
+            <Route path="/admin/add-ons/create" element={<AddonCreate />} />
+            <Route
+              path="/admin/add-ons/edit/:addonId"
+              element={<AddonEdit />}
+            />
+            <Route
+              path="/admin/service-packages"
+              element={<ServicePackageList />}
+            />
+            <Route
+              path="/admin/service-packages/create"
+              element={<ServicePackageCreate />}
+            />
+            <Route
+              path="/admin/service-packages/edit/:servicePackageId"
+              element={<ServicePackageEdit />}
+            />
             <Route
               path="/admin/subscription-plans"
               element={<SubscriptionPlanList />}
@@ -142,9 +170,19 @@ export default function AppRouter() {
               path="/admin/subscription-plans/:id/edit"
               element={<SubscriptionPlanEdit />}
             />
+            <Route path="/admin/wash-lanes" element={<WashLaneManagement />} />
+            <Route path="/admin/promotions" element={<PromotionOverview />} />
             <Route
-              path="/admin/addon-services/create"
-              element={<AddonServiceCreate />}
+              path="/admin/promotions/station/:stationId"
+              element={<PromotionDetail />}
+            />
+            <Route
+              path="/admin/promotions/create"
+              element={<PromotionCreate />}
+            />
+            <Route
+              path="/admin/promotions/:id/edit"
+              element={<PromotionEdit />}
             />
             <Route
               path="/admin/transactions"

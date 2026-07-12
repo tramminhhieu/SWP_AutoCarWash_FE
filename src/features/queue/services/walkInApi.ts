@@ -4,15 +4,12 @@ import type { ApiSuccessResponse } from "../../../types/apiResponse";
 // Mirrors BE CheckPhoneResponse.VehicleSubscriptionDTO (vietbinh_branch, WalkInCheckInService.checkPhone) —
 // BE đã lọc sẵn chỉ trả về subscription đang ACTIVE và chưa hết hạn tính đến hôm nay,
 // FE không cần tự check ngày/hạn nữa.
-// planType đổi "UNLIMITED" -> "UNLIMIT" theo confirm chung với BE 2026-07-08 (cùng cột
-// plan_type dùng xuyên suốt hệ thống) - nếu endpoint checkPhone riêng của walk-in vẫn còn trả
-// "UNLIMITED" thì cần verify lại khi có BE thật chạy cùng.
 export interface VehicleSubscriptionDTO {
   subscriptionId: number;
   subscriptionPlanId: number;
   servicePackageId: number;
   planName: string;
-  planType: "UNLIMIT" | "FAMILY";
+  planType: "UNLIMITED" | "FAMILY";
   endDate: string;
   status: string;
 }

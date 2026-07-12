@@ -269,7 +269,7 @@ export default function AdminCustomers() {
   }, [viewingCustomerId]);
 
   return (
-    <div className="flex flex-col gap-8">
+    <div className="mx-auto flex max-w-[1440px] flex-col gap-8 px-12 py-8">
       <div className="flex flex-col gap-2">
         <h1 className="font-heading text-headline-xl font-bold tracking-[-1.2px] text-on-surface">
           Customer Management
@@ -475,7 +475,9 @@ export default function AdminCustomers() {
 
                 <button
                   type="button"
-                  onClick={() => handlePageChange(Math.min(totalPages, page + 1))}
+                  onClick={() =>
+                    handlePageChange(Math.min(totalPages, page + 1))
+                  }
                   disabled={page === totalPages}
                   className="flex items-center gap-1 rounded-lg px-3 py-2 text-sm font-medium text-on-surface-variant transition-colors hover:bg-surface-container-low disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:bg-transparent"
                 >
@@ -568,7 +570,9 @@ export default function AdminCustomers() {
                         Registered Vehicles
                       </p>
                       {detail.vehicles.length === 0 ? (
-                        <p className="text-on-surface-variant">No vehicles registered</p>
+                        <p className="text-on-surface-variant">
+                          No vehicles registered
+                        </p>
                       ) : (
                         detail.vehicles.map((v, i) => (
                           <div
@@ -593,11 +597,17 @@ export default function AdminCustomers() {
 
                     <div className="flex flex-col gap-2 rounded-lg border border-outline-variant p-4">
                       <div className="flex justify-between">
-                        <span className="text-on-surface-variant">Account Status</span>
-                        <StatusPill active={detail.accountStatus === "ACTIVE"} />
+                        <span className="text-on-surface-variant">
+                          Account Status
+                        </span>
+                        <StatusPill
+                          active={detail.accountStatus === "ACTIVE"}
+                        />
                       </div>
                       <div className="flex justify-between">
-                        <span className="text-on-surface-variant">Last Visit</span>
+                        <span className="text-on-surface-variant">
+                          Last Visit
+                        </span>
                         <span className="font-semibold text-on-surface">
                           {detail.lastVisit
                             ? formatCheckInTime(detail.lastVisit)

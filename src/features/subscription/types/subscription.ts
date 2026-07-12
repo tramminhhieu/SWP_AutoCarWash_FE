@@ -76,8 +76,7 @@ export interface UnlimitedSubscription {
   price: number;
   vehicle: { id: number; licensePlate: string; vehicleName: string };
   description: string;
-  // Số xe tối đa của gói (chỉ có ý nghĩa với FAMILY) - cần để hiện "Slots Used X/Y" ở màn
-  // quản lý Family Group (FamilyGroupManage.tsx) mà không phải gọi thêm API lấy lại plan.
+  // Số xe tối đa của gói (chỉ có ý nghĩa với FAMILY)
   maxVehicleCount: number;
 }
 

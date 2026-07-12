@@ -36,8 +36,6 @@ import CustomerSubscriptionPlanList from "../features/subscription/pages/Subscri
 import SubscriptionRegister from "../features/subscription/pages/SubscriptionRegister";
 import SubscriptionPayment from "../features/subscription/pages/SubscriptionPayment";
 import MySubscriptions from "../features/subscription/pages/MySubscriptions";
-// Family Group management (không có trong Note.md - xem comment trong familyGroupApi.ts)
-import FamilyGroupManage from "../features/subscription/pages/FamilyGroupManage";
 // Admin - Transaction History + Customer management (từ origin/dev)
 import AdminTransactionHistory from "../features/adminTransaction/pages/AdminTransactionHistory";
 import AdminCustomers from "../features/adminCustomer/pages/AdminCustomers";
@@ -99,12 +97,6 @@ export default function AppRouter() {
             {/* FE-60-US-05 + FE-58 + FE-56 entry point - khớp href "/subscription" đã có
                 sẵn trong CustomerHeader NAV_LINKS ("My Subscription") */}
             <Route path="/subscription" element={<MySubscriptions />} />
-            {/* Family Group management - vào từ nút "Manage Family" trên card FAMILY
-                đang ACTIVE ở MySubscriptions.tsx, subscriptionId = id của UnlimitedSubscription */}
-            <Route
-              path="/subscription/family/:subscriptionId"
-              element={<FamilyGroupManage />}
-            />
           </Route>
         </Route>
       </Route>

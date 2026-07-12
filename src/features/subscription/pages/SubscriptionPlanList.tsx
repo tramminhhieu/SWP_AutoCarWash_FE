@@ -8,9 +8,12 @@ import {
   getSubscriptionTypeLabel,
 } from "../../../constants/subscriptionStyles";
 import { getPlans } from "../api/subscriptionApi";
-import { getAll as getServicePackages } from "../../servicepackage/api/servicePackageApi";
+import {
+  getAll as getServicePackages,
+  getAllAddonServices,
+} from "../../servicepackage/api/servicePackageApi";
 import type { CustomerSubscriptionPlan, PlanType } from "../types/subscription";
-import type { ServicePackage } from "../../servicepackage/types/servicePackage";
+import type { AddonService, ServicePackage } from "../../servicepackage/types/servicePackage";
 
 // Nora: kỳ hạn hiện có cho gói Unlimited - khớp data.sql (mỗi combo Basic/Premium
 // luôn có đủ 1/3/6 tháng), dùng cho toggle chọn kỳ hạn ở đầu section Unlimited.
@@ -221,17 +224,25 @@ export default function SubscriptionPlanList() {
   // nên chặn cả trang, nên catch riêng và fallback [] (card Unlimited vẫn hiện, chỉ
   // thiếu checklist).
   const [servicePackages, setServicePackages] = useState<ServicePackage[]>([]);
+  // BE chỉ trả addonIds (id thô) trong ServicePackage - cần danh sách AddonService riêng
+  // để resolve ra tên hiển thị cho checklist card Unlimited.
+  const [addonServices, setAddonServices] = useState<AddonService[]>([]);
   const [selectedMonths, setSelectedMonths] = useState<UnlimitedDurationMonths>(1);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     let isMounted = true;
-    Promise.all([getPlans(), getServicePackages().catch(() => [])])
-      .then(([plansData, packagesData]) => {
+    Promise.all([
+      getPlans(),
+      getServicePackages().catch(() => []),
+      getAllAddonServices().catch(() => []),
+    ])
+      .then(([plansData, packagesData, addonsData]) => {
         if (isMounted) {
           setPlans(plansData);
           setServicePackages(packagesData);
+          setAddonServices(addonsData);
         }
       })
       .catch(() => {
@@ -245,12 +256,20 @@ export default function SubscriptionPlanList() {
     };
   }, []);
 
-  // name -> addons thật của ServicePackage (Basic/Medium/Premium), match theo
+  // name -> tên add-on thật của ServicePackage (Basic/Medium/Premium), match theo
   // servicePackageName trên CustomerSubscriptionPlan để hiện checklist cho card Unlimited.
-  const addonsByPackageName = useMemo(
-    () => new Map(servicePackages.map((sp) => [sp.name, sp.addons])),
-    [servicePackages],
-  );
+  const addonsByPackageName = useMemo(() => {
+    const addonNameById = new Map(addonServices.map((a) => [a.id, a.name]));
+    return new Map(
+      servicePackages.map((sp) => [
+        sp.name,
+        // BE trả addonIds bị lặp (bug join phía BE) - khử trùng lặp trước khi hiển thị
+        Array.from(new Set(sp.addonIds))
+          .map((id) => addonNameById.get(id))
+          .filter((n): n is string => !!n),
+      ]),
+    );
+  }, [servicePackages, addonServices]);
 
   // FE-60-US-02.1: chưa login -> chuyển sang /login kèm "from" để quay lại đúng bước
   // chọn xe sau khi login, giống pattern handleSelectPackage ở ServicePackageList.tsx.

@@ -1,6 +1,6 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
-import { CalendarClock, CarFront } from "lucide-react";
+import { CalendarClock, CarFront, CheckCircle2 } from "lucide-react";
 import { useAuth } from "../../../hooks/useAuth";
 import { formatCurrency } from "../../../utils";
 import {
@@ -8,7 +8,14 @@ import {
   getSubscriptionTypeLabel,
 } from "../../../constants/subscriptionStyles";
 import { getPlans } from "../api/subscriptionApi";
+import { getAll as getServicePackages } from "../../servicepackage/api/servicePackageApi";
 import type { CustomerSubscriptionPlan, PlanType } from "../types/subscription";
+import type { ServicePackage } from "../../servicepackage/types/servicePackage";
+
+// Nora: kỳ hạn hiện có cho gói Unlimited - khớp data.sql (mỗi combo Basic/Premium
+// luôn có đủ 1/3/6 tháng), dùng cho toggle chọn kỳ hạn ở đầu section Unlimited.
+const UNLIMITED_DURATION_OPTIONS = [1, 3, 6] as const;
+type UnlimitedDurationMonths = (typeof UNLIMITED_DURATION_OPTIONS)[number];
 
 const SECTION_ORDER: { type: PlanType; title: string; subtitle: string }[] = [
   {
@@ -126,6 +133,78 @@ function PlanGroupCard({
   );
 }
 
+/** Card gói Unlimited theo mockup mới: badge "BEST VALUE" nổi bật cho tier Premium,
+ * checklist addon lấy từ ServicePackage thật (không bịa nội dung), kỳ hạn được điều
+ * khiển từ toggle chung ở section thay vì mỗi card tự chọn kỳ hạn riêng. */
+function UnlimitedPlanCard({
+  variant,
+  addons,
+  isBestValue,
+  onSubscribe,
+}: {
+  variant: CustomerSubscriptionPlan;
+  addons: string[];
+  isBestValue: boolean;
+  onSubscribe: (planId: number) => void;
+}) {
+  return (
+    <div
+      className={`relative flex h-full flex-col rounded-2xl bg-surface-container-lowest p-8 ${
+        isBestValue
+          ? "border-2 border-primary shadow-[0_20px_50px_-12px_rgba(0,55,176,0.35)]"
+          : "border border-outline-variant shadow-soft"
+      }`}
+    >
+      {isBestValue && (
+        <span className="absolute -top-3 left-1/2 -translate-x-1/2 rounded-full bg-primary px-4 py-1 text-label-sm font-bold uppercase tracking-wider text-on-primary">
+          Best Value
+        </span>
+      )}
+
+      <div className="flex-1">
+        <h3 className="font-heading text-headline-md font-bold text-on-surface">
+          Unlimited {variant.servicePackageName}
+        </h3>
+        <p className="mt-2 text-body-md text-on-surface-variant">
+          {variant.description}
+        </p>
+
+        <div className="mt-6 flex items-baseline gap-1">
+          <span className="font-heading text-headline-md font-bold text-on-surface">
+            {formatCurrency(variant.price)}
+          </span>
+          <span className="text-body-md text-on-surface-variant">
+            / {durationLabel(variant.durationDays)}
+          </span>
+        </div>
+
+        {addons.length > 0 && (
+          <ul className="mt-6 space-y-2.5">
+            {addons.map((addon) => (
+              <li key={addon} className="flex items-center gap-2.5">
+                <CheckCircle2
+                  size={16}
+                  className="shrink-0 text-tertiary-fixed-dim"
+                  strokeWidth={2}
+                />
+                <span className="text-body-sm text-on-surface">{addon}</span>
+              </li>
+            ))}
+          </ul>
+        )}
+      </div>
+
+      <button
+        type="button"
+        onClick={() => onSubscribe(variant.id)}
+        className="mt-8 w-full rounded-lg bg-primary px-6 py-3 text-center text-body-md font-semibold text-on-primary hover:opacity-90"
+      >
+        Select {variant.servicePackageName}
+      </button>
+    </div>
+  );
+}
+
 export default function SubscriptionPlanList() {
   const navigate = useNavigate();
   const { isAuthenticated } = useAuth();
@@ -138,14 +217,22 @@ export default function SubscriptionPlanList() {
       ? SECTION_ORDER.filter((s) => s.type === typeParam)
       : SECTION_ORDER;
   const [plans, setPlans] = useState<CustomerSubscriptionPlan[]>([]);
+  // Chỉ dùng để lấy addons thật (checklist) cho card Unlimited - lỗi ở call này không
+  // nên chặn cả trang, nên catch riêng và fallback [] (card Unlimited vẫn hiện, chỉ
+  // thiếu checklist).
+  const [servicePackages, setServicePackages] = useState<ServicePackage[]>([]);
+  const [selectedMonths, setSelectedMonths] = useState<UnlimitedDurationMonths>(1);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     let isMounted = true;
-    getPlans()
-      .then((data) => {
-        if (isMounted) setPlans(data);
+    Promise.all([getPlans(), getServicePackages().catch(() => [])])
+      .then(([plansData, packagesData]) => {
+        if (isMounted) {
+          setPlans(plansData);
+          setServicePackages(packagesData);
+        }
       })
       .catch(() => {
         if (isMounted) setError("Failed to load subscription plans. Please try again.");
@@ -157,6 +244,13 @@ export default function SubscriptionPlanList() {
       isMounted = false;
     };
   }, []);
+
+  // name -> addons thật của ServicePackage (Basic/Medium/Premium), match theo
+  // servicePackageName trên CustomerSubscriptionPlan để hiện checklist cho card Unlimited.
+  const addonsByPackageName = useMemo(
+    () => new Map(servicePackages.map((sp) => [sp.name, sp.addons])),
+    [servicePackages],
+  );
 
   // FE-60-US-02.1: chưa login -> chuyển sang /login kèm "from" để quay lại đúng bước
   // chọn xe sau khi login, giống pattern handleSelectPackage ở ServicePackageList.tsx.
@@ -220,15 +314,59 @@ export default function SubscriptionPlanList() {
                   <p className="mt-1 text-body-md text-on-surface-variant">
                     {section.subtitle}
                   </p>
-                  <div className="mt-6 grid grid-cols-1 gap-6 md:grid-cols-3">
-                    {groupedList.map((variants) => (
-                      <PlanGroupCard
-                        key={groupKey(variants[0])}
-                        variants={variants}
-                        onSubscribe={handleSubscribe}
-                      />
-                    ))}
-                  </div>
+
+                  {section.type === "UNLIMIT" ? (
+                    <>
+                      {/* Toggle kỳ hạn dùng chung cho cả section - chọn 1 lần, mọi card
+                          bên dưới đổi giá/mô tả theo đúng kỳ hạn đó (thay vì mỗi card
+                          tự chọn kỳ hạn riêng như trước). */}
+                      <div className="mt-6 flex justify-center">
+                        <div className="inline-flex rounded-full bg-surface-container p-1">
+                          {UNLIMITED_DURATION_OPTIONS.map((m) => (
+                            <button
+                              key={m}
+                              type="button"
+                              onClick={() => setSelectedMonths(m)}
+                              className={`rounded-full px-5 py-2 text-label-md font-semibold transition-colors ${
+                                selectedMonths === m
+                                  ? "bg-primary text-on-primary shadow-soft"
+                                  : "text-on-surface-variant hover:text-on-surface"
+                              }`}
+                            >
+                              {durationLabel(m * 30)}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+
+                      <div className="mx-auto mt-10 grid max-w-2xl grid-cols-1 gap-8 md:grid-cols-2">
+                        {groupedList.map((variants) => {
+                          const selected =
+                            variants.find((v) => v.durationDays === selectedMonths * 30) ??
+                            variants[variants.length - 1];
+                          return (
+                            <UnlimitedPlanCard
+                              key={groupKey(variants[0])}
+                              variant={selected}
+                              addons={addonsByPackageName.get(selected.servicePackageName) ?? []}
+                              isBestValue={selected.servicePackageName === "Premium"}
+                              onSubscribe={handleSubscribe}
+                            />
+                          );
+                        })}
+                      </div>
+                    </>
+                  ) : (
+                    <div className="mt-6 grid grid-cols-1 gap-6 md:grid-cols-3">
+                      {groupedList.map((variants) => (
+                        <PlanGroupCard
+                          key={groupKey(variants[0])}
+                          variants={variants}
+                          onSubscribe={handleSubscribe}
+                        />
+                      ))}
+                    </div>
+                  )}
                 </div>
               );
             })}

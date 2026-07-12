@@ -119,6 +119,10 @@ export const API = {
     // API-05-01: GET /api/service-packages
     LIST: "/api/service-packages",
   },
+  ADDON_SERVICE: {
+    // GET /api/addon-services - public, dùng để resolve tên add-on cho ServicePackage.addons
+    LIST: "/api/addon-services",
+  },
   ADMIN: {
     SERVICE_PACKAGE: {
       // GET /api/admin/service-packages/active - dropdown Service Package trong form Create/Edit Subscription Plan

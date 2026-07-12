@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect } from "react";
 import { Package, Save, Clock, Loader2 } from "lucide-react";
 import { getAllAddonServices } from "../../addon/api/addonApi";
 import type { AddonService } from "../../addon/types/addon";
@@ -9,6 +9,7 @@ import type { AddonService } from "../../addon/types/addon";
 export interface ServicePackageFormData {
   name: string;
   basePrice: number;
+  durationMinutes: number;
   description: string | null;
   addonIds: number[];
 }
@@ -18,6 +19,7 @@ export interface ServicePackageFormProps {
   initialData?: {
     name: string;
     basePrice: number;
+    durationMinutes: number;
     description: string | null;
     addonIds: number[];
   };
@@ -115,6 +117,11 @@ export default function ServicePackageForm({
   const [basePrice, setBasePrice] = useState(
     initialData?.basePrice != null ? String(initialData.basePrice) : "",
   );
+  const [duration, setDuration] = useState(
+    initialData?.durationMinutes != null
+      ? String(initialData.durationMinutes)
+      : "",
+  );
   const [description, setDescription] = useState(
     initialData?.description ?? "",
   );
@@ -125,6 +132,7 @@ export default function ServicePackageForm({
   /* ---- State: validation errors ---- */
   const [nameError, setNameError] = useState<string | null>(null);
   const [priceError, setPriceError] = useState<string | null>(null);
+  const [durationError, setDurationError] = useState<string | null>(null);
   const [addonError, setAddonError] = useState<string | null>(null);
 
   /* ---- State: submit ---- */
@@ -155,13 +163,6 @@ export default function ServicePackageForm({
     };
   }, []);
 
-  /* ---- Duration read-only = tổng durationMinutes của addon đang tick ---- */
-  const totalDuration = useMemo(() => {
-    return allAddons
-      .filter((a) => selectedAddonIds.includes(a.id))
-      .reduce((sum, a) => sum + a.durationMinutes, 0);
-  }, [allAddons, selectedAddonIds]);
-
   /* ---- Toggle addon selection ---- */
   const toggleAddon = (id: number) => {
     setSelectedAddonIds((prev) =>
@@ -175,6 +176,7 @@ export default function ServicePackageForm({
     let isValid = true;
     setNameError(null);
     setPriceError(null);
+    setDurationError(null);
     setAddonError(null);
 
     if (!name.trim()) {
@@ -188,6 +190,16 @@ export default function ServicePackageForm({
     const priceNum = Number(basePrice);
     if (!basePrice.trim() || isNaN(priceNum) || priceNum <= 0) {
       setPriceError("Package price must be greater than 0");
+      isValid = false;
+    }
+
+    /* Duration phải là bội số 15 (cho phép 0) */
+    const durNum = Number(duration);
+    if (duration.trim() === "" || isNaN(durNum) || durNum < 0) {
+      setDurationError("Duration is required and must be 0 or positive");
+      isValid = false;
+    } else if (durNum % 15 !== 0) {
+      setDurationError("Duration must be a multiple of 15 minutes");
       isValid = false;
     }
 
@@ -209,6 +221,7 @@ export default function ServicePackageForm({
       await onSubmit({
         name: name.trim(),
         basePrice: Number(basePrice),
+        durationMinutes: Number(duration),
         description: description.trim() || null,
         addonIds: selectedAddonIds,
       });
@@ -284,26 +297,28 @@ export default function ServicePackageForm({
           )}
         </div>
 
-        {/* Estimated Duration — read-only, tính từ addon đang chọn */}
+        {/* Duration — admin tự nhập, phải là bội số 15 */}
         <div>
-          <label className="mb-1.5 block text-label-md uppercase tracking-wide text-on-surface-variant">
-            Estimated Duration
+          <label
+            htmlFor="pkgDuration"
+            className="mb-1.5 block text-label-md uppercase tracking-wide text-on-surface-variant"
+          >
+            Duration (minutes)
           </label>
-          <div className="flex items-center gap-2 rounded-lg border border-outline-variant bg-surface-container px-4 py-2.5">
-            <Clock size={16} className="text-on-surface-variant" />
-            <span className="text-body-md font-medium text-on-surface">
-              {totalDuration} min
-            </span>
-            {selectedAddonIds.length > 0 && (
-              <span className="text-label-sm text-on-surface-variant">
-                ({selectedAddonIds.length} service
-                {selectedAddonIds.length > 1 ? "s" : ""})
-              </span>
-            )}
-          </div>
-          <p className="mt-1.5 text-label-sm text-on-surface-variant">
-            Auto-calculated from selected services below
-          </p>
+          <input
+            id="pkgDuration"
+            type="number"
+            min="0"
+            step="1"
+            value={duration}
+            onChange={(e) => setDuration(e.target.value)}
+            placeholder="30"
+            className={`w-full rounded-lg border px-4 py-2.5 text-body-md text-on-surface outline-none transition-colors placeholder:text-on-surface-variant/60
+              ${durationError ? "border-error" : "border-outline-variant focus:border-primary"}`}
+          />
+          {durationError && (
+            <p className="mt-1.5 text-label-md text-error">{durationError}</p>
+          )}
         </div>
       </div>
 

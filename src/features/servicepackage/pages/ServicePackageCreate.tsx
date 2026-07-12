@@ -17,6 +17,7 @@ export default function ServicePackageCreate() {
       const result = await createServicePackage({
         name: data.name,
         basePrice: data.basePrice,
+        durationMinutes: data.durationMinutes,
         description: data.description,
         addonIds: data.addonIds,
       });

@@ -121,7 +121,7 @@ const Modal = ({
                   type="button"
                   onClick={onClose}
                   disabled={isConfirmLoading}
-                  className="flex-1 rounded-lg border border-secondary px-6 py-3 text-body-md font-semibold text-secondary hover:bg-secondary/5 disabled:opacity-50"
+                  className="flex-1 rounded-lg border border-outline-variant px-6 py-3 text-body-md font-semibold text-on-surface transition-colors hover:bg-surface-ice disabled:opacity-50"
                 >
                   {cancelText}
                 </button>

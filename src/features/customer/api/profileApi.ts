@@ -5,6 +5,7 @@ import axiosClient from "../../../lib/axiosClient";
 import type {
   ChangePasswordRequest,
   CustomerProfileResponse,
+  TransferPlanRequest,
   UpdateProfileRequest,
   UpdateProfileResponse,
 } from "../types/profile";
@@ -31,17 +32,9 @@ export const changePassword = async (
   await axiosClient.patch(API.CUSTOMER.CHANGE_PASSWORD, data);
 };
 
-// FE-59-US-01: PATCH /api/customer/unlimited-subscriptions/{subscriptionId}/transfer-vehicle
-// (thay cho path đoán trước đây "/api/subscriptions/transfer" - path/shape thật lấy từ
-// UnlimitedSubscriptionController trên nhánh BE feature/53,60,55,56,58,59. Endpoint nhận
-// subscriptionId trong path, không phải sourceVehicleId - xem handleConfirmTransfer trong
-// Profile.tsx để biết cách tra subscriptionId từ vehicle nguồn qua getMySubscriptions()).
-export const transferVehicle = async (
-  subscriptionId: number,
-  vehicleId: number,
+// ─── POST /api/subscriptions/transfer (API-06-01) ─────────────────────────────
+export const transferSubscription = async (
+  data: TransferPlanRequest,
 ): Promise<void> => {
-  await axiosClient.patch(
-    API.CUSTOMER.UNLIMITED_SUBSCRIPTION.TRANSFER_VEHICLE(subscriptionId),
-    { vehicleId },
-  );
+  await axiosClient.post(API.CUSTOMER.TRANSFER_SUBSCRIPTION, data);
 };

@@ -16,8 +16,7 @@ export interface CustomerTier {
 }
 
 export interface VehicleActiveSubscription {
-  type: string; // "UNLIMIT" | "FAMILY" (giá trị thật BE trả, confirm 2026-07-08 - UI hiển thị
-  // "UNLIMITED" qua getSubscriptionTypeLabel(), xem src/constants/subscriptionStyles.ts)
+  type: string; // "UNLIMITED" | "FAMILY"
   // Chỉ gửi khi xe đang trong lock period (last_vehicle_change_at chưa hết hạn)
   hasTransferred?: boolean;
   transferUnlockDate?: string; // "YYYY-MM-DD"
@@ -69,4 +68,10 @@ export interface ChangePasswordRequest {
   currentPassword: string;
   newPassword: string;
   confirmNewPassword: string;
+}
+
+// Request cho POST /api/subscriptions/transfer (API-06-01)
+export interface TransferPlanRequest {
+  sourceVehicleId: number;
+  targetVehicleId: number;
 }

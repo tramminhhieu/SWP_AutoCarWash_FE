@@ -1,42 +1,61 @@
-import { API } from "../../../constants/apiEndpoints";
 import axiosClient from "../../../lib/axiosClient";
+import { API } from "../../../constants/apiEndpoints";
 import type { ApiSuccessResponse } from "../../../types/apiResponse";
-import type { ServicePackage } from "../types/servicePackage";
+import type {
+  ServicePackage,
+  CreateServicePackageRequest,
+  UpdateServicePackageRequest,
+  AddonService,
+} from "../types/servicePackage";
 
-// Response thật của GET /api/service-packages - trả addonIds (id thô), không phải tên
-interface ServicePackageRaw {
-  id: number;
-  name: string;
-  basePrice: number;
-  description: string;
-  durationMinutes: number;
-  addonIds: number[];
-}
-
-interface AddonServiceOption {
-  id: number;
-  name: string;
-}
-
-/** Lấy toàn bộ gói dịch vụ - dùng cho ServicePackageList (customer) và dropdown
- * Service Package trong form Subscription Plan (admin, chỉ lấy status = ACTIVE).
- * BE chỉ trả addonIds nên phải gọi thêm /api/addon-services để resolve ra tên add-on
- * hiển thị (ServicePackage.addons: string[]). */
+/**
+ * GET /api/service-packages — lấy toàn bộ gói dịch vụ active.
+ */
 export async function getAll(): Promise<ServicePackage[]> {
-  const [packagesRes, addonsRes] = await Promise.all([
-    axiosClient.get<ApiSuccessResponse<ServicePackageRaw[]>>(API.SERVICE_PACKAGE.LIST),
-    axiosClient.get<ApiSuccessResponse<AddonServiceOption[]>>(API.ADDON_SERVICE.LIST),
-  ]);
-  const addonNameById = new Map(addonsRes.data.data.map((a) => [a.id, a.name]));
-  return packagesRes.data.data.map((p) => ({
-    id: p.id,
-    name: p.name,
-    description: p.description,
-    basePrice: p.basePrice,
-    durationMinutes: p.durationMinutes,
-    // BE trả addonIds bị lặp (bug join phía BE) - khử trùng lặp trước khi hiển thị
-    addons: Array.from(new Set(p.addonIds))
-      .map((id) => addonNameById.get(id))
-      .filter((n): n is string => !!n),
-  }));
+  const res = await axiosClient.get<ApiSuccessResponse<ServicePackage[]>>(
+    API.SERVICE_PACKAGE.LIST,
+  );
+  return res.data.data;
+}
+
+/** POST /api/service-packages — tạo gói dịch vụ mới (API-14-01, chỉ ADMIN). */
+export async function createServicePackage(
+  body: CreateServicePackageRequest,
+): Promise<ServicePackage> {
+  const res = await axiosClient.post<ApiSuccessResponse<ServicePackage>>(
+    API.SERVICE_PACKAGE.LIST,
+    body,
+  );
+  return res.data.data;
+}
+
+/** PUT /api/service-packages/{id} — cập nhật gói dịch vụ (API-14-02, chỉ ADMIN). */
+export async function updateServicePackage(
+  servicePackageId: number,
+  body: UpdateServicePackageRequest,
+): Promise<ServicePackage> {
+  const res = await axiosClient.put<ApiSuccessResponse<ServicePackage>>(
+    `${API.SERVICE_PACKAGE.LIST}/${servicePackageId}`,
+    body,
+  );
+  return res.data.data;
+}
+
+/**
+ * GET /api/addon-services — lấy toàn bộ add-on active.
+ * Gọi 1 lần khi vào trang Service Management, lưu lại để:
+ * hiển thị ✓/✗ addon trong PackageCard + làm picker khi tạo/sửa package.
+ */
+export async function getAllAddonServices(): Promise<AddonService[]> {
+  const res = await axiosClient.get<ApiSuccessResponse<AddonService[]>>(
+    API.ADDON.LIST,
+  );
+  return res.data.data;
+}
+
+/** DELETE /api/service-packages/{id} — xoá mềm add-on (API-15-03, chỉ ADMIN). */
+export async function deleteServicePackage(
+  servicePackageId: number,
+): Promise<void> {
+  await axiosClient.delete(`${API.SERVICE_PACKAGE.LIST}/${servicePackageId}`);
 }

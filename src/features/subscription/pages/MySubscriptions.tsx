@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
-import { AlertTriangle, Car, RefreshCw, Users, XCircle } from "lucide-react";
+import { AlertTriangle, Car, RefreshCw, XCircle } from "lucide-react";
 import Loading from "../../../components/ui/Loading";
 import Modal from "../../../components/ui/Modal";
 import { formatCurrency, formatDate } from "../../../utils";
@@ -33,24 +33,21 @@ function SubscriptionCard({
   sub,
   onCancel,
   onRenew,
-  onManageFamily,
   isRenewing,
 }: {
   sub: UnlimitedSubscription;
   onCancel: () => void;
   onRenew: () => void;
-  onManageFamily: () => void;
   isRenewing: boolean;
 }) {
   const typeStyle = getSubscriptionStyle(sub.planType);
   const daysLeft = daysUntil(sub.endDate);
   const isExpiringSoon = sub.status === "ACTIVE" && daysLeft >= 0 && daysLeft <= 3;
 
-  const canManageFamily = sub.planType === "FAMILY" && sub.status === "ACTIVE";
   const canCancel = sub.status === "ACTIVE";
   // FE-56-US-02 AC01: chỉ hiện Renew khi ACTIVE và còn <=3 ngày trước hết hạn.
   const canRenew = isExpiringSoon;
-  const hasAnyAction = canManageFamily || canCancel || canRenew;
+  const hasAnyAction = canCancel || canRenew;
 
   return (
     <div className="rounded-2xl border border-outline-variant bg-surface-container-lowest p-6 shadow-[0_10px_25px_-5px_rgba(29,78,216,0.05)]">
@@ -116,18 +113,6 @@ function SubscriptionCard({
 
       {hasAnyAction && (
         <div className="mt-5 flex flex-wrap items-center justify-end gap-3 border-t border-outline-variant pt-4">
-          {/* Family Group Management - không có trong Note.md, build theo mockup Nora gửi
-              ("Car Wash Prototype (1).zip"). Chỉ hiện khi gói FAMILY đang ACTIVE. */}
-          {canManageFamily && (
-            <button
-              type="button"
-              onClick={onManageFamily}
-              className="mr-auto flex items-center gap-1.5 text-label-md font-semibold text-primary hover:opacity-80"
-            >
-              <Users size={15} />
-              Manage Family
-            </button>
-          )}
           {canCancel && (
             <button
               type="button"
@@ -271,7 +256,6 @@ export default function MySubscriptions() {
                 sub={sub}
                 onCancel={() => setSubToCancel(sub)}
                 onRenew={() => handleRenew(sub)}
-                onManageFamily={() => navigate(`/subscription/family/${sub.id}`)}
                 isRenewing={renewingId === sub.id}
               />
             ))}

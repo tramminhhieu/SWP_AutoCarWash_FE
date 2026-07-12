@@ -76,20 +76,6 @@ export const API = {
       INVOICE_STATUS: (invoiceId: number | string) =>
         `/api/subscriptions/invoices/${invoiceId}`,
     },
-    // ⚠️ CHƯA có contract từ BE (không có trong Note.md/spec Sprint 3) - path tự đoán theo
-    // đúng pattern REST của UNLIMITED_SUBSCRIPTION ở trên. Sửa lại ngay khi BE có API thật.
-    FAMILY_GROUP: {
-      DETAIL: (subscriptionId: number | string) =>
-        `/api/customer/family-groups/${subscriptionId}`,
-      ADD_MEMBER: (subscriptionId: number | string) =>
-        `/api/customer/family-groups/${subscriptionId}/members`,
-      REMOVE_MEMBER: (subscriptionId: number | string, memberId: number | string) =>
-        `/api/customer/family-groups/${subscriptionId}/members/${memberId}`,
-      UPDATE_MEMBER_VEHICLE: (subscriptionId: number | string, memberId: number | string) =>
-        `/api/customer/family-groups/${subscriptionId}/members/${memberId}/vehicle`,
-      DISSOLVE: (subscriptionId: number | string) =>
-        `/api/customer/family-groups/${subscriptionId}`,
-    },
   },
   PAYMENTS: {
     CASH: "/api/payments/cash",

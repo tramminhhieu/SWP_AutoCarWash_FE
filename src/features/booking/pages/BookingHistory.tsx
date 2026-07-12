@@ -9,17 +9,16 @@ import {
   CirclePlus,
   Star,
 } from "lucide-react";
-import {
-  cancelBooking,
-  getPastBookings,
-  getUpcomingBookings,
-} from "../api/bookingApi";
+import { getPastBookings, getUpcomingBookings } from "../api/bookingApi";
 import type { BookingCard } from "../types/booking";
 import BookingStatusBadge from "../../../components/ui/BookingStatusBadge";
-import Modal from "../../../components/ui/Modal";
+import RefundModal from "../components/RefundModal";
 import {
   formatAppointmentDate,
+  formatCurrency,
+  formatRefundedAt,
   formatTimeRange,
+  maskAccount,
 } from "../utils/bookingFormatters";
 
 function BookingCardItem({
@@ -30,25 +29,10 @@ function BookingCardItem({
   onCancelled: (bookingId: number) => void;
 }) {
   const navigate = useNavigate();
-  const [isCancelling, setIsCancelling] = useState(false);
   const [showCancelModal, setShowCancelModal] = useState(false);
 
   function handleCancel() {
     setShowCancelModal(true);
-  }
-
-  function handleConfirmCancel() {
-    setIsCancelling(true);
-    cancelBooking(booking.bookingId)
-      .then(() => {
-        setShowCancelModal(false);
-        onCancelled(booking.bookingId);
-      })
-      .catch(() => {
-        setShowCancelModal(false);
-        window.alert("Unable to cancel booking. Please try again later.");
-      })
-      .finally(() => setIsCancelling(false));
   }
   return (
     <div className="flex flex-col rounded-[8px] border border-outline-variant/50 bg-white shadow-[0px_10px_25px_-5px_rgba(17,24,39,0.05)]">
@@ -70,7 +54,25 @@ function BookingCardItem({
               </div>
             </div>
           </div>
-          <BookingStatusBadge status={booking.status} />
+          <div className="flex flex-col items-end gap-1">
+            <BookingStatusBadge status={booking.status} />
+            {booking.status === "REFUND_PENDING" && (
+              <span className="text-xs font-medium text-amber-600">
+                Refund in progress — expected within 1-2 business days
+              </span>
+            )}
+            {booking.status === "REFUNDED" && (
+              <span className="text-xs font-medium text-on-surface-variant">
+                {booking.refundAmount != null &&
+                booking.refundAccountNumber &&
+                booking.refundedAt
+                  ? `Refunded ${formatCurrency(booking.refundAmount)} to account ${maskAccount(
+                      booking.refundAccountNumber,
+                    )} at ${formatRefundedAt(booking.refundedAt)}`
+                  : "—"}
+              </span>
+            )}
+          </div>
         </div>
 
         <div className="grid grid-cols-2 gap-8 border-t border-outline-variant/20 pt-[33px]">
@@ -101,10 +103,9 @@ function BookingCardItem({
             {booking.allowedActions.includes("CANCEL") && (
               <button
                 onClick={handleCancel}
-                disabled={isCancelling}
                 className="text-sm font-medium tracking-[0.14px] text-error"
               >
-                {isCancelling ? "CANCELLING…" : "CANCEL"}
+                CANCEL
               </button>
             )}
             {booking.allowedActions.includes("WRITE_REVIEW") && (
@@ -128,19 +129,13 @@ function BookingCardItem({
         </div>
       )}
 
-      <Modal
-        isOpen={showCancelModal}
-        onClose={() => {
-          if (!isCancelling) setShowCancelModal(false);
-        }}
-        variant="danger"
-        title="Cancel Booking"
-        message="Are you sure you want to cancel this appointment? This action cannot be undone."
-        confirmText="Cancel Booking"
-        cancelText="Keep Booking"
-        onConfirm={handleConfirmCancel}
-        isConfirmLoading={isCancelling}
-      />
+      {showCancelModal && (
+        <RefundModal
+          booking={booking}
+          onClose={() => setShowCancelModal(false)}
+          onRefunded={onCancelled}
+        />
+      )}
     </div>
   );
 }

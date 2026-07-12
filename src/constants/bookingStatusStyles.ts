@@ -85,4 +85,18 @@ export const BOOKING_STATUS_STYLES: Record<BookingStatus, BookingStatusStyle> =
       bgClassName: "bg-tertiary-fixed/20",
       borderClassName: "border-tertiary/20",
     },
+    REFUND_PENDING: {
+      label: "CANCELLED",
+      dotClassName: "bg-amber-500",
+      textClassName: "text-amber-600",
+      bgClassName: "bg-amber-50",
+      borderClassName: "border-amber-200",
+    },
+    REFUNDED: {
+      label: "CANCELLED",
+      dotClassName: "bg-[#22c55e]",
+      textClassName: "text-[#22c55e]",
+      bgClassName: "bg-tertiary-fixed/20",
+      borderClassName: "border-tertiary/20",
+    },
   };

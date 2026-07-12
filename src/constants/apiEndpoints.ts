@@ -91,6 +91,13 @@ export const API = {
     // GET the customer's currently active subscription (204 if none)
     ACTIVE: "/api/subscriptions/active",
   },
+  // API-17-01: base path /api/family-groups (KHÔNG nằm dưới /api/customer/...)
+  FAMILY_GROUP: {
+    // POST - tạo group mới, tự động thêm chủ nhóm làm thành viên đầu tiên
+    CREATE: "/api/family-groups/create",
+    // GET - xem group của chính mình (role CUSTOMER), data null nếu chưa có group
+    MY_GROUP: "/api/family-groups/my-group",
+  },
   CUSTOMERS: {
     // GET admin customer list + KPI summary (?page=&size=&keyword=) - FE-US-09
     LIST: "/api/customers",

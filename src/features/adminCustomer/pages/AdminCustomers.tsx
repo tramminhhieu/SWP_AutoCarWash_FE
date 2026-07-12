@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
+import { useAuth } from "../../../hooks/useAuth";
 import {
   ChevronLeft,
   ChevronRight,
@@ -100,6 +101,10 @@ function KpiCard({
 
 export default function AdminCustomers() {
   const navigate = useNavigate();
+  const location = useLocation();
+  const { user } = useAuth();
+  const isAdmin = user?.role === "ADMIN";
+  const routePrefix = location.pathname.startsWith("/staff") ? "/staff" : "/admin";
   const [rows, setRows] = useState<AdminCustomerRow[]>([]);
   const [totalCustomers, setTotalCustomers] = useState(0);
   const [newThisMonth, setNewThisMonth] = useState(0);
@@ -371,13 +376,15 @@ export default function AdminCustomers() {
             </option>
           ))}
         </select>
-        <BranchFilterDropdown
-          onChange={(sel) => handleFilterChange(() => setBranchFilter(sel))}
-        />
+        {isAdmin && (
+          <BranchFilterDropdown
+            onChange={(sel) => handleFilterChange(() => setBranchFilter(sel))}
+          />
+        )}
       </div>
 
       {/* ─── Table ────────────────────────────────────────────────── */}
-      <div className="overflow-hidden rounded-lg border border-outline-variant bg-white shadow-[0_1px_2px_rgba(0,0,0,0.05)]">
+      <div className="overflow-x-auto rounded-lg border border-outline-variant bg-white shadow-[0_1px_2px_rgba(0,0,0,0.05)]">
         {error ? (
           <div className="flex h-48 items-center justify-center text-base text-error">
             {error}
@@ -635,24 +642,28 @@ export default function AdminCustomers() {
                   <button
                     type="button"
                     onClick={() =>
-                      navigate(`/admin/customers/${detail.customerId}/bookings`)
+                      navigate(
+                        `${routePrefix}/customers/${detail.customerId}/bookings`,
+                      )
                     }
                     className="flex items-center justify-center gap-2 rounded-lg border border-primary px-6 py-3 text-sm font-semibold text-primary hover:bg-primary/5"
                   >
                     <History className="size-4" />
                     View Booking History
                   </button>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setDeleteError(null);
-                      setConfirmingDelete(true);
-                    }}
-                    className="flex items-center justify-center gap-2 rounded-lg bg-error px-6 py-3 text-sm font-semibold text-on-error hover:opacity-90"
-                  >
-                    <Trash2 className="size-4" />
-                    Delete Customer
-                  </button>
+                  {isAdmin && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setDeleteError(null);
+                        setConfirmingDelete(true);
+                      }}
+                      className="flex items-center justify-center gap-2 rounded-lg bg-error px-6 py-3 text-sm font-semibold text-on-error hover:opacity-90"
+                    >
+                      <Trash2 className="size-4" />
+                      Delete Customer
+                    </button>
+                  )}
                 </div>
               </>
             )

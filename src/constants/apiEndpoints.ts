@@ -111,6 +111,12 @@ export const API = {
     ACCOUNT_LOOKUP: "/api/refunds/account-lookup",
     // GET — số tiền cọc cố định toàn hệ thống để hiển thị read-only { amount }
     DEPOSIT_AMOUNT: "/api/refunds/deposit-amount",
+    // US-05 AC1,AC6-AC10: GET /api/refunds?page=&size=&status=&year=&month=&stationId=&keyword=
+    LIST: "/api/refunds",
+    // US-05 AC2,AC2b,AC2c: GET /api/refunds/{id}
+    DETAIL: (id: number | string) => `/api/refunds/${id}`,
+    // US-05 AC3,AC4,AC5: POST /api/refunds/{id}/confirm
+    CONFIRM: (id: number | string) => `/api/refunds/${id}/confirm`,
   },
   PROMOTION: {
     // API-02-01: Tổng hợp số lượng promotion theo từng chi nhánh

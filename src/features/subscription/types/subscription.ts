@@ -51,7 +51,7 @@ export interface SubscriptionPaymentInit {
   bankCode: string;
   bankAccountName: string;
   customerName: string;
-  vehicleLicensePlate: string;
+  vehicleLicensePlate?: string; // Unlimited only; absent for Family invoices
   startDate: string; // "YYYY-MM-DD"
   endDate: string; // "YYYY-MM-DD"
 }

@@ -23,23 +23,28 @@ export default function SubscriptionPayment() {
   const navigate = useNavigate();
   const location = useLocation();
   const id = Number(invoiceId);
-  // isRenewal không có trong response BE - đọc lại từ navigation state do trang gọi
-  // register()/renew() truyền qua (xem SubscriptionRegister.tsx / MySubscriptions.tsx).
-  const isRenewal = Boolean((location.state as { isRenewal?: boolean } | null)?.isRenewal);
+  const isInvalidId = !id || Number.isNaN(id);
+  // isRenewal/redirectTo không có trong response BE - đọc lại từ navigation state do trang gọi
+  // register()/renew() truyền qua (xem SubscriptionRegister.tsx / MySubscriptions.tsx / Family-
+  // SubscriptionList.tsx). redirectTo cho phép luồng Family trỏ về /subscriptions/family/plans
+  // thay vì mặc định /subscription (MySubscriptions.tsx chỉ liệt kê gói Unlimited theo xe).
+  const navState = location.state as
+    | { isRenewal?: boolean; redirectTo?: string }
+    | null;
+  const isRenewal = Boolean(navState?.isRenewal);
+  const redirectTo = navState?.redirectTo ?? "/subscription";
 
   const [payment, setPayment] = useState<SubscriptionPaymentInit | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
-  const [loadError, setLoadError] = useState<string | null>(null);
+  const [isLoading, setIsLoading] = useState(!isInvalidId);
+  const [loadError, setLoadError] = useState<string | null>(
+    isInvalidId ? "Invalid invoice." : null,
+  );
   const [secondsLeft, setSecondsLeft] = useState<number | null>(null);
   const [copiedField, setCopiedField] = useState<"content" | "account" | null>(null);
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   useEffect(() => {
-    if (!id || Number.isNaN(id)) {
-      setLoadError("Invalid invoice.");
-      setIsLoading(false);
-      return;
-    }
+    if (isInvalidId) return;
 
     const stopPolling = () => {
       if (pollRef.current) {
@@ -56,7 +61,7 @@ export default function SubscriptionPayment() {
             stopPolling();
           }
           if (data.invoiceStatus === "PAID") {
-            navigate("/subscription", {
+            navigate(redirectTo, {
               state: {
                 successMessage: isRenewal
                   ? "Payment successful. Your membership has been renewed."
@@ -76,7 +81,7 @@ export default function SubscriptionPayment() {
     fetchStatus();
     pollRef.current = setInterval(fetchStatus, POLL_INTERVAL_MS);
     return stopPolling;
-  }, [id, isRenewal, navigate]);
+  }, [id, isInvalidId, isRenewal, redirectTo, navigate]);
 
   useEffect(() => {
     if (!payment || payment.invoiceStatus !== "PENDING") {
@@ -131,10 +136,10 @@ export default function SubscriptionPayment() {
             </p>
             <button
               type="button"
-              onClick={() => navigate("/subscription")}
+              onClick={() => navigate(redirectTo)}
               className="mt-2 rounded-lg bg-primary px-5 py-2.5 text-label-md font-semibold text-on-primary hover:opacity-90"
             >
-              Back to My Subscriptions
+              Back
             </button>
           </div>
         ) : payment ? (
@@ -151,10 +156,14 @@ export default function SubscriptionPayment() {
                 <span className="text-on-surface-variant">Customer</span>
                 <span className="text-body-md text-on-surface">{payment.customerName}</span>
               </div>
-              <div className="mt-3 flex items-center justify-between text-label-md">
-                <span className="text-on-surface-variant">Vehicle</span>
-                <span className="text-body-md text-on-surface">{payment.vehicleLicensePlate}</span>
-              </div>
+              {payment.vehicleLicensePlate && (
+                <div className="mt-3 flex items-center justify-between text-label-md">
+                  <span className="text-on-surface-variant">Vehicle</span>
+                  <span className="text-body-md text-on-surface">
+                    {payment.vehicleLicensePlate}
+                  </span>
+                </div>
+              )}
               <div className="mt-3 flex items-center justify-between text-label-md">
                 <span className="text-on-surface-variant">Plan period</span>
                 <span className="text-body-md text-on-surface">

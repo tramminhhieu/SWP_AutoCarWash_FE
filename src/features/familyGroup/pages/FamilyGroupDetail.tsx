@@ -120,19 +120,17 @@ export default function FamilyGroupDetail() {
     }
   };
 
-  // Gia hạn đúng gói hiện tại - thành công thì sang màn "chuyển khoản" tạm thời (chưa có QR thật)
+  // Gia hạn đúng gói hiện tại - thành công thì sang màn thanh toán QR dùng chung với Unlimited
   const handleRenew = async () => {
     if (currentPlanId == null) return;
     setIsRenewing(true);
     setRenewError(null);
     try {
       const result = await renewFamilySubscription({ subscriptionPlanId: currentPlanId });
-      navigate("/subscriptions/family/payment", {
+      navigate(`/subscription-plans/payment/${result.invoiceId}`, {
         state: {
-          planName: result.planName,
-          startDate: result.startDate,
-          endDate: result.endDate,
-          status: result.status,
+          isRenewal: true,
+          redirectTo: "/family",
         },
       });
     } catch (err) {

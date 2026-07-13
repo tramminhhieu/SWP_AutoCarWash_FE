@@ -67,6 +67,7 @@ export interface RenewFamilySubscriptionRequest {
 
 export interface RenewFamilySubscriptionResponse {
   familySubscriptionId: number;
+  invoiceId: number;
   planName: string;
   planDuration: number;
   status: string;

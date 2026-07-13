@@ -56,6 +56,26 @@ export const API = {
     CHANGE_PASSWORD: "/api/auth/change-password",
     // API-06-01:: TRANSFER SUBSCRIPTION PLAN
     TRANSFER_SUBSCRIPTION: "/api/subscriptions/transfer",
+    SUBSCRIPTION_PLAN: {
+      // FE-60-US-01: GET /api/customer/subscription-plans
+      LIST: "/api/customer/subscription-plans",
+    },
+    UNLIMITED_SUBSCRIPTION: {
+      // FE-60-US-05: GET /api/customer/unlimited-subscriptions
+      LIST: "/api/customer/unlimited-subscriptions",
+      // FE-58-US-01: PATCH /api/customer/unlimited-subscriptions/{id}/cancel
+      CANCEL: (id: number | string) =>
+        `/api/customer/unlimited-subscriptions/${id}/cancel`,
+    },
+    // FE-US-56-04: mua/gia hạn gói Unlimited CÓ thanh toán QR thật (tách khỏi
+    // UNLIMITED_SUBSCRIPTION ở trên - đăng ký cũ không QR đã bị thay thế).
+    SUBSCRIPTION_PURCHASE: {
+      REGISTER: "/api/customer/subscriptions/unlimited",
+      RENEW: (subscriptionId: number | string) =>
+        `/api/customer/subscriptions/unlimited/${subscriptionId}/renew`,
+      INVOICE_STATUS: (invoiceId: number | string) =>
+        `/api/subscriptions/invoices/${invoiceId}`,
+    },
   },
   PAYMENTS: {
     CASH: "/api/payments/cash",
@@ -70,6 +90,29 @@ export const API = {
   SUBSCRIPTIONS: {
     // GET the customer's currently active subscription (204 if none)
     ACTIVE: "/api/subscriptions/active",
+
+    FAMILY_PLANS: "/api/subscriptions/family/plans",
+    FAMILY_REGISTER: "/api/subscriptions/family",
+    FAMILY_RENEW: "/api/subscriptions/family/renew",
+    FAMILY_CANCEL: "/api/subscriptions/family/cancel",
+  },
+  // API-17-01/02: base path /api/family-groups (KHÔNG nằm dưới /api/customer/..., và
+  // KHÔNG có tiền tố /v1/ dù tài liệu API-17-02 có ghi nhầm /api/v1/... - khớp đúng
+  // @RequestMapping("/api/family-groups") trong FamilyGroupController.java)
+  FAMILY_GROUP: {
+    // POST - tạo group mới, tự động thêm chủ nhóm làm thành viên đầu tiên
+    CREATE: "/api/family-groups/create",
+    // GET - xem group của chính mình (role CUSTOMER), data null nếu chưa có group
+    MY_GROUP: "/api/family-groups/my-group",
+    // GET ?identifier= - tra cứu customer để mời bằng SĐT/email chính xác (AC01/AC02)
+    SEARCH_MEMBER: "/api/family-groups/search-member",
+    // POST - chủ nhóm xác nhận thêm thành viên đã tra cứu được vào nhóm (AC09)
+    ADD_MEMBER: "/api/family-groups/add-member",
+    // DELETE - owner xóa cứng 1 thành viên khỏi nhóm (Remove Member AC04)
+    REMOVE_MEMBER: (memberCustomerId: number | string) =>
+      `/api/family-groups/members/${memberCustomerId}`,
+    // DELETE - owner giải tán cả nhóm (API-17-03 AC04, hard delete)
+    DISSOLVE: "/api/family-groups/dissolve",
   },
   CUSTOMERS: {
     // GET admin customer list + KPI summary (?page=&size=&keyword=) - FE-US-09
@@ -80,6 +123,28 @@ export const API = {
     // (?page=&size=&vehicleKeyword=&serviceCategoryId=&active=&stationId=)
     BOOKINGS: (customerId: number | string) =>
       `/api/customers/${customerId}/bookings`,
+  },
+  ADDON_SERVICE: {
+    // GET /api/addon-services - public, dùng để resolve tên add-on cho ServicePackage.addons
+    LIST: "/api/addon-services",
+  },
+  ADMIN: {
+    SERVICE_PACKAGE: {
+      // GET /api/admin/service-packages/active - dropdown Service Package trong form Create/Edit Subscription Plan
+      ACTIVE: "/api/admin/service-packages/active",
+    },
+    SUBSCRIPTION_PLAN: {
+      // FE-53-US-01: GET /api/admin/subscription-plans?status=ACTIVE/INACTIVE/ALL
+      LIST: "/api/admin/subscription-plans",
+      // FE-53-US-03: GET /api/admin/subscription-plans/{id}
+      DETAIL: (id: number | string) => `/api/admin/subscription-plans/${id}`,
+      // FE-53-US-02: POST /api/admin/subscription-plans
+      CREATE: "/api/admin/subscription-plans",
+      // FE-53-US-03: PUT /api/admin/subscription-plans/{id}
+      UPDATE: (id: number | string) => `/api/admin/subscription-plans/${id}`,
+      // FE-53-US-04: DELETE /api/admin/subscription-plans/{id} (soft delete -> INACTIVE)
+      DELETE: (id: number | string) => `/api/admin/subscription-plans/${id}`,
+    },
   },
   LOYALTY: {
     // GET loyalty profile (points, tier, spending)

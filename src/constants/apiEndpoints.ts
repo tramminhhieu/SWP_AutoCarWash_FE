@@ -70,6 +70,11 @@ export const API = {
   SUBSCRIPTIONS: {
     // GET the customer's currently active subscription (204 if none)
     ACTIVE: "/api/subscriptions/active",
+
+    FAMILY_PLANS: "/api/subscriptions/family/plans",
+    FAMILY_REGISTER: "/api/subscriptions/family",
+    FAMILY_RENEW: "/api/subscriptions/family/renew",
+    FAMILY_CANCEL: "/api/subscriptions/family/cancel",
   },
   CUSTOMERS: {
     // GET admin customer list + KPI summary (?page=&size=&keyword=) - FE-US-09

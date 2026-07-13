@@ -37,6 +37,7 @@ import PromotionEdit from "../features/promotion/pages/PromotionEdit";
 import AdminTransactionHistory from "../features/adminTransaction/pages/AdminTransactionHistory";
 import AdminCustomers from "../features/adminCustomer/pages/AdminCustomers";
 import AdminCustomerBookingHistory from "../features/adminCustomer/pages/AdminCustomerBookingHistory";
+import FamilySubscriptionList from "../features/subscriptionPlans/familySubscription/pages/FamilySubscriptionList";
 
 export default function AppRouter() {
   return (
@@ -47,6 +48,10 @@ export default function AppRouter() {
         <Route path="/register" element={<Register />} />
         <Route path="/add-ons" element={<AddonList />} />
         <Route path="/service-packages" element={<ServicePackageList />} />
+        <Route
+          path="/subscriptions/family/plans"
+          element={<FamilySubscriptionList />}
+        />
 
         {/* Toàn bộ flow đặt lịch yêu cầu đăng nhập - bọc trong PrivateRoute,
             chưa login bấm vào sẽ bị redirect về /login (xử lý trong PrivateRoute.tsx) */}
@@ -145,6 +150,10 @@ export default function AppRouter() {
             <Route
               path="/admin/customers/:customerId/bookings"
               element={<AdminCustomerBookingHistory />}
+            />
+            <Route
+              path="/admin/subscriptions/family/plans"
+              element={<FamilySubscriptionList />}
             />
           </Route>
         </Route>

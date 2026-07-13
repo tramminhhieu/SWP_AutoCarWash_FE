@@ -183,7 +183,7 @@ function VehicleItem({
           <button
             onClick={() => {
               onMenuToggle(vehicle.id); // đóng dropdown
-              navigate(`/vehicles/edit/${vehicle.id}`, {
+              navigate(`/vehicles/${vehicle.id}/edit`, {
                 state: { vehicle },
               });
             }}

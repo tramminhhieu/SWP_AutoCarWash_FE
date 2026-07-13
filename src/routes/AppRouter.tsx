@@ -37,7 +37,9 @@ import PromotionEdit from "../features/promotion/pages/PromotionEdit";
 import AdminTransactionHistory from "../features/adminTransaction/pages/AdminTransactionHistory";
 import AdminCustomers from "../features/adminCustomer/pages/AdminCustomers";
 import AdminCustomerBookingHistory from "../features/adminCustomer/pages/AdminCustomerBookingHistory";
-import SystemSettingList from "../features/systemSetting/pages/systemSettingList";
+import SystemSettingList from "../features/systemSetting/pages/SystemSettingList";
+import SystemSettingCreate from "../features/systemSetting/pages/SystemSettingCreate";
+import SystemSettingEdit from "../features/systemSetting/pages/SystemSettingEdit";
 
 export default function AppRouter() {
   return (
@@ -67,7 +69,7 @@ export default function AppRouter() {
               element={<BookingDetail />}
             />
             <Route path="/vehicles/create" element={<VehicleCreate />} />
-            <Route path="/vehicles/edit/:vehicleId" element={<VehicleEdit />} />
+            <Route path="/vehicles/:vehicleId/edit" element={<VehicleEdit />} />
             <Route path="/customer/profile" element={<CustomerProfile />} />
             <Route path="/customer/loyalty" element={<LoyaltyRewards />} />
             <Route
@@ -109,9 +111,10 @@ export default function AppRouter() {
             <Route path="/admin/add-ons" element={<AddonList />} />
             <Route path="/admin/add-ons/create" element={<AddonCreate />} />
             <Route
-              path="/admin/add-ons/edit/:addonId"
+              path="/admin/add-ons/:addonId/edit"
               element={<AddonEdit />}
             />
+
             <Route
               path="/admin/service-packages"
               element={<ServicePackageList />}
@@ -121,9 +124,10 @@ export default function AppRouter() {
               element={<ServicePackageCreate />}
             />
             <Route
-              path="/admin/service-packages/edit/:servicePackageId"
+              path="/admin/service-packages/:servicePackageId/edit"
               element={<ServicePackageEdit />}
             />
+
             <Route path="/admin/wash-lanes" element={<WashLaneManagement />} />
             <Route path="/admin/promotions" element={<PromotionOverview />} />
             <Route
@@ -135,7 +139,7 @@ export default function AppRouter() {
               element={<PromotionCreate />}
             />
             <Route
-              path="/admin/promotions/:id/edit"
+              path="/admin/promotions/:promotionId/edit"
               element={<PromotionEdit />}
             />
             <Route
@@ -148,8 +152,16 @@ export default function AppRouter() {
               element={<AdminCustomerBookingHistory />}
             />
             <Route
-              path="admin/system-settings"
+              path="/admin/system-settings"
               element={<SystemSettingList />}
+            />
+            <Route
+              path="/admin/system-settings/new"
+              element={<SystemSettingCreate />}
+            />
+            <Route
+              path="/admin/system-settings/:systemSettingId/edit"
+              element={<SystemSettingEdit />}
             />
           </Route>
         </Route>

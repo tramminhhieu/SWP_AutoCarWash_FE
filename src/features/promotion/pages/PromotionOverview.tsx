@@ -142,11 +142,11 @@ export default function PromotionOverview() {
 
         <button
           onClick={() => navigate("/admin/promotions/create")}
-          className="flex items-center gap-2 rounded-md bg-primary px-6 py-3 shadow-[0px_10px_25px_-5px_rgba(29,78,216,0.15)] transition-opacity hover:opacity-90"
+          className="flex shrink-0 items-center gap-2 rounded-md bg-primary px-5 py-2.5 text-body-md font-semibold text-on-primary shadow-[0_10px_25px_-5px_rgba(29,78,216,0.05)] transition-colors hover:bg-primary/90"
         >
           <Plus size={16} strokeWidth={2.5} className="text-white" />
           <span className="text-sm font-bold tracking-[0.14px] text-white">
-            New Promotion
+            Add New
           </span>
         </button>
       </div>

@@ -1,3 +1,5 @@
+import type { BookingStatus } from "../types/booking";
+
 /**
  * Formats a backend `yyyy-MM-dd` date string into the long display form
  * used on the card, e.g. `"2023-10-18"` -> `"October 18, 2023"`.
@@ -56,4 +58,21 @@ export function formatRefundedAt(iso: string): string {
   const dd = String(date.getDate()).padStart(2, "0");
   const MM = String(date.getMonth() + 1).padStart(2, "0");
   return `${hh}:${mm} ${dd}/${MM}/${date.getFullYear()}`;
+}
+
+/**
+ * Derives the status to actually display (badge + refund captions) from a
+ * booking's refund fields, instead of trusting the raw `status` string to
+ * ever literally equal "REFUND_PENDING"/"REFUNDED" — the backend's "past"
+ * list endpoint is only documented to return PAID/CANCELED/NO_SHOW, so
+ * refund progress must be read from refundedAt/refundAmount instead.
+ */
+export function getEffectiveBookingStatus(booking: {
+  status: BookingStatus;
+  refundedAt?: string | null;
+  refundAmount?: number | null;
+}): BookingStatus {
+  if (booking.refundedAt) return "REFUNDED";
+  if (booking.refundAmount != null) return "REFUND_PENDING";
+  return booking.status;
 }

@@ -18,14 +18,14 @@ const OPTIONS: TypeOption[] = [
     title: "Unlimited Membership",
     description: "Subscription-based unlimited wash package for 1 vehicle.",
     icon: <InfinityIcon size={26} />,
-    path: "/admin/subscription-plans/create/unlimited",
+    path: "/admin/subscription-plans/unlimited/create",
   },
   {
     key: "family",
     title: "Family Membership",
     description: "Shared membership package with multiple vehicles.",
     icon: <Users size={26} />,
-    path: "/admin/subscription-plans/create/family",
+    path: "/admin/subscription-plans/family/create",
   },
   {
     key: "addon",

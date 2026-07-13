@@ -23,8 +23,8 @@ const decodeUserFromToken = (token: string): AuthUser | null => {
       return null;
     }
 
-    // BE gần đây đổi JWT "roles" claim sang có tiền tố "ROLE_" (vd "ROLE_CUSTOMER") để khớp
-    // với Spring Security hasRole() - chuẩn hoá về dạng không tiền tố ở đây vì RoleType và
+    // BE trả JWT "roles" claim có tiền tố "ROLE_" (vd "ROLE_CUSTOMER") để khớp với
+    // Spring Security hasRole() - chuẩn hoá về dạng không tiền tố ở đây vì RoleType và
     // mọi so sánh role trong FE (RoleRoute, v.v.) đều dùng dạng "CUSTOMER"/"STAFF"/"ADMIN".
     const rawRole = payload.roles ?? "CUSTOMER";
     const role = (

@@ -37,6 +37,7 @@ import MySubscriptions from "../features/subscription/pages/MySubscriptions";
 // remove/edit) là task riêng, chưa làm ở đây.
 import FamilyGroupDetail from "../features/familyGroup/pages/FamilyGroupDetail";
 import FamilyGroupCreate from "../features/familyGroup/pages/FamilyGroupCreate";
+
 // Add-on + Service Package (từ origin/dev) - thay thế addonservice/ cũ (mock)
 import AddonList from "../features/addon/pages/AddonList";
 import AddonCreate from "../features/addon/pages/AddonCreate";
@@ -53,6 +54,8 @@ import PromotionEdit from "../features/promotion/pages/PromotionEdit";
 import AdminTransactionHistory from "../features/adminTransaction/pages/AdminTransactionHistory";
 import AdminCustomers from "../features/adminCustomer/pages/AdminCustomers";
 import AdminCustomerBookingHistory from "../features/adminCustomer/pages/AdminCustomerBookingHistory";
+import FamilySubscriptionList from "../features/subscriptionPlans/familySubscription/pages/FamilySubscriptionList";
+import FamilyPaymentPending from "../features/subscriptionPlans/familySubscription/pages/FamilyPaymentPending";
 
 export default function AppRouter() {
   return (
@@ -68,6 +71,10 @@ export default function AppRouter() {
         <Route
           path="/subscription-plans"
           element={<CustomerSubscriptionPlanList />}
+        />
+        <Route
+          path="/subscriptions/family/plans"
+          element={<FamilySubscriptionList />}
         />
 
         {/* Toàn bộ flow đặt lịch yêu cầu đăng nhập - bọc trong PrivateRoute,
@@ -115,6 +122,10 @@ export default function AppRouter() {
                 ("My Family") */}
             <Route path="/family" element={<FamilyGroupDetail />} />
             <Route path="/family/create" element={<FamilyGroupCreate />} />
+            <Route
+              path="/subscriptions/family/payment"
+              element={<FamilyPaymentPending />}
+            />
           </Route>
         </Route>
       </Route>
@@ -171,7 +182,7 @@ export default function AppRouter() {
               element={<SubscriptionPlanTypeSelect />}
             />
             <Route
-              path="/admin/subscription-plans/create/:type"
+              path="/admin/subscription-plans/:type/create"
               element={<SubscriptionPlanCreate />}
             />
             <Route
@@ -200,6 +211,10 @@ export default function AppRouter() {
             <Route
               path="/admin/customers/:customerId/bookings"
               element={<AdminCustomerBookingHistory />}
+            />
+            <Route
+              path="/admin/family-subscriptions"
+              element={<FamilySubscriptionList />}
             />
           </Route>
         </Route>

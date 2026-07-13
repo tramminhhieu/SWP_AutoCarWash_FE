@@ -9,7 +9,8 @@ export interface SubscriptionStyleConfig {
 
 export const SUBSCRIPTION_STYLES: Record<string, SubscriptionStyleConfig> = {
   // Gói cá nhân không giới hạn lượt rửa — màu xanh lá (tertiary) theo DESIGN.md
-  UNLIMITED: {
+  // Key = giá trị thật BE trả ("UNLIMIT", confirm 2026-07-08) - KHÔNG phải chữ hiển thị.
+  UNLIMIT: {
     badge: "bg-tertiary/10 text-tertiary",
     border: "border-tertiary/30",
   },
@@ -20,9 +21,20 @@ export const SUBSCRIPTION_STYLES: Record<string, SubscriptionStyleConfig> = {
   },
 };
 
-// Lấy style theo plan_type, fallback về UNLIMITED nếu BE trả type không khớp
+// Lấy style theo plan_type, fallback về UNLIMIT nếu BE trả type không khớp
 export function getSubscriptionStyle(
   planType: string,
 ): SubscriptionStyleConfig {
-  return SUBSCRIPTION_STYLES[planType] ?? SUBSCRIPTION_STYLES["UNLIMITED"];
+  return SUBSCRIPTION_STYLES[planType] ?? SUBSCRIPTION_STYLES["UNLIMIT"];
+}
+
+// Text hiển thị cho người dùng - tách biệt khỏi giá trị enum thật dùng để so sánh/gọi API.
+// "UNLIMIT" (giá trị thật BE trả) vẫn phải hiện chữ "UNLIMITED" trên UI.
+const SUBSCRIPTION_TYPE_LABELS: Record<string, string> = {
+  UNLIMIT: "UNLIMITED",
+  FAMILY: "FAMILY",
+};
+
+export function getSubscriptionTypeLabel(planType: string): string {
+  return SUBSCRIPTION_TYPE_LABELS[planType] ?? planType;
 }

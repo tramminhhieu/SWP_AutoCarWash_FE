@@ -10,6 +10,11 @@ import type { FamilyGroupDetails, GroupMemberDto } from "../types/familyGroup";
 import { getFamilyGroupErrorMessage } from "../utils/familyGroupErrorMessages";
 import AddMemberModal from "../components/AddMemberModal";
 import MemberDetailsModal from "../components/MemberDetailsModal";
+import {
+  cancelFamilySubscription,
+  getFamilySubscriptionPlans,
+  renewFamilySubscription,
+} from "../../subscriptionPlans/familySubscription/api/familySubscriptionApi";
 
 // AC08: điểm đến sau khi tạo Family Group thành công - hiện danh sách thành viên + nút "Buy
 // Family Plan" (task khác, chưa nối logic) và "Invite Member" (API-17-02, chỉ owner thấy được).
@@ -33,6 +38,16 @@ export default function FamilyGroupDetail() {
   const [isDissolving, setIsDissolving] = useState(false);
   const [dissolveError, setDissolveError] = useState<string | null>(null);
 
+  // subscriptionPlanId của gói hiện tại - GroupSubscriptionDto (từ /my-group) không có field
+  // này, phải lấy riêng từ GET /api/subscriptions/family/plans (currentGroup.subscription) để
+  // biết chính xác renew đúng gói nào khi bấm "Renew".
+  const [currentPlanId, setCurrentPlanId] = useState<number | null>(null);
+  const [isRenewing, setIsRenewing] = useState(false);
+  const [renewError, setRenewError] = useState<string | null>(null);
+  const [isCancelSubOpen, setIsCancelSubOpen] = useState(false);
+  const [isCancelingSub, setIsCancelingSub] = useState(false);
+  const [cancelSubError, setCancelSubError] = useState<string | null>(null);
+
   useEffect(() => {
     if (!toast) return;
     window.history.replaceState({}, "");
@@ -47,6 +62,12 @@ export default function FamilyGroupDetail() {
       .then(setGroup)
       .catch(() => setError("Unable to load your family group. Please try again."))
       .finally(() => setIsLoading(false));
+    // Best-effort - không chặn hiển thị trang chính nếu lỗi, chỉ ảnh hưởng nút Renew
+    getFamilySubscriptionPlans()
+      .then((res) =>
+        setCurrentPlanId(res.data.currentGroup?.subscription?.subscriptionPlanId ?? null),
+      )
+      .catch(() => setCurrentPlanId(null));
   }, []);
 
   useEffect(() => {
@@ -98,6 +119,58 @@ export default function FamilyGroupDetail() {
       setIsDissolving(false);
     }
   };
+
+  // Gia hạn đúng gói hiện tại - thành công thì sang màn "chuyển khoản" tạm thời (chưa có QR thật)
+  const handleRenew = async () => {
+    if (currentPlanId == null) return;
+    setIsRenewing(true);
+    setRenewError(null);
+    try {
+      const result = await renewFamilySubscription({ subscriptionPlanId: currentPlanId });
+      navigate("/subscriptions/family/payment", {
+        state: {
+          planName: result.planName,
+          startDate: result.startDate,
+          endDate: result.endDate,
+          status: result.status,
+        },
+      });
+    } catch (err) {
+      const { errorCode, message } = getApiErrorInfo(err);
+      setRenewError(getFamilyGroupErrorMessage(errorCode, message));
+    } finally {
+      setIsRenewing(false);
+    }
+  };
+
+  // Hủy gói Family đang ACTIVE - hiện được mọi lúc trong lúc gói còn active, không phụ thuộc
+  // số ngày còn lại (khác với Renew/Buy New Plan chỉ hiện khi sắp/đã hết hạn).
+  const handleConfirmCancelSub = async () => {
+    setIsCancelingSub(true);
+    setCancelSubError(null);
+    try {
+      await cancelFamilySubscription();
+      setIsCancelSubOpen(false);
+      setToast("Your family subscription has been canceled.");
+      load();
+    } catch (err) {
+      const { errorCode, message } = getApiErrorInfo(err);
+      setCancelSubError(getFamilyGroupErrorMessage(errorCode, message));
+    } finally {
+      setIsCancelingSub(false);
+    }
+  };
+
+  const daysLeft = group?.subscription
+    ? Math.ceil(
+        (new Date(group.subscription.endDate).getTime() - Date.now()) /
+          (1000 * 60 * 60 * 24),
+      )
+    : null;
+  const showRenewOptions =
+    !!group?.subscription &&
+    (group.subscription.status !== "ACTIVE" || (daysLeft !== null && daysLeft <= 3));
+  const showCancelPlan = group?.subscription?.status === "ACTIVE";
 
   const openMember = group?.members.find((m) => m.customerId === openMemberId) ?? null;
 
@@ -167,15 +240,51 @@ export default function FamilyGroupDetail() {
                 </div>
               )}
 
-              <div className="mt-5 flex flex-wrap gap-3 border-t border-outline-variant pt-4">
-                {/* Mua gói Family - task khác, chưa nối logic */}
-                <button
-                  type="button"
-                  disabled
-                  className="cursor-not-allowed rounded-lg bg-primary px-4 py-2 text-label-md font-semibold text-on-primary opacity-50"
-                >
-                  Buy Family Plan
-                </button>
+              <div className="mt-5 flex flex-wrap items-center gap-3 border-t border-outline-variant pt-4">
+                {!group.subscription ? (
+                  <button
+                    type="button"
+                    onClick={() => navigate("/subscriptions/family/plans")}
+                    className="rounded-lg bg-primary px-4 py-2 text-label-md font-semibold text-on-primary hover:opacity-90"
+                  >
+                    Buy Family Plan
+                  </button>
+                ) : (
+                  showRenewOptions && (
+                    <>
+                      <button
+                        type="button"
+                        onClick={handleRenew}
+                        disabled={isRenewing || currentPlanId == null}
+                        className="rounded-lg bg-primary px-4 py-2 text-label-md font-semibold text-on-primary hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50"
+                      >
+                        {isRenewing ? "Renewing..." : "Renew"}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => navigate("/subscriptions/family/plans")}
+                        className="rounded-lg border border-outline-variant px-4 py-2 text-label-md font-semibold text-on-surface hover:border-primary/40 hover:text-primary"
+                      >
+                        Buy New Plan
+                      </button>
+                    </>
+                  )
+                )}
+
+                {/* Hủy gói đang active - hiện mọi lúc, không phụ thuộc còn bao nhiêu ngày */}
+                {showCancelPlan && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setCancelSubError(null);
+                      setIsCancelSubOpen(true);
+                    }}
+                    className="rounded-lg border border-error/30 px-4 py-2 text-label-md font-semibold text-error hover:bg-error-container"
+                  >
+                    Cancel Plan
+                  </button>
+                )}
+
                 {/* API-17-02 AC01: chỉ owner mới thêm được thành viên */}
                 {group.owner && (
                   <button
@@ -187,6 +296,9 @@ export default function FamilyGroupDetail() {
                   </button>
                 )}
               </div>
+              {renewError && (
+                <p className="mt-2 text-label-sm text-error">{renewError}</p>
+              )}
             </div>
 
             <div className="mt-6">
@@ -338,6 +450,31 @@ export default function FamilyGroupDetail() {
         confirmText="Dissolve Group"
         onConfirm={handleConfirmDissolve}
         isConfirmLoading={isDissolving}
+      />
+
+      {/* Xác nhận trước khi hủy gói Family đang active - mất quyền lợi ngay lập tức, không
+          hoàn tiền (cùng phong cách cảnh báo với Dissolve Family Group ở trên). */}
+      <Modal
+        isOpen={isCancelSubOpen}
+        onClose={() => {
+          setIsCancelSubOpen(false);
+          setCancelSubError(null);
+        }}
+        variant="danger"
+        title="Cancel Family Plan?"
+        message={
+          <>
+            This will cancel your family plan immediately — all members lose their
+            benefits right away, and there's no refund for the remaining period. This
+            action cannot be undone.
+            {cancelSubError && (
+              <p className="mt-3 text-label-sm text-error">{cancelSubError}</p>
+            )}
+          </>
+        }
+        confirmText="Cancel Plan"
+        onConfirm={handleConfirmCancelSub}
+        isConfirmLoading={isCancelingSub}
       />
     </div>
   );

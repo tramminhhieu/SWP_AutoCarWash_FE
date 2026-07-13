@@ -252,7 +252,7 @@ const Home = () => {
 
             <button
               type="button"
-              onClick={() => navigate("/subscription-plans?type=FAMILY")}
+              onClick={() => navigate("/subscriptions/family/plans")}
               className="mt-7 px-6 py-3 rounded-lg bg-primary text-on-primary font-body font-semibold text-sm"
             >
               Get Started

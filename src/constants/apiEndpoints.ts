@@ -90,6 +90,11 @@ export const API = {
   SUBSCRIPTIONS: {
     // GET the customer's currently active subscription (204 if none)
     ACTIVE: "/api/subscriptions/active",
+
+    FAMILY_PLANS: "/api/subscriptions/family/plans",
+    FAMILY_REGISTER: "/api/subscriptions/family",
+    FAMILY_RENEW: "/api/subscriptions/family/renew",
+    FAMILY_CANCEL: "/api/subscriptions/family/cancel",
   },
   // API-17-01/02: base path /api/family-groups (KHÔNG nằm dưới /api/customer/..., và
   // KHÔNG có tiền tố /v1/ dù tài liệu API-17-02 có ghi nhầm /api/v1/... - khớp đúng

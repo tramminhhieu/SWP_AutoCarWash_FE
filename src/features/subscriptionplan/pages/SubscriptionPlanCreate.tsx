@@ -22,7 +22,7 @@ export default function SubscriptionPlanCreate() {
   const { type } = useParams<{ type: string }>();
   const config = type ? TYPE_CONFIG[type] : undefined;
 
-  // URL /admin/subscription-plans/create/:type không hợp lệ -> quay lại màn chọn loại
+  // URL /admin/subscription-plans/:type/create không hợp lệ -> quay lại màn chọn loại
   if (!config) {
     return <Navigate to="/admin/subscription-plans/create" replace />;
   }

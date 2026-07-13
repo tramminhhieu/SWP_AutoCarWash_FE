@@ -18,6 +18,7 @@ import {
   formatCurrency,
   formatRefundedAt,
   formatTimeRange,
+  getEffectiveBookingStatus,
   maskAccount,
 } from "../utils/bookingFormatters";
 
@@ -55,14 +56,14 @@ function BookingCardItem({
             </div>
           </div>
           <div className="flex flex-col items-end gap-1">
-            <BookingStatusBadge status={booking.status} />
-            {booking.status === "REFUND_PENDING" && (
+            <BookingStatusBadge status={getEffectiveBookingStatus(booking)} />
+            {getEffectiveBookingStatus(booking) === "REFUND_PENDING" && (
               <span className="text-xs font-medium text-amber-600">
                 Refund in progress — expected within 1-2 business days
               </span>
             )}
-            {booking.status === "REFUNDED" && (
-              <span className="text-xs font-medium text-on-surface-variant">
+            {getEffectiveBookingStatus(booking) === "REFUNDED" && (
+              <span className="text-xs font-medium text-[#22c55e]">
                 {booking.refundAmount != null &&
                 booking.refundAccountNumber &&
                 booking.refundedAt

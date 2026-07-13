@@ -85,18 +85,22 @@ export const BOOKING_STATUS_STYLES: Record<BookingStatus, BookingStatusStyle> =
       bgClassName: "bg-tertiary-fixed/20",
       borderClassName: "border-tertiary/20",
     },
+    // Badge luôn đỏ như CANCELED — booking đã bị hủy là sự thật không đổi bất kể
+    // tiến trình hoàn tiền. Tiến trình refund (đang xử lý/đã hoàn) hiển thị riêng
+    // qua dòng chữ bên dưới badge (BookingHistory.tsx/BookingDetail.tsx), không
+    // đổi màu badge.
     REFUND_PENDING: {
       label: "CANCELLED",
-      dotClassName: "bg-amber-500",
-      textClassName: "text-amber-600",
-      bgClassName: "bg-amber-50",
-      borderClassName: "border-amber-200",
+      dotClassName: "bg-error",
+      textClassName: "text-error",
+      bgClassName: "bg-error-container",
+      borderClassName: "border-error/20",
     },
     REFUNDED: {
       label: "CANCELLED",
-      dotClassName: "bg-[#22c55e]",
-      textClassName: "text-[#22c55e]",
-      bgClassName: "bg-tertiary-fixed/20",
-      borderClassName: "border-tertiary/20",
+      dotClassName: "bg-error",
+      textClassName: "text-error",
+      bgClassName: "bg-error-container",
+      borderClassName: "border-error/20",
     },
   };

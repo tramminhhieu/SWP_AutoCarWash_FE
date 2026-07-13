@@ -328,13 +328,6 @@ const RefundModal = ({ booking, onClose, onRefunded }: RefundModalProps) => {
               Đúng là tài khoản của bạn?
             </p>
           )}
-          {/* AC2c — lookup thất bại: BE đã báo lỗi, FE chỉ mở nhập tay + cảnh báo */}
-          {holderManual && (
-            <p className="mt-1 text-label-sm text-amber-600">
-              Vui lòng kiểm tra kỹ thông tin, hệ thống không xác thực được tài
-              khoản này.
-            </p>
-          )}
           {fieldErrors.accountHolder && (
             <p className="mt-1 text-label-sm text-error">
               {fieldErrors.accountHolder}

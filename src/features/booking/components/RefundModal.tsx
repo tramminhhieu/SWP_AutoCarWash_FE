@@ -135,7 +135,7 @@ const RefundModal = ({ booking, onClose, onRefunded }: RefundModalProps) => {
       setApiError(
         API_ERROR_MAP[errorCode ?? ""] ??
           message ??
-          "Không thể tạo yêu cầu hoàn tiền. Vui lòng thử lại.",
+          "Failed to submit refund request. Please try again.",
       );
     } finally {
       setIsSubmitting(false);
@@ -172,9 +172,9 @@ const RefundModal = ({ booking, onClose, onRefunded }: RefundModalProps) => {
           onClose();
         }}
         variant="success"
-        title="Đã gửi yêu cầu hoàn tiền"
+        title="Refund request submitted"
         message={successMessage ?? ""}
-        confirmText="Đã hiểu"
+        confirmText="Got it"
       />
 
       {/* Error feedback */}
@@ -182,9 +182,9 @@ const RefundModal = ({ booking, onClose, onRefunded }: RefundModalProps) => {
         isOpen={!!apiError}
         onClose={() => setApiError(null)}
         variant="danger"
-        title="Không thể hoàn tiền"
+        title="Unable to process refund"
         message={apiError ?? ""}
-        confirmText="Đã hiểu"
+        confirmText="Got it"
         onConfirm={() => setApiError(null)}
       />
 

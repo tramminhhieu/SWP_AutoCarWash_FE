@@ -117,4 +117,9 @@ export const API = {
     SOFT_DELETE_CAMPAIGN: "/api/admin/promotions", // + /{promotionId}/soft-delete
     SOFT_DELETE_VOUCHER: "/api/admin/vouchers", // + /{voucherId}/soft-delete
   },
+  SETTINGS: {
+    LIST: "/api/admin/system-settings",
+    CREATE: "/api/admin/system-settings",
+    UPDATE: (id: number) => `/api/admin/system-settings/${id}`,
+  },
 };

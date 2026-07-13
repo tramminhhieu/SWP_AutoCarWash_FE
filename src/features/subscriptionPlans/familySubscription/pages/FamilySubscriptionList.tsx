@@ -399,13 +399,11 @@ export default function FamilySubscriptionList() {
             familyGroupId: currentGroup.familyGroupId,
             subscriptionPlanId: plan.id,
           });
-      /* Thành công → navigate sang trang xác nhận "chuyển khoản" tạm thời (chưa có QR thật) */
-      navigate("/subscriptions/family/payment", {
+      /* Thành công → sang màn thanh toán QR dùng chung với luồng Unlimited */
+      navigate(`/subscription-plans/payment/${result.invoiceId}`, {
         state: {
-          planName: result.planName,
-          startDate: result.startDate,
-          endDate: result.endDate,
-          status: result.status,
+          isRenewal: !!currentGroup.subscription,
+          redirectTo: "/subscriptions/family/plans",
         },
       });
     } catch (err) {

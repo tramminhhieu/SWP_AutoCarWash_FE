@@ -55,7 +55,6 @@ import AdminTransactionHistory from "../features/adminTransaction/pages/AdminTra
 import AdminCustomers from "../features/adminCustomer/pages/AdminCustomers";
 import AdminCustomerBookingHistory from "../features/adminCustomer/pages/AdminCustomerBookingHistory";
 import FamilySubscriptionList from "../features/subscriptionPlans/familySubscription/pages/FamilySubscriptionList";
-import FamilyPaymentPending from "../features/subscriptionPlans/familySubscription/pages/FamilyPaymentPending";
 
 export default function AppRouter() {
   return (
@@ -122,10 +121,6 @@ export default function AppRouter() {
                 ("My Family") */}
             <Route path="/family" element={<FamilyGroupDetail />} />
             <Route path="/family/create" element={<FamilyGroupCreate />} />
-            <Route
-              path="/subscriptions/family/payment"
-              element={<FamilyPaymentPending />}
-            />
           </Route>
         </Route>
       </Route>

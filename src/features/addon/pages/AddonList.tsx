@@ -144,7 +144,7 @@ export default function AddonList() {
 
   /* Navigate sang trang edit, truyền addon data qua state (KHÔNG gọi API mới — AC-15.2) */
   const handleEdit = (addon: AddonService) => {
-    navigate(`/admin/add-ons/edit/${addon.id}`, { state: { addon } });
+    navigate(`/admin/add-ons/${addon.id}/edit`, { state: { addon } });
   };
 
   /* State cho confirm dialog */

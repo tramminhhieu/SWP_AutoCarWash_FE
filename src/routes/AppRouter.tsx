@@ -24,7 +24,6 @@ import LoyaltyRewards from "../features/customer/pages/LoyaltyRewards";
 //Admin
 import AdminLayout from "../layouts/AdminLayout";
 import SubscriptionPlanList from "../features/subscriptionplan/pages/SubscriptionPlanList";
-import SubscriptionPlanTypeSelect from "../features/subscriptionplan/pages/SubscriptionPlanTypeSelect";
 import SubscriptionPlanCreate from "../features/subscriptionplan/pages/SubscriptionPlanCreate";
 import SubscriptionPlanEdit from "../features/subscriptionplan/pages/SubscriptionPlanEdit";
 // FE-60/56/58: Customer - browse/register/manage Subscription (khác admin CRUD ở trên).
@@ -181,10 +180,13 @@ export default function AppRouter() {
               path="/admin/subscription-plans"
               element={<SubscriptionPlanList />}
             />
-            {/* Màn chọn loại (Unlimited/Family/Add-on) trước khi vào form tạo tương ứng */}
+            {/* Không còn màn chọn loại (Select Package Type) - "+ Add" ở list đi thẳng vào
+                form Unlimited; Family có lối riêng từ FamilySubscriptionList "Add New". */}
             <Route
               path="/admin/subscription-plans/create"
-              element={<SubscriptionPlanTypeSelect />}
+              element={
+                <Navigate to="/admin/subscription-plans/unlimited/create" replace />
+              }
             />
             <Route
               path="/admin/subscription-plans/:type/create"

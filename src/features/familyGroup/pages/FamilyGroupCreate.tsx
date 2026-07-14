@@ -175,18 +175,22 @@ export default function FamilyGroupCreate() {
             <div className="flex flex-col gap-2.5">
               {vehicles.map((v) => {
                 const isSelected = selectedVehicleId === v.id;
+                const isDisabled = v.hasActiveSubscription;
                 return (
                   <button
                     key={v.id}
                     type="button"
+                    disabled={isDisabled}
                     onClick={() => {
                       setSelectedVehicleId(v.id);
                       setVehicleError(null);
                     }}
                     className={`flex w-full items-center gap-3 rounded-xl border p-3.5 text-left transition-colors ${
-                      isSelected
-                        ? "border-primary bg-primary/5"
-                        : "border-outline-variant bg-surface-container-lowest hover:border-primary/40"
+                      isDisabled
+                        ? "cursor-not-allowed border-outline-variant/40 bg-surface-container opacity-60"
+                        : isSelected
+                          ? "border-primary bg-primary/5"
+                          : "border-outline-variant bg-surface-container-lowest hover:border-primary/40"
                     }`}
                   >
                     <div className="flex size-11 shrink-0 items-center justify-center rounded-lg border border-primary/10 bg-primary/5">
@@ -198,9 +202,10 @@ export default function FamilyGroupCreate() {
                       </p>
                       <p className="text-label-sm text-on-surface-variant">
                         {v.vehicleName}
+                        {isDisabled ? " · Already has an active plan" : ""}
                       </p>
                     </div>
-                    {isSelected && (
+                    {isSelected && !isDisabled && (
                       <div className="flex size-6 shrink-0 items-center justify-center rounded-full bg-primary">
                         <Check size={14} className="text-on-primary" strokeWidth={3} />
                       </div>

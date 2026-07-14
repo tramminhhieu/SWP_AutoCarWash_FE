@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { CheckCircle2, Loader2 } from "lucide-react";
 import Modal from "../../../components/ui/Modal";
 import { getApiErrorInfo } from "../../../lib/axiosClient";
-import { formatCurrency } from "../utils/bookingFormatters";
+import { formatCurrency } from "../../../utils";
 import {
   createRefund,
   fetchBanks,

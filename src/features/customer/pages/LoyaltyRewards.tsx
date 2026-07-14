@@ -27,6 +27,7 @@ import type {
 } from "../types/loyalty";
 import { getTierStyle } from "../../../constants/tierStyles";
 import { formatAppointmentDate } from "../../booking/utils/bookingFormatters";
+import { formatCurrency } from "../../../utils";
 
 // Icon riêng cho từng tier (API trả tên: MEMBER/SILVER/GOLD/PLATINUM)
 const TIER_ICONS: Record<string, typeof Shield> = {
@@ -254,10 +255,7 @@ export default function LoyaltyRewards() {
                 </p>
                 <p className="flex items-baseline gap-1">
                   <span className="font-heading text-2xl font-semibold text-on-surface">
-                    {profile.retentionCurrentAmount.toLocaleString("vi-VN")}
-                  </span>
-                  <span className="text-sm font-medium tracking-wide text-on-surface">
-                    ₫
+                    {formatCurrency(profile.retentionCurrentAmount)}
                   </span>
                 </p>
               </div>
@@ -403,7 +401,7 @@ export default function LoyaltyRewards() {
                   Amount to Maintain {profile.tierName}
                 </p>
                 <p className="font-heading text-2xl font-semibold text-on-surface">
-                  {profile.retentionTargetAmount.toLocaleString("vi-VN")} ₫
+                  {formatCurrency(profile.retentionTargetAmount)}
                 </p>
               </div>
             </div>
@@ -427,7 +425,7 @@ export default function LoyaltyRewards() {
                 <>
                   {remainingToRetain > 0 && (
                     <div className="mb-6 rounded-lg border border-error/30 bg-error-container px-4 py-3 text-body-md text-on-error-container">
-                      Spend {remainingToRetain.toLocaleString("vi-VN")} ₫ more
+                      Spend {formatCurrency(remainingToRetain)} more
                       before {retentionEndDateText} to keep your{" "}
                       {profile.tierName} status.
                     </div>
@@ -539,8 +537,7 @@ export default function LoyaltyRewards() {
             <div className="flex flex-wrap items-center gap-4">
               {!historyError && !isHistoryLoading && (
                 <span className="text-sm font-medium text-on-surface-variant">
-                  Total spending: {historyTotalSpending.toLocaleString("vi-VN")}{" "}
-                  ₫
+                  Total spending: {formatCurrency(historyTotalSpending)}
                 </span>
               )}
               <select

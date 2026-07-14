@@ -691,7 +691,7 @@ export default function PromotionCreate() {
                   >
                     {type === "PERCENTAGE"
                       ? "Percentage (%)"
-                      : "Fixed Amount (VND)"}
+                      : "Fixed Amount (VNĐ)"}
                   </button>
                 ))}
               </div>
@@ -702,7 +702,7 @@ export default function PromotionCreate() {
                 label={
                   form.discountType === "PERCENTAGE"
                     ? "Discount (%)"
-                    : "Discount (VND)"
+                    : "Discount (VNĐ)"
                 }
                 required
                 error={errors.discountValue}
@@ -731,7 +731,7 @@ export default function PromotionCreate() {
               </FormField>
 
               <FormField
-                label="Max Discount (VND)"
+                label="Max Discount (VNĐ)"
                 required
                 error={errors.maxDiscountAmount}
               >
@@ -751,7 +751,7 @@ export default function PromotionCreate() {
               </FormField>
 
               <FormField
-                label="Min Order Value (VND)"
+                label="Min Order Value (VNĐ)"
                 required
                 error={errors.minOrderValue}
               >

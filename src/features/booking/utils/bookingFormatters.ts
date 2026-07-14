@@ -40,11 +40,6 @@ export function formatCheckInTime(isoDateTime: string): string {
   });
 }
 
-/** Formats a VND amount, e.g. `150000` -> `"150.000 ₫"`. */
-export function formatCurrency(amount: number): string {
-  return new Intl.NumberFormat("vi-VN", { style: "currency", currency: "VND" }).format(amount);
-}
-
 /** Masks all but the last 4 digits of a bank account number, e.g. `"0123456789"` -> `"•••6789"`. */
 export function maskAccount(accountNumber: string): string {
   return `•••${accountNumber.slice(-4)}`;

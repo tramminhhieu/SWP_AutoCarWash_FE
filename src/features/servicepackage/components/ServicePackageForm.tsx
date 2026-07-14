@@ -281,7 +281,7 @@ export default function ServicePackageForm({
             htmlFor="pkgPrice"
             className="mb-1.5 block text-label-md uppercase tracking-wide text-on-surface-variant"
           >
-            Base Price (VND)
+            Base Price (VNĐ)
           </label>
           <input
             id="pkgPrice"

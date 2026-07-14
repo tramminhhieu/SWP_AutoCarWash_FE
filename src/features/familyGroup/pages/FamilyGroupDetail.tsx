@@ -208,7 +208,7 @@ export default function FamilyGroupDetail() {
     : null;
 
   return (
-    <div className="max-w-[1200px] mx-auto px-margin-mobile py-12 md:px-margin-desktop">
+    <div className="max-w-3xl mx-auto px-margin-mobile py-12 md:px-margin-desktop">
       <Modal
         isOpen={!!toast}
         onClose={() => setToast(null)}

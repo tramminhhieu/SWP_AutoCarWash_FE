@@ -241,7 +241,7 @@ export default function MySubscriptions() {
   };
 
   return (
-    <div className="max-w-[1200px] mx-auto px-margin-mobile py-12 md:px-margin-desktop">
+    <div className="max-w-3xl mx-auto px-margin-mobile py-12 md:px-margin-desktop">
       <h1 className="font-heading text-headline-lg text-on-surface">
         My Subscriptions
       </h1>
@@ -276,7 +276,7 @@ export default function MySubscriptions() {
             </button>
           </div>
         ) : (
-          <div className="grid grid-cols-1 gap-5 md:grid-cols-2">
+          <div className="flex flex-col gap-5">
             {subscriptions.map((sub) => (
               <SubscriptionCard
                 key={sub.id}

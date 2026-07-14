@@ -13,12 +13,12 @@ import BookingStatusBadge from "../../../components/ui/BookingStatusBadge";
 import {
   formatAppointmentDate,
   formatCheckInTime,
-  formatCurrency,
   formatRefundedAt,
   formatTimeRange,
   getEffectiveBookingStatus,
   maskAccount,
 } from "../utils/bookingFormatters";
+import { formatCurrency } from "../../../utils";
 
 export default function BookingDetail() {
   const { bookingId } = useParams<{ bookingId: string }>();

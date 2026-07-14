@@ -19,8 +19,8 @@ import RefundStatusBadge from "../../../components/ui/RefundStatusBadge";
 import {
   formatAppointmentDate,
   formatCheckInTime,
-  formatCurrency,
 } from "../../booking/utils/bookingFormatters";
+import { formatCurrency } from "../../../utils";
 
 const PAGE_SIZE = 10;
 

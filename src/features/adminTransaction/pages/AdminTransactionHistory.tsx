@@ -21,10 +21,8 @@ import type {
 } from "../types/adminTransaction";
 import Modal from "../../../components/ui/Modal";
 import { useAuth } from "../../../hooks/useAuth";
-import {
-  formatCheckInTime,
-  formatCurrency,
-} from "../../booking/utils/bookingFormatters";
+import { formatCheckInTime } from "../../booking/utils/bookingFormatters";
+import { formatCurrency } from "../../../utils";
 
 const PAGE_SIZE = 8;
 

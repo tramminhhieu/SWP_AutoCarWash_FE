@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
-import { CalendarClock, CarFront, CheckCircle2 } from "lucide-react";
+import { CalendarClock, CarFront, CheckCircle2, XCircle } from "lucide-react";
 import { useAuth } from "../../../hooks/useAuth";
 import { formatCurrency } from "../../../utils";
 import {
@@ -141,12 +141,14 @@ function PlanGroupCard({
  * khiển từ toggle chung ở section thay vì mỗi card tự chọn kỳ hạn riêng. */
 function UnlimitedPlanCard({
   variant,
-  addons,
+  allAddons,
+  includedAddonIds,
   isBestValue,
   onSubscribe,
 }: {
   variant: CustomerSubscriptionPlan;
-  addons: string[];
+  allAddons: AddonService[];
+  includedAddonIds: Set<number>;
   isBestValue: boolean;
   onSubscribe: (planId: number) => void;
 }) {
@@ -181,18 +183,45 @@ function UnlimitedPlanCard({
           </span>
         </div>
 
-        {addons.length > 0 && (
+        <div className="mt-4 flex flex-wrap gap-2">
+          <span className="inline-flex items-center gap-1.5 rounded-full bg-surface-container px-3 py-1.5 text-label-sm font-medium text-on-surface-variant">
+            <CalendarClock size={14} />
+            {variant.durationDays} days
+          </span>
+          <span className="inline-flex items-center rounded-full bg-surface-container px-3 py-1.5 text-label-sm font-medium text-on-surface-variant">
+            {variant.servicePackageName}
+          </span>
+        </div>
+
+        {allAddons.length > 0 && (
           <ul className="mt-6 space-y-2.5">
-            {addons.map((addon) => (
-              <li key={addon} className="flex items-center gap-2.5">
-                <CheckCircle2
-                  size={16}
-                  className="shrink-0 text-tertiary-fixed-dim"
-                  strokeWidth={2}
-                />
-                <span className="text-body-sm text-on-surface">{addon}</span>
-              </li>
-            ))}
+            {allAddons.map((addon) => {
+              const isIncluded = includedAddonIds.has(addon.id);
+              return (
+                <li key={addon.id} className="flex items-center gap-2.5">
+                  {isIncluded ? (
+                    <CheckCircle2
+                      size={16}
+                      className="shrink-0 text-tertiary-fixed-dim"
+                      strokeWidth={2}
+                    />
+                  ) : (
+                    <XCircle
+                      size={16}
+                      className="shrink-0 text-error"
+                      strokeWidth={2}
+                    />
+                  )}
+                  <span
+                    className={`text-body-sm ${
+                      isIncluded ? "text-on-surface" : "text-on-surface-variant"
+                    }`}
+                  >
+                    {addon.name}
+                  </span>
+                </li>
+              );
+            })}
           </ul>
         )}
       </div>
@@ -256,20 +285,14 @@ export default function SubscriptionPlanList() {
     };
   }, []);
 
-  // name -> tên add-on thật của ServicePackage (Basic/Medium/Premium), match theo
-  // servicePackageName trên CustomerSubscriptionPlan để hiện checklist cho card Unlimited.
-  const addonsByPackageName = useMemo(() => {
-    const addonNameById = new Map(addonServices.map((a) => [a.id, a.name]));
-    return new Map(
-      servicePackages.map((sp) => [
-        sp.name,
-        // BE trả addonIds bị lặp (bug join phía BE) - khử trùng lặp trước khi hiển thị
-        Array.from(new Set(sp.addonIds))
-          .map((id) => addonNameById.get(id))
-          .filter((n): n is string => !!n),
-      ]),
-    );
-  }, [servicePackages, addonServices]);
+  // servicePackageName -> Set<addonId> đã có trong ServicePackage (Basic/Medium/Premium), match
+  // theo servicePackageName trên CustomerSubscriptionPlan để hiện checklist ✓/✗ cho card Unlimited
+  // (đồng bộ với ServicePackageList.tsx / FamilySubscriptionList.tsx - hiện TẤT CẢ addon, không
+  // chỉ addon đã có).
+  const includedAddonIdsByPackageName = useMemo(
+    () => new Map(servicePackages.map((sp) => [sp.name, new Set(sp.addonIds)])),
+    [servicePackages],
+  );
 
   // FE-60-US-02.1: chưa login -> chuyển sang /login kèm "from" để quay lại đúng bước
   // chọn xe sau khi login, giống pattern handleSelectPackage ở ServicePackageList.tsx.
@@ -358,7 +381,7 @@ export default function SubscriptionPlanList() {
                         </div>
                       </div>
 
-                      <div className="mx-auto mt-10 grid max-w-2xl grid-cols-1 gap-8 md:grid-cols-2">
+                      <div className="mt-10 grid grid-cols-1 gap-6 md:grid-cols-3">
                         {groupedList.map((variants) => {
                           const selected =
                             variants.find((v) => v.durationDays === selectedMonths * 30) ??
@@ -367,7 +390,11 @@ export default function SubscriptionPlanList() {
                             <UnlimitedPlanCard
                               key={groupKey(variants[0])}
                               variant={selected}
-                              addons={addonsByPackageName.get(selected.servicePackageName) ?? []}
+                              allAddons={addonServices}
+                              includedAddonIds={
+                                includedAddonIdsByPackageName.get(selected.servicePackageName) ??
+                                new Set()
+                              }
                               isBestValue={selected.servicePackageName === "Premium"}
                               onSubscribe={handleSubscribe}
                             />

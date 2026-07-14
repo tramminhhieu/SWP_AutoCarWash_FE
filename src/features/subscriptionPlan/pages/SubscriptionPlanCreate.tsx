@@ -1,9 +1,13 @@
 import { Navigate, useNavigate, useParams } from "react-router-dom";
 import SubscriptionPlanForm from "../components/SubscriptionPlanForm";
-import type { PlanType } from "../types/subscriptionPlan";
+import { PLAN_TYPE_LIST_ROUTE, type PlanType } from "../types/subscriptionPlan";
 
 // Map :type trên URL (đến từ SubscriptionPlanTypeSelect) -> planType thật + nội dung hiển thị
-const TYPE_CONFIG: Record<string, { planType: PlanType; title: string; subtitle: string }> = {
+// listRoute lấy từ PLAN_TYPE_LIST_ROUTE (subscriptionPlan.ts) — nguồn duy nhất, đồng bộ với Edit
+const TYPE_CONFIG: Record<
+  string,
+  { planType: PlanType; title: string; subtitle: string }
+> = {
   unlimited: {
     planType: "UNLIMIT",
     title: "Create Unlimited Membership",
@@ -29,19 +33,26 @@ export default function SubscriptionPlanCreate() {
 
   return (
     <div className="mx-auto max-w-4xl">
-      <h1 className="font-heading text-headline-lg text-on-surface">{config.title}</h1>
-      <p className="mt-1 text-body-md text-on-surface-variant">{config.subtitle}</p>
+      <h1 className="font-heading text-headline-lg text-on-surface">
+        {config.title}
+      </h1>
+      <p className="mt-1 text-body-md text-on-surface-variant">
+        {config.subtitle}
+      </p>
 
       <div className="mt-6">
         <SubscriptionPlanForm
           fixedPlanType={config.planType}
-          // AC05: tạo thành công -> thông báo + quay về list (list tự refresh khi mount)
+          // AC05: tạo thành công -> về đúng list (UNLIMIT/FAMILY), list tự refetch khi mount
           onSuccess={() =>
-            navigate("/admin/subscription-plans", {
-              state: { successMessage: "Subscription plan created successfully." },
+            navigate(PLAN_TYPE_LIST_ROUTE[config.planType], {
+              state: {
+                successMessage: "Subscription plan created successfully.",
+              },
             })
           }
-          onCancel={() => navigate("/admin/subscription-plans/create")}
+          // Hủy -> về list tương ứng thay vì màn chọn loại
+          onCancel={() => navigate(PLAN_TYPE_LIST_ROUTE[config.planType])}
         />
       </div>
     </div>

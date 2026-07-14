@@ -9,10 +9,17 @@ import type {
   SubscriptionPlan,
   SubscriptionPlanDetail,
   UpdateSubscriptionPlanRequest,
+  FamilyPlansApiResponse,
+  RegisterFamilySubscriptionRequest,
+  RegisterFamilySubscriptionResponse,
+  RenewFamilySubscriptionRequest,
+  RenewFamilySubscriptionResponse,
 } from "../types/subscriptionPlan";
 
 // AC02 US-02: dropdown chỉ hiển thị service package ACTIVE - BE đã lọc sẵn ACTIVE ở endpoint này
-export const getServicePackageOptions = async (): Promise<ServicePackageOption[]> => {
+export const getServicePackageOptions = async (): Promise<
+  ServicePackageOption[]
+> => {
   const res = await axiosClient.get<ApiSuccessResponse<ServicePackageOption[]>>(
     API.ADMIN.SERVICE_PACKAGE.ACTIVE,
   );
@@ -63,9 +70,46 @@ export const update = async (
 };
 
 // FE-53-US-04 (soft delete -> status = INACTIVE)
-export const remove = async (id: number): Promise<ApiSuccessResponse<unknown>> => {
+export const remove = async (
+  id: number,
+): Promise<ApiSuccessResponse<unknown>> => {
   const res = await axiosClient.delete<ApiSuccessResponse<unknown>>(
     API.ADMIN.SUBSCRIPTION_PLAN.DELETE(id),
   );
   return res.data;
 };
+
+/** GET /api/subscriptions/family/plans — public endpoint (API-16-01). */
+export async function getFamilySubscriptionPlans(): Promise<FamilyPlansApiResponse> {
+  const res = await axiosClient.get<FamilyPlansApiResponse>(
+    API.SUBSCRIPTIONS.FAMILY_PLANS,
+  );
+  return res.data;
+}
+
+/** POST /api/subscriptions/family — đăng ký gói Family lần đầu (API-17-02). */
+export async function registerFamilySubscription(
+  body: RegisterFamilySubscriptionRequest,
+): Promise<RegisterFamilySubscriptionResponse> {
+  const res = await axiosClient.post<{
+    success: boolean;
+    data: RegisterFamilySubscriptionResponse;
+  }>(API.SUBSCRIPTIONS.FAMILY_REGISTER, body);
+  return res.data.data;
+}
+
+/** POST /api/subscriptions/family/renew — gia hạn hoặc mua gói mới (API-17-04). */
+export async function renewFamilySubscription(
+  body: RenewFamilySubscriptionRequest,
+): Promise<RenewFamilySubscriptionResponse> {
+  const res = await axiosClient.post<{
+    success: boolean;
+    data: RenewFamilySubscriptionResponse;
+  }>(API.SUBSCRIPTIONS.FAMILY_RENEW, body);
+  return res.data.data;
+}
+
+/** PATCH /api/subscriptions/family/cancel — hủy gói Family (API-17-03). */
+export async function cancelFamilySubscription(): Promise<void> {
+  await axiosClient.patch(API.SUBSCRIPTIONS.FAMILY_CANCEL);
+}

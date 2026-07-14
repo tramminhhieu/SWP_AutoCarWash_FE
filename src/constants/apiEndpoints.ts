@@ -167,6 +167,22 @@ export const API = {
     LIST_BY_STATION: (stationId: number | string) =>
       `/api/admin/stations/${stationId}/lanes`,
   },
+  REFUNDS: {
+    // POST — tạo yêu cầu hoàn tiền khi customer hủy booking (US-04 AC3)
+    CREATE: "/api/refunds",
+    // GET — danh sách ngân hàng (BankEnum) { bin, name, code }[]
+    BANKS: "/api/refunds/banks",
+    // GET — tra cứu tên chủ tài khoản qua VietQR (proxy BE) ?bin=&accountNumber= (AC2.1)
+    ACCOUNT_LOOKUP: "/api/refunds/account-lookup",
+    // GET — số tiền cọc cố định toàn hệ thống để hiển thị read-only { amount }
+    DEPOSIT_AMOUNT: "/api/refunds/deposit-amount",
+    // US-05 AC1,AC6-AC10: GET /api/refunds?page=&size=&status=&year=&month=&stationId=&keyword=
+    LIST: "/api/refunds",
+    // US-05 AC2,AC2b,AC2c: GET /api/refunds/{id}
+    DETAIL: (id: number | string) => `/api/refunds/${id}`,
+    // US-05 AC3,AC4,AC5: POST /api/refunds/{id}/confirm
+    CONFIRM: (id: number | string) => `/api/refunds/${id}/confirm`,
+  },
   PROMOTION: {
     // API-02-01: Tổng hợp số lượng promotion theo từng chi nhánh
     BRANCHES_SUMMARY: "/api/admin/promotions/branches-summary",

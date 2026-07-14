@@ -54,6 +54,7 @@ import PromotionEdit from "../features/promotion/pages/PromotionEdit";
 import AdminTransactionHistory from "../features/adminTransaction/pages/AdminTransactionHistory";
 import AdminCustomers from "../features/adminCustomer/pages/AdminCustomers";
 import AdminCustomerBookingHistory from "../features/adminCustomer/pages/AdminCustomerBookingHistory";
+import RefundManagement from "../features/refund/pages/RefundManagement";
 import FamilySubscriptionList from "../features/subscriptionPlans/familySubscription/pages/FamilySubscriptionList";
 
 export default function AppRouter() {
@@ -216,6 +217,7 @@ export default function AppRouter() {
               path="/admin/customers/:customerId/bookings"
               element={<AdminCustomerBookingHistory />}
             />
+            <Route path="/admin/refunds" element={<RefundManagement />} />
             <Route
               path="/admin/family-subscriptions"
               element={<FamilySubscriptionList />}

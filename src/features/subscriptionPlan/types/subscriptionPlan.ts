@@ -72,3 +72,10 @@ export const SUBSCRIPTION_PLAN_ERROR_CODES = {
   SUBSCRIPTION_PLAN_NOT_FOUND: "SUBSCRIPTION_PLAN_NOT_FOUND",
   SUBSCRIPTION_PLAN_ALREADY_INACTIVE: "SUBSCRIPTION_PLAN_ALREADY_INACTIVE",
 } as const;
+
+// Route về trang list tương ứng theo planType — dùng chung cho Create (onSuccess/onCancel)
+// và Edit (onSuccess/onCancel/error fallback). Sửa route ở đây là đủ, không cần đụng 2 page.
+export const PLAN_TYPE_LIST_ROUTE: Record<PlanType, string> = {
+  UNLIMIT: "/admin/unlimited-subscriptions",
+  FAMILY: "/admin/family-subscriptions",
+};

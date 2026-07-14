@@ -8,20 +8,22 @@ import {
   Trash2,
   Plus,
 } from "lucide-react";
-import { useAuth } from "../../../../hooks/useAuth";
-import { formatCurrency } from "../../../../utils";
+import { useAuth } from "../../../hooks/useAuth";
+import { formatCurrency } from "../../../utils";
+import Modal from "../../../components/ui/Modal";
 import {
   getFamilySubscriptionPlans,
   registerFamilySubscription,
   renewFamilySubscription,
-} from "../api/familySubscriptionApi";
-import { getApiErrorInfo } from "../../../../lib/axiosClient";
-import { getAllAddonServices } from "../../../addon/api/addonApi";
+} from "../../subscriptionPlans/familySubscription/api/familySubscriptionApi";
+import { remove } from "../api/subscriptionPlanApi";
+import { getApiErrorInfo } from "../../../lib/axiosClient";
+import { getAllAddonServices } from "../../addon/api/addonApi";
 import type {
   FamilySubscriptionPlan,
   CurrentGroup,
-} from "../types/familySubscription";
-import type { AddonService } from "../../../addon/types/addon";
+} from "../../subscriptionPlans/familySubscription/types/familySubscription";
+import type { AddonService } from "../../addon/types/addon";
 
 /* ================================================================
    Hằng số
@@ -79,6 +81,7 @@ function PlanCard({
   allAddons,
   ctaVariant,
   isRegistering,
+  isDeleting,
   onSelectPlan,
   onEdit,
   onDelete,
@@ -88,6 +91,7 @@ function PlanCard({
   allAddons: AddonService[];
   ctaVariant: CtaVariant;
   isRegistering: boolean;
+  isDeleting: boolean;
   onSelectPlan: (
     plan: FamilySubscriptionPlan,
     action: "purchase" | "renew" | "login" | "create-group",
@@ -198,7 +202,8 @@ function PlanCard({
               <button
                 type="button"
                 onClick={() => onDelete(plan)}
-                className="flex flex-1 items-center justify-center gap-1.5 rounded-lg border border-error/30 px-3 py-2.5 font-body text-sm font-medium text-error transition-colors hover:bg-error-container"
+                disabled={isDeleting}
+                className="flex flex-1 items-center justify-center gap-1.5 rounded-lg border border-error/30 px-3 py-2.5 font-body text-sm font-medium text-error transition-colors hover:bg-error-container disabled:cursor-not-allowed disabled:opacity-40"
               >
                 <Trash2 size={14} />
                 Delete
@@ -318,8 +323,13 @@ export default function FamilySubscriptionList() {
 
   /* ---- State: đang gọi API đăng ký ---- */
   const [isRegistering, setIsRegistering] = useState(false);
-  /* ---- Toast lỗi từ API đăng ký ---- */
+  /* ---- Toast lỗi từ API đăng ký / xóa ---- */
   const [errorToast, setErrorToast] = useState<string | null>(null);
+
+  /* ---- State xóa: popup confirm + loading ---- */
+  const [planToDelete, setPlanToDelete] =
+    useState<FamilySubscriptionPlan | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   /* ---- Filter tab ---- */
   const [activeTab, setActiveTab] = useState<TabType>("1-Month");
@@ -353,6 +363,17 @@ export default function FamilySubscriptionList() {
     };
   }, []);
 
+  /* ---- Refetch chỉ plans sau khi xóa — addons không đổi ---- */
+  const reloadPlans = async () => {
+    try {
+      const plansRes = await getFamilySubscriptionPlans();
+      setPlans(plansRes.data.familyPlans);
+      setCurrentGroup(plansRes.data.currentGroup);
+    } catch {
+      // Lỗi refetch sau xóa - không block UI, giữ data cũ
+    }
+  };
+
   /* ---- Filter plans theo tab đang chọn ---- */
   const filteredPlans = useMemo(
     () => plans.filter((p) => p.durationDays === TAB_DURATION[activeTab]),
@@ -385,9 +406,6 @@ export default function FamilySubscriptionList() {
       return;
     }
 
-    /* purchase / renew → group chưa từng có subscription (API-17-02), ngược lại group đã
-       từng có subscription (bất kể ACTIVE/EXPIRED/CANCELED) → luôn dùng API-17-04, kể cả khi
-       đổi sang gói khác - "renew" trên BE tự xử lý cả 2 trường hợp gia hạn lẫn đổi gói. */
     if (!currentGroup) return;
 
     setIsRegistering(true);
@@ -399,7 +417,6 @@ export default function FamilySubscriptionList() {
             familyGroupId: currentGroup.familyGroupId,
             subscriptionPlanId: plan.id,
           });
-      /* Thành công → sang màn thanh toán QR dùng chung với luồng Unlimited */
       navigate(`/subscription-plans/payment/${result.invoiceId}`, {
         state: {
           isRenewal: !!currentGroup.subscription,
@@ -409,13 +426,11 @@ export default function FamilySubscriptionList() {
     } catch (err) {
       const { errorCode, message } = getApiErrorInfo(err);
 
-      /* AUTH_001 → redirect login */
       if (errorCode === "AUTH_001") {
         navigate("/login", { state: { from: "/subscription/family" } });
         return;
       }
 
-      /* Các lỗi nghiệp vụ → hiện toast */
       const toastMsg =
         errorCode === "SUB_001"
           ? "Bạn đã có gói Family đang hoạt động"
@@ -434,22 +449,39 @@ export default function FamilySubscriptionList() {
   };
 
   const handleEdit = (plan: FamilySubscriptionPlan) => {
-    console.log("Edit plan:", plan.id);
+    navigate(`/admin/subscription-plans/${plan.id}/edit`);
   };
 
-  const handleDelete = (plan: FamilySubscriptionPlan) => {
-    console.log("Delete plan:", plan.id);
+  /* ---- Xác nhận xóa: gọi API soft delete rồi refetch list ---- */
+  const handleConfirmDelete = async () => {
+    if (!planToDelete) return;
+    setIsDeleting(true);
+    try {
+      await remove(planToDelete.id);
+      setPlanToDelete(null);
+      await reloadPlans();
+    } catch (err) {
+      const { message } = getApiErrorInfo(err);
+      // Hiện lỗi qua errorToast đã có sẵn trong component
+      setErrorToast(message ?? "Failed to delete subscription plan.");
+      const timer = setTimeout(() => setErrorToast(null), 4000);
+      setPlanToDelete(null);
+      return () => clearTimeout(timer);
+    } finally {
+      setIsDeleting(false);
+    }
   };
 
   /* ================================================================ */
   return (
     <div className="mx-auto max-w-page px-margin-mobile py-20 md:px-margin-desktop">
-      {/* ---- Error toast từ API đăng ký ---- */}
+      {/* ---- Error toast từ API đăng ký / xóa ---- */}
       {errorToast && (
         <div className="fixed bottom-6 left-1/2 z-50 -translate-x-1/2 rounded-lg border border-error/30 bg-error-container px-5 py-3 text-body-md font-medium text-on-error-container shadow-soft">
           {errorToast}
         </div>
       )}
+
       {/* ---- Header ---- */}
       <div className="text-center">
         <h1 className="font-heading text-headline-lg font-bold text-on-surface">
@@ -533,15 +565,34 @@ export default function FamilySubscriptionList() {
                   allAddons={visibleAddons}
                   ctaVariant={ctaVariant}
                   isRegistering={isRegistering}
+                  isDeleting={isDeleting}
                   onSelectPlan={handleSelectPlan}
                   onEdit={handleEdit}
-                  onDelete={handleDelete}
+                  onDelete={setPlanToDelete}
                 />
               );
             })}
           </div>
         )}
       </div>
+
+      {/* ---- Modal xác nhận xóa (soft delete) ---- */}
+      <Modal
+        isOpen={!!planToDelete}
+        onClose={() => setPlanToDelete(null)}
+        variant="danger"
+        title="Delete Subscription Plan"
+        message={
+          <>
+            Are you sure you want to delete{" "}
+            <span className="font-semibold">{planToDelete?.planName}</span>?
+            This plan will be set to INACTIVE and hidden from customers.
+          </>
+        }
+        confirmText="Delete"
+        onConfirm={handleConfirmDelete}
+        isConfirmLoading={isDeleting}
+      />
     </div>
   );
 }

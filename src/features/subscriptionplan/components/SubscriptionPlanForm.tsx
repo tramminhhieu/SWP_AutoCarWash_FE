@@ -2,7 +2,11 @@ import { useEffect, useState, type ReactNode } from "react";
 import { CarFront, ChevronDown, Info, Save, Tag } from "lucide-react";
 import { getApiErrorInfo } from "../../../lib/axiosClient";
 import { getSubscriptionTypeLabel } from "../../../constants/subscriptionStyles";
-import { create, getServicePackageOptions, update } from "../api/subscriptionPlanApi";
+import {
+  create,
+  getServicePackageOptions,
+  update,
+} from "../api/subscriptionPlanApi";
 import {
   SUBSCRIPTION_PLAN_ERROR_CODES,
   type PlanStatus,
@@ -94,7 +98,9 @@ function FormSection({
     <div className="rounded-2xl border border-outline-variant bg-surface-container-lowest p-6">
       <div className="mb-5 flex items-center gap-2 border-b border-outline-variant pb-4">
         <span className="text-primary">{icon}</span>
-        <h2 className="font-heading text-body-lg font-bold text-on-surface">{title}</h2>
+        <h2 className="font-heading text-body-lg font-bold text-on-surface">
+          {title}
+        </h2>
       </div>
       <div className="space-y-5">{children}</div>
     </div>
@@ -136,35 +142,50 @@ export default function SubscriptionPlanForm({
   const [durationDays, setDurationDays] = useState(
     initialData?.durationDays?.toString() ?? "",
   );
-  const [description, setDescription] = useState(initialData?.description ?? "");
+  const [description, setDescription] = useState(
+    initialData?.description ?? "",
+  );
   const [servicePackageId, setServicePackageId] = useState(
     initialData?.servicePackageId?.toString() ?? "",
   );
   // planType không cho sửa ở cả Create (khoá theo fixedPlanType từ màn chọn loại) lẫn Edit
   // (khoá theo initialData) - không có setter vì không còn UI nào đổi giá trị này.
-  const [planType] = useState<PlanType>(initialData?.planType ?? fixedPlanType ?? "UNLIMIT");
-  // FAMILY: >1 do admin nhập. UNLIMITED: note + data.sql thật đều để 1, nên field bị ẩn và
-  // luôn gửi 1 - xem quyết định đã báo Nora trong plan trước khi code phần này.
-  const [maxVehicleCount, setMaxVehicleCount] = useState(
-    initialData?.maxVehicleCount && initialData.planType === "FAMILY"
-      ? initialData.maxVehicleCount.toString()
-      : "",
+  const [planType] = useState<PlanType>(
+    initialData?.planType ?? fixedPlanType ?? "UNLIMIT",
   );
-  const [status, setStatus] = useState<PlanStatus>(initialData?.status ?? "ACTIVE");
+  // maxVehicleCount không còn state riêng - FAMILY cố định = 5, UNLIMIT cố định = 1,
+  // FE tự gán khi submit (xem payload bên dưới), không cho admin nhập tự do.
+  const [status, setStatus] = useState<PlanStatus>(
+    initialData?.status ?? "ACTIVE",
+  );
 
-  const [servicePackages, setServicePackages] = useState<ServicePackageOption[]>([]);
+  const [servicePackages, setServicePackages] = useState<
+    ServicePackageOption[]
+  >([]);
 
   // Lỗi riêng từng field
   const [planNameError, setPlanNameError] = useState<string | null>(null);
   const [priceError, setPriceError] = useState<string | null>(null);
-  const [durationDaysError, setDurationDaysError] = useState<string | null>(null);
-  const [servicePackageError, setServicePackageError] = useState<string | null>(null);
-  const [maxVehicleCountError, setMaxVehicleCountError] = useState<string | null>(
+  const [durationDaysError, setDurationDaysError] = useState<string | null>(
     null,
   );
-  const [formError, setFormError] = useState<string | null>(null);
+  const [servicePackageError, setServicePackageError] = useState<string | null>(
+    null,
+  );
 
+  const [formError, setFormError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  // Spec Edit: disable Save nếu chưa có thay đổi so với initialData ban đầu.
+  // Create mode luôn "dirty" (không có initialData để so sánh).
+  const isDirty =
+    !isEditMode ||
+    planName !== (initialData?.planName ?? "") ||
+    price !== (initialData?.price?.toString() ?? "") ||
+    durationDays !== (initialData?.durationDays?.toString() ?? "") ||
+    description !== (initialData?.description ?? "") ||
+    servicePackageId !== (initialData?.servicePackageId?.toString() ?? "") ||
+    status !== (initialData?.status ?? "ACTIVE");
 
   // AC02 US-02: dropdown service package chỉ hiển thị các gói đang ACTIVE.
   // Hiện lấy từ mock trong subscriptionPlanApi.ts (xem comment đầu file đó để bật lại API thật).
@@ -178,7 +199,6 @@ export default function SubscriptionPlanForm({
     setPriceError(null);
     setDurationDaysError(null);
     setServicePackageError(null);
-    setMaxVehicleCountError(null);
 
     if (!planName.trim()) {
       setPlanNameError("Plan name is required.");
@@ -193,18 +213,10 @@ export default function SubscriptionPlanForm({
       setPriceError("Price must be greater than 0.");
       isValid = false;
     }
-    const durationNum = Number(durationDays);
-    if (!durationDays || Number.isNaN(durationNum) || durationNum <= 0) {
-      setDurationDaysError("Duration must be greater than 0.");
+    // durationDays là dropdown [30/90/180] - chỉ cần check đã chọn chưa
+    if (!durationDays) {
+      setDurationDaysError("Please select a duration.");
       isValid = false;
-    }
-    // Chỉ validate maxVehicleCount khi FAMILY - UNLIMITED tự gán 1, ẩn khỏi form
-    if (planType === "FAMILY") {
-      const maxVehicleNum = Number(maxVehicleCount);
-      if (!maxVehicleCount || Number.isNaN(maxVehicleNum) || maxVehicleNum <= 0) {
-        setMaxVehicleCountError("Must be greater than 0.");
-        isValid = false;
-      }
     }
 
     return isValid;
@@ -224,7 +236,8 @@ export default function SubscriptionPlanForm({
         description: description.trim(),
         servicePackageId: Number(servicePackageId),
         planType,
-        maxVehicleCount: planType === "FAMILY" ? Number(maxVehicleCount) : 1,
+        // FAMILY cố định = 5, UNLIMIT cố định = 1 - không phụ thuộc input của admin
+        maxVehicleCount: planType === "FAMILY" ? 5 : 1,
       };
 
       const result = isEditMode
@@ -250,9 +263,7 @@ export default function SubscriptionPlanForm({
         case codes.INVALID_DURATION_DAYS:
           setDurationDaysError(message ?? "Duration must be greater than 0.");
           break;
-        case codes.INVALID_MAX_VEHICLE_COUNT:
-          setMaxVehicleCountError(message ?? "Must be greater than 0.");
-          break;
+
         default:
           setFormError(
             message ??
@@ -285,7 +296,9 @@ export default function SubscriptionPlanForm({
                 placeholder="e.g. Unlimited Premium"
                 className={inputClass(!!planNameError)}
               />
-              {planNameError && <p className={errorTextClass}>{planNameError}</p>}
+              {planNameError && (
+                <p className={errorTextClass}>{planNameError}</p>
+              )}
             </div>
 
             <SelectField
@@ -343,37 +356,38 @@ export default function SubscriptionPlanForm({
               />
             </FieldWithSuffix>
 
-            <FieldWithSuffix label="Duration" suffix="days" error={durationDaysError}>
-              <input
-                type="number"
-                min={1}
-                value={durationDays}
-                onChange={(e) => setDurationDays(e.target.value)}
-                placeholder="30"
-                className={inputClass(!!durationDaysError, true)}
-              />
-            </FieldWithSuffix>
+            {/* Chỉ cho chọn 3 kỳ hạn cố định theo spec - không free input */}
+            <SelectField
+              label="Duration"
+              value={durationDays}
+              onChange={(e) => setDurationDays(e.target.value)}
+              error={durationDaysError}
+            >
+              <option value="">Select duration</option>
+              <option value="30">1 Month (30 days)</option>
+              <option value="90">3 Months (90 days)</option>
+              <option value="180">6 Months (180 days)</option>
+            </SelectField>
           </FormSection>
 
-          {/* AC03 (US-02/03): FAMILY bắt buộc nhập max_vehicle_count > 1. UNLIMITED: ẩn field,
-              luôn gửi 1 (xem comment trong Note.md + data.sql). Trạng thái chỉ sửa được ở Edit. */}
+          {/* FAMILY: hiện maxVehicleCount readonly = 5. UNLIMIT: ẩn hoàn toàn (luôn gửi 1).
+              Status chỉ cho sửa ở Edit mode. */}
           {(planType === "FAMILY" || isEditMode) && (
             <FormSection icon={<CarFront size={18} />} title="Membership Rules">
               {planType === "FAMILY" && (
-                <FieldWithSuffix
-                  label="Max Vehicles"
-                  suffix="cars"
-                  error={maxVehicleCountError}
-                >
-                  <input
-                    type="number"
-                    min={1}
-                    value={maxVehicleCount}
-                    onChange={(e) => setMaxVehicleCount(e.target.value)}
-                    placeholder="3"
-                    className={inputClass(!!maxVehicleCountError, true)}
-                  />
-                </FieldWithSuffix>
+                <div>
+                  <label className={labelClass}>Max Vehicles</label>
+                  {/* Readonly = 5, cố định theo spec - FE tự gán, không cho nhập tự do */}
+                  <div
+                    className={`${inputClass(false)} flex items-center justify-between bg-surface-container-high text-on-surface-variant`}
+                  >
+                    <span>5</span>
+                    <span className="text-label-sm">cars</span>
+                  </div>
+                  <p className="mt-1.5 text-label-sm text-on-surface-variant">
+                    Fixed at 5 vehicles for all Family plans.
+                  </p>
+                </div>
               )}
 
               {/* AC02 US-03: status chỉ cho sửa ở màn Edit */}
@@ -408,9 +422,9 @@ export default function SubscriptionPlanForm({
         </button>
         <button
           type="submit"
-          disabled={isSubmitting}
+          disabled={isSubmitting || (isEditMode && !isDirty)}
           className={`flex items-center gap-2 rounded-lg px-6 py-3 text-body-md font-semibold transition-colors ${
-            isSubmitting
+            isSubmitting || (isEditMode && !isDirty)
               ? "cursor-not-allowed bg-surface-container-high text-on-surface-variant"
               : "bg-primary text-on-primary hover:opacity-90"
           }`}

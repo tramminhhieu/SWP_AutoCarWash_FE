@@ -11,6 +11,7 @@ import {
   Settings,
   Banknote,
   Users2,
+  Infinity as InfinityIcon,
 } from "lucide-react";
 import { useAuth } from "../hooks/useAuth";
 
@@ -28,6 +29,11 @@ const navItems = [
     path: "/admin/family-subscriptions",
     label: "Family Plans",
     icon: Users2,
+  },
+  {
+    path: "/admin/unlimited-subscriptions",
+    label: "Unlimited Plans",
+    icon: InfinityIcon,
   },
 ];
 

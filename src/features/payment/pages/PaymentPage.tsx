@@ -475,12 +475,21 @@ export default function PaymentPage() {
               </div>
 
               {/* Điểm tích được sau khi hoàn tất — dưới Total Due */}
-              <div className="flex justify-between">
-                <span className="text-on-surface-variant">Points Earned</span>
-                <span className="text-green-600 font-semibold">
-                  +{earnedPoints} pts
-                </span>
-              </div>
+              {/*<div className="flex justify-between">*/}
+              {/*  <span className="text-on-surface-variant">Points Earned</span>*/}
+              {/*  <span className="text-green-600 font-semibold">*/}
+              {/*    +{earnedPoints} pts*/}
+              {/*  </span>*/}
+              {/*</div>*/}
+
+                {detail.customerTier != null && (
+                    <div className="flex justify-between">
+                        <span className="text-on-surface-variant">Points Earned</span>
+                        <span className="text-green-600 font-semibold">
+      +{earnedPoints} pts
+    </span>
+                    </div>
+                )}
 
               {/* Đã cọc trước (nếu có) */}
               {detail.isDepositPaid && (

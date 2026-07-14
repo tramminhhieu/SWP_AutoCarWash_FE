@@ -15,12 +15,12 @@ import BookingStatusBadge from "../../../components/ui/BookingStatusBadge";
 import RefundModal from "../components/RefundModal";
 import {
   formatAppointmentDate,
-  formatCurrency,
   formatRefundedAt,
   formatTimeRange,
   getEffectiveBookingStatus,
   maskAccount,
 } from "../utils/bookingFormatters";
+import { formatCurrency } from "../../../utils";
 
 function BookingCardItem({
   booking,

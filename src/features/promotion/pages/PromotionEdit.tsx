@@ -560,7 +560,7 @@ export default function PromotionEdit() {
                     >
                       {type === "PERCENTAGE"
                         ? "Percentage (%)"
-                        : "Fixed Amount (₫)"}
+                        : "Fixed Amount (VNĐ)"}
                     </button>
                   ))}
                 </div>
@@ -571,7 +571,7 @@ export default function PromotionEdit() {
                   label={
                     discountType === "PERCENTAGE"
                       ? "Discount (%)"
-                      : "Discount (₫)"
+                      : "Discount (VNĐ)"
                   }
                   required
                   error={errors.discountValue}
@@ -586,7 +586,7 @@ export default function PromotionEdit() {
                   />
                 </FormField>
                 <FormField
-                  label="Max Discount (₫)"
+                  label="Max Discount (VNĐ)"
                   required
                   error={errors.maxDiscount}
                 >
@@ -600,7 +600,7 @@ export default function PromotionEdit() {
                   />
                 </FormField>
                 <FormField
-                  label="Min Order (₫)"
+                  label="Min Order (VNĐ)"
                   required
                   error={errors.minOrder}
                 >

@@ -332,7 +332,7 @@ export default function SubscriptionPlanForm({
         {/* Pricing & Rules */}
         <div className="space-y-6 lg:col-span-2">
           <FormSection icon={<Tag size={18} />} title="Pricing">
-            <FieldWithSuffix label="Price" suffix="VND" error={priceError}>
+            <FieldWithSuffix label="Price" suffix="VNĐ" error={priceError}>
               <input
                 type="number"
                 min={1}

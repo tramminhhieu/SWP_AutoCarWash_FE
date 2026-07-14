@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
+import Modal from "../../../components/ui/Modal";
 import { Pencil, Plus, Search } from "lucide-react";
 import { getAllSettings } from "../api/systemSettingApi";
 import type { SystemSetting } from "../types/systemSetting";
@@ -22,6 +23,20 @@ const DATA_TYPE_BADGE: Record<string, { label: string; className: string }> = {
 
 export default function SystemSettingList() {
   const navigate = useNavigate();
+  const location = useLocation();
+
+  const [toast, setToast] = useState<string | null>(
+    () =>
+      (location.state as { successMessage?: string })?.successMessage ?? null,
+  );
+
+  useEffect(() => {
+    if (!toast) return;
+    window.history.replaceState({}, "");
+    const timer = setTimeout(() => setToast(null), 1000);
+    return () => clearTimeout(timer);
+  }, [toast]);
+
   const [grouped, setGrouped] = useState<Record<string, SystemSetting[]>>({});
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -64,6 +79,14 @@ export default function SystemSettingList() {
 
   return (
     <div className="mx-auto flex max-w-[1440px] flex-col gap-8 px-12 py-8">
+      <Modal
+        isOpen={!!toast}
+        onClose={() => setToast(null)}
+        variant="success"
+        title="Success"
+        message={toast}
+      />
+
       {/* Header */}
       <div className="flex items-start justify-between">
         <div className="flex flex-col gap-2">
@@ -80,10 +103,10 @@ export default function SystemSettingList() {
 
         <button
           onClick={() => navigate("/admin/system-settings/new")}
-          className="flex items-center gap-2 rounded-[8px] bg-primary px-5 py-3 text-sm font-bold text-on-primary transition-opacity hover:opacity-90"
+          className="flex shrink-0 items-center gap-2 rounded-md bg-primary px-5 py-2.5 text-body-md font-semibold text-on-primary shadow-[0_10px_25px_-5px_rgba(29,78,216,0.05)] transition-colors hover:bg-primary/90"
         >
           <Plus className="size-4" />
-          Add New Setting
+          Add New
         </button>
       </div>
 
@@ -174,10 +197,11 @@ export default function SystemSettingList() {
                     </td>
 
                     <td className="px-6 py-4">
-                      <span className="rounded-full border border-outline-variant/40 bg-surface-container px-2.5 py-0.5 text-xs font-medium text-on-surface-variant">
+                      <span className="line-clamp-2 text-base text-on-surface-variant">
                         {setting.category ?? "—"}
                       </span>
                     </td>
+
                     <td className="px-6 py-4">
                       <span
                         className={`rounded-full border px-2.5 py-0.5 text-xs font-semibold ${badge.className}`}

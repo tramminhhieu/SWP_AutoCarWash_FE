@@ -424,8 +424,8 @@ function RefundDetailModal({
   onRefunded: (updated: RefundDetail) => void;
 }) {
   const [detail, setDetail] = useState<RefundDetail | null>(null);
-  const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const isLoading = refundId != null && detail == null && error == null;
 
   const [transactionCode, setTransactionCode] = useState("");
   const [validationError, setValidationError] = useState<string | null>(null);
@@ -433,17 +433,9 @@ function RefundDetailModal({
   const [confirmError, setConfirmError] = useState<string | null>(null);
 
   useEffect(() => {
-    if (refundId == null) {
-      setDetail(null);
-      setTransactionCode("");
-      setValidationError(null);
-      setConfirmError(null);
-      return;
-    }
+    if (refundId == null) return;
 
     let isMounted = true;
-    setIsLoading(true);
-    setError(null);
 
     getRefundDetail(refundId)
       .then((res) => {
@@ -452,15 +444,21 @@ function RefundDetailModal({
       .catch(() => {
         if (isMounted)
           setError("Không thể tải chi tiết hoàn tiền. Vui lòng thử lại sau.");
-      })
-      .finally(() => {
-        if (isMounted) setIsLoading(false);
       });
 
     return () => {
       isMounted = false;
     };
   }, [refundId]);
+
+  function handleClose() {
+    setDetail(null);
+    setError(null);
+    setTransactionCode("");
+    setValidationError(null);
+    setConfirmError(null);
+    onClose();
+  }
 
   function handleConfirm() {
     if (!detail) return;
@@ -485,7 +483,7 @@ function RefundDetailModal({
   }
 
   return (
-    <Modal isOpen={refundId != null} onClose={onClose} variant="custom" size="lg">
+    <Modal isOpen={refundId != null} onClose={handleClose} variant="custom" size="lg">
       <div className="flex w-full flex-col gap-4 text-left">
         {error ? (
           <p className="text-center text-base text-error">{error}</p>

@@ -16,3 +16,15 @@ export async function getCustomerBookingHistory(
   >(API.CUSTOMERS.BOOKINGS(customerId), { params: filters });
   return res.data.data;
 }
+
+export interface AdminStationOption {
+  id: number;
+  stationName: string;
+}
+
+export async function getAllStations(): Promise<AdminStationOption[]> {
+  const res = await axiosClient.get<ApiSuccessResponse<AdminStationOption[]>>(
+    API.LOCATION.ALL_STATIONS,
+  );
+  return res.data.data;
+}

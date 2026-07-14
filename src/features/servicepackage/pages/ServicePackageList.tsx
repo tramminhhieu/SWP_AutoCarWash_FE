@@ -205,7 +205,7 @@ export default function ServicePackageList() {
 
   /* Admin: navigate sang trang edit, truyền package data qua state */
   const handleEdit = (pkg: ServicePackage) => {
-    navigate(`/admin/service-packages/edit/${pkg.id}`, { state: { pkg } });
+    navigate(`/admin/service-packages/${pkg.id}/edit`, { state: { pkg } });
   };
 
   /* Admin: placeholder — thay bằng confirm dialog + API khi có spec delete */

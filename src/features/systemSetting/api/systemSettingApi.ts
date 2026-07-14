@@ -1,38 +1,31 @@
 import axiosClient from "../../../lib/axiosClient";
 import { API } from "../../../constants/apiEndpoints";
-import type { ApiSuccessResponse } from "../../../types/apiResponse";
 import type {
-  CreateSystemSettingRequest,
-  SystemSettingsByCategory,
-  SystemSettingWithCategoryDto,
-  UpdateSystemSettingRequest,
+  SystemSetting,
+  SystemSettingsGrouped,
+  CreateSettingRequest,
+  UpdateSettingRequest,
 } from "../types/systemSetting";
 
-// API-35-01: GET /api/admin/system-settings - trả về đã gom theo category.
-export async function getAllSystemSettings(): Promise<SystemSettingsByCategory> {
-  const res = await axiosClient.get<ApiSuccessResponse<SystemSettingsByCategory>>(
-    API.SYSTEM_SETTING.LIST,
-  );
+// API-35-01: Lấy toàn bộ settings đã group sẵn theo category
+export async function getAllSettings(): Promise<SystemSettingsGrouped> {
+  const res = await axiosClient.get(API.SYSTEM_SETTINGS.LIST);
   return res.data.data;
 }
 
-// API-35-02: POST /api/admin/system-settings - tạo setting mới (chỉ ADMIN).
-export async function createSystemSetting(
-  body: CreateSystemSettingRequest,
-): Promise<SystemSettingWithCategoryDto> {
-  const res = await axiosClient.post<
-    ApiSuccessResponse<SystemSettingWithCategoryDto>
-  >(API.SYSTEM_SETTING.LIST, body);
-  return res.data.data;
+// API-35-02: Tạo mới một setting
+export async function createSetting(
+  data: CreateSettingRequest,
+): Promise<{ setting: SystemSetting; message: string }> {
+  const res = await axiosClient.post(API.SYSTEM_SETTINGS.CREATE, data);
+  return { setting: res.data.data, message: res.data.message };
 }
 
-// API-35-03: PUT /api/admin/system-settings/{id} - chỉ sửa setting_value (chỉ ADMIN).
-export async function updateSystemSetting(
+// API-35-03: Cập nhật setting_value của một setting theo id
+export async function updateSetting(
   id: number,
-  body: UpdateSystemSettingRequest,
-): Promise<SystemSettingWithCategoryDto> {
-  const res = await axiosClient.put<
-    ApiSuccessResponse<SystemSettingWithCategoryDto>
-  >(API.SYSTEM_SETTING.UPDATE(id), body);
-  return res.data.data;
+  data: UpdateSettingRequest,
+): Promise<{ setting: SystemSetting; message: string }> {
+  const res = await axiosClient.put(API.SYSTEM_SETTINGS.UPDATE(id), data);
+  return { setting: res.data.data, message: res.data.message };
 }

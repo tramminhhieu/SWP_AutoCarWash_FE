@@ -53,7 +53,7 @@ export async function getAllAddonServices(): Promise<AddonService[]> {
   return res.data.data;
 }
 
-/** DELETE /api/service-packages/{id} — xoá mềm add-on (API-15-03, chỉ ADMIN). */
+/** DELETE /api/service-packages/{id} — xoá mềm service package (API-14-03, chỉ ADMIN). */
 export async function deleteServicePackage(
   servicePackageId: number,
 ): Promise<void> {

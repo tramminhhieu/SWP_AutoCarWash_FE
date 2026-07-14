@@ -137,6 +137,15 @@ export default function AppRouter() {
             <Route path="/staff/queue" element={<QueuePage />} />
             <Route path="/staff/walk-in" element={<WalkInPage />} />
             <Route path="/staff/payment/:bookingId" element={<PaymentPage />} />
+            <Route path="/staff/customers" element={<AdminCustomers />} />
+            <Route
+              path="/staff/customers/:customerId/bookings"
+              element={<AdminCustomerBookingHistory />}
+            />
+            <Route
+              path="/staff/transactions"
+              element={<AdminTransactionHistory />}
+            />
           </Route>
         </Route>
       </Route>

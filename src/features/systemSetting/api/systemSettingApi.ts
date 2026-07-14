@@ -9,7 +9,7 @@ import type {
 
 // API-35-01: Lấy toàn bộ settings đã group sẵn theo category
 export async function getAllSettings(): Promise<SystemSettingsGrouped> {
-  const res = await axiosClient.get(API.SETTINGS.LIST);
+  const res = await axiosClient.get(API.SYSTEM_SETTINGS.LIST);
   return res.data.data;
 }
 
@@ -17,7 +17,7 @@ export async function getAllSettings(): Promise<SystemSettingsGrouped> {
 export async function createSetting(
   data: CreateSettingRequest,
 ): Promise<{ setting: SystemSetting; message: string }> {
-  const res = await axiosClient.post(API.SETTINGS.CREATE, data);
+  const res = await axiosClient.post(API.SYSTEM_SETTINGS.CREATE, data);
   return { setting: res.data.data, message: res.data.message };
 }
 
@@ -26,6 +26,6 @@ export async function updateSetting(
   id: number,
   data: UpdateSettingRequest,
 ): Promise<{ setting: SystemSetting; message: string }> {
-  const res = await axiosClient.put(API.SETTINGS.UPDATE(id), data);
+  const res = await axiosClient.put(API.SYSTEM_SETTINGS.UPDATE(id), data);
   return { setting: res.data.data, message: res.data.message };
 }

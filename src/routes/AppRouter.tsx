@@ -23,12 +23,12 @@ import ChangePassword from "../features/customer/pages/ChangePassword";
 import LoyaltyRewards from "../features/customer/pages/LoyaltyRewards";
 //Admin
 import AdminLayout from "../layouts/AdminLayout";
-import SubscriptionPlanList from "../features/subscriptionplan/pages/SubscriptionPlanList";
-import SubscriptionPlanCreate from "../features/subscriptionplan/pages/SubscriptionPlanCreate";
-import SubscriptionPlanEdit from "../features/subscriptionplan/pages/SubscriptionPlanEdit";
+import UnlimitedSubscriptionList from "../features/subscriptionPlan/pages/UnlimitedSubscriptionList";
+import SubscriptionPlanCreate from "../features/subscriptionPlan/pages/SubscriptionPlanCreate";
+import SubscriptionPlanEdit from "../features/subscriptionPlan/pages/SubscriptionPlanEdit";
 // FE-60/56/58: Customer - browse/register/manage Subscription (khác admin CRUD ở trên).
 // FE-59 (transfer vehicle) đã có sẵn trong CustomerProfile, không có route riêng.
-import CustomerSubscriptionPlanList from "../features/subscription/pages/SubscriptionPlanList";
+import CustomerSubscriptionPlanList from "../features/subscription/pages/CustomerUnlimitedSubscriptionList";
 import SubscriptionRegister from "../features/subscription/pages/SubscriptionRegister";
 import SubscriptionPayment from "../features/subscription/pages/SubscriptionPayment";
 import MySubscriptions from "../features/subscription/pages/MySubscriptions";
@@ -57,7 +57,7 @@ import SystemSettingList from "../features/systemSetting/pages/SystemSettingList
 import SystemSettingCreate from "../features/systemSetting/pages/SystemSettingCreate";
 import SystemSettingEdit from "../features/systemSetting/pages/SystemSettingEdit";
 import RefundManagement from "../features/refund/pages/RefundManagement";
-import FamilySubscriptionList from "../features/subscriptionPlans/familySubscription/pages/FamilySubscriptionList";
+import FamilySubscriptionList from "../features/subscriptionPlan/pages/FamilySubscriptionList";
 
 export default function AppRouter() {
   return (
@@ -182,8 +182,8 @@ export default function AppRouter() {
             />
 
             <Route
-              path="/admin/subscription-plans"
-              element={<SubscriptionPlanList />}
+              path="/admin/unlimited-subscriptions"
+              element={<UnlimitedSubscriptionList />}
             />
             {/* Không còn màn chọn loại (Select Package Type) - "+ Add" ở list đi thẳng vào
                 form Unlimited; Family có lối riêng từ FamilySubscriptionList "Add New". */}

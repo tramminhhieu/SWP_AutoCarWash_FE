@@ -4,7 +4,10 @@ import Loading from "../../../components/ui/Loading";
 import { getApiErrorInfo } from "../../../lib/axiosClient";
 import { getById } from "../api/subscriptionPlanApi";
 import SubscriptionPlanForm from "../components/SubscriptionPlanForm";
-import type { SubscriptionPlanDetail } from "../types/subscriptionPlan";
+import {
+  PLAN_TYPE_LIST_ROUTE,
+  type SubscriptionPlanDetail,
+} from "../types/subscriptionPlan";
 
 // FE-53-US-03
 export default function SubscriptionPlanEdit() {
@@ -33,6 +36,9 @@ export default function SubscriptionPlanEdit() {
       .finally(() => setIsLoading(false));
   }, [planId]);
 
+  // listRoute từ PLAN_TYPE_LIST_ROUTE (subscriptionPlan.ts) — đồng bộ với Create
+  const listRoute = plan ? PLAN_TYPE_LIST_ROUTE[plan.planType] : undefined;
+
   return (
     <div className="mx-auto max-w-4xl">
       <h1 className="font-heading text-headline-lg text-on-surface">
@@ -46,8 +52,18 @@ export default function SubscriptionPlanEdit() {
         {isLoading ? (
           <Loading rows={5} />
         ) : error ? (
-          <div className="rounded-lg border border-error/30 bg-error-container px-4 py-3 text-body-md text-on-error-container">
-            {error}
+          <div className="space-y-4">
+            <div className="rounded-lg border border-error/30 bg-error-container px-4 py-3 text-body-md text-on-error-container">
+              {error}
+            </div>
+            {/* Không biết planType khi fetch thất bại → navigate(-1) về list trước đó */}
+            <button
+              type="button"
+              onClick={() => navigate(-1)}
+              className="text-body-md font-semibold text-primary hover:opacity-80"
+            >
+              ← Go Back
+            </button>
           </div>
         ) : plan ? (
           <SubscriptionPlanForm
@@ -62,15 +78,15 @@ export default function SubscriptionPlanEdit() {
               maxVehicleCount: plan.maxVehicleCount,
               status: plan.status,
             }}
-            // AC05: cập nhật thành công -> thông báo + refresh list
+            // AC05: cập nhật thành công -> về đúng list (UNLIMIT/FAMILY)
             onSuccess={() =>
-              navigate("/admin/subscription-plans", {
+              navigate(listRoute!, {
                 state: {
                   successMessage: "Subscription plan updated successfully.",
                 },
               })
             }
-            onCancel={() => navigate("/admin/subscription-plans")}
+            onCancel={() => navigate(listRoute!)}
           />
         ) : null}
       </div>

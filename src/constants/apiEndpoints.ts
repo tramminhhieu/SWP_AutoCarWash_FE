@@ -131,7 +131,7 @@ export const API = {
   ADMIN: {
     SERVICE_PACKAGE: {
       // GET /api/admin/service-packages/active - dropdown Service Package trong form Create/Edit Subscription Plan
-      ACTIVE: "/api/admin/service-packages/active",
+      ACTIVE: "/api/service-packages/admin/active",
     },
     SUBSCRIPTION_PLAN: {
       // FE-53-US-01: GET /api/admin/subscription-plans?status=ACTIVE/INACTIVE/ALL

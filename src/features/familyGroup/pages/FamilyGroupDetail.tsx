@@ -1,10 +1,11 @@
 import { useCallback, useEffect, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
-import { Car, Crown, LogOut, Trash2 } from "lucide-react";
+import { Car, LogOut, Plus, Trash2, UserPlus } from "lucide-react";
 import Loading from "../../../components/ui/Loading";
 import Modal from "../../../components/ui/Modal";
 import { formatDate, formatDateTime } from "../../../utils";
 import { getApiErrorInfo } from "../../../lib/axiosClient";
+import { useAuth } from "../../../hooks/useAuth";
 import { dissolveFamilyGroup, getMyFamilyGroup, removeMember } from "../api/familyGroupApi";
 import type { FamilyGroupDetails, GroupMemberDto } from "../types/familyGroup";
 import { getFamilyGroupErrorMessage } from "../utils/familyGroupErrorMessages";
@@ -16,11 +17,34 @@ import {
   renewFamilySubscription,
 } from "../../subscriptionPlans/familySubscription/api/familySubscriptionApi";
 
+// "SLOTS USED x/y" ở banner - usageSummary BE trả sẵn dạng chuỗi "3/5", parse ra số để
+// vừa hiện to (Slots Used) vừa tính số chỗ trống còn lại cho ô "Add" cuối danh sách.
+function parseUsageSummary(usageSummary: string): { used: number; total: number } | null {
+  const match = usageSummary.match(/(\d+)\s*\/\s*(\d+)/);
+  if (!match) return null;
+  return { used: Number(match[1]), total: Number(match[2]) };
+}
+
+// planName thật dạng "Family Premium 3 Months" (data.sql) - tách số tháng ra để hiện badge
+// "3-Month Plan" trên banner giống mockup, không bịa field durationDays mới ở FE.
+function parsePlanDurationLabel(planName: string): string | null {
+  const match = planName.match(/(\d+)\s*Months?/i);
+  if (!match) return null;
+  return `${match[1]}-Month Plan`;
+}
+
+function getInitials(fullName: string): string {
+  const parts = fullName.trim().split(/\s+/).filter(Boolean);
+  const initials = parts.slice(0, 2).map((p) => p[0]?.toUpperCase() ?? "");
+  return initials.join("") || "?";
+}
+
 // AC08: điểm đến sau khi tạo Family Group thành công - hiện danh sách thành viên + nút "Buy
 // Family Plan" (task khác, chưa nối logic) và "Invite Member" (API-17-02, chỉ owner thấy được).
 export default function FamilyGroupDetail() {
   const navigate = useNavigate();
   const location = useLocation();
+  const { user } = useAuth();
 
   const [group, setGroup] = useState<FamilyGroupDetails | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -172,8 +196,19 @@ export default function FamilyGroupDetail() {
 
   const openMember = group?.members.find((m) => m.customerId === openMemberId) ?? null;
 
+  // usageSummary ("3/5") -> số slot đã dùng/tổng, dùng cho box "SLOTS USED" ở banner và
+  // để tính số chỗ trống còn lại cho ô "Add" cuối danh sách thành viên.
+  const usage = group?.subscription ? parseUsageSummary(group.subscription.usageSummary) : null;
+  const slotsRemaining = usage ? usage.total - usage.used : null;
+  // Không có subscription thì chưa biết hạn mức thật - vẫn cho owner bấm Add (giữ đúng
+  // hành vi cũ của nút Invite Member, chỉ ẩn ô Add khi ĐÃ biết chắc hết slot).
+  const canShowAddTile = !!group?.owner && (slotsRemaining === null || slotsRemaining > 0);
+  const planDurationLabel = group?.subscription
+    ? parsePlanDurationLabel(group.subscription.planName)
+    : null;
+
   return (
-    <div className="max-w-page mx-auto px-margin-mobile py-12 md:px-margin-desktop">
+    <div className="max-w-[1200px] mx-auto px-margin-mobile py-12 md:px-margin-desktop">
       <Modal
         isOpen={!!toast}
         onClose={() => setToast(null)}
@@ -182,11 +217,13 @@ export default function FamilyGroupDetail() {
         message={toast}
       />
 
-      <h1 className="font-heading text-headline-lg text-on-surface">
-        My Family Group
-      </h1>
+      {(isLoading || error || group === null) && (
+        <h1 className="font-heading text-headline-lg text-on-surface">
+          My Family Group
+        </h1>
+      )}
 
-      <div className="mt-6">
+      <div className={isLoading || error || group === null ? "mt-6" : ""}>
         {isLoading ? (
           <Loading rows={3} />
         ) : error ? (
@@ -208,37 +245,52 @@ export default function FamilyGroupDetail() {
           </div>
         ) : (
           <>
-            <div className="rounded-2xl border border-outline-variant bg-surface-container-lowest p-6 shadow-[0_10px_25px_-5px_rgba(29,78,216,0.05)]">
-              <div className="flex flex-wrap items-start justify-between gap-3">
-                <div>
-                  <h2 className="font-heading text-body-lg font-bold text-on-surface">
-                    {group.groupName}
-                  </h2>
-                  <p className="mt-0.5 text-body-md text-on-surface-variant">
+            {/* Banner hero - tên nhóm/gói + badge kỳ hạn + mô tả bên trái, "SLOTS USED x/y"
+                nổi bật bên phải (usageSummary BE trả sẵn, không tính lại ở FE). */}
+            <div className="rounded-2xl bg-primary p-6 text-on-primary shadow-[0_10px_25px_-5px_rgba(29,78,216,0.05)]">
+              <div className="flex flex-wrap items-start justify-between gap-6">
+                <div className="max-w-xl">
+                  <div className="flex flex-wrap items-center gap-3">
+                    <h2 className="font-heading text-headline-md font-bold">
+                      {group.groupName}
+                    </h2>
+                    {planDurationLabel && (
+                      <span className="rounded-full bg-on-primary/15 px-3 py-1 text-label-sm font-semibold">
+                        {planDurationLabel}
+                      </span>
+                    )}
+                  </div>
+                  <p className="mt-2 text-body-md text-on-primary/80">
+                    Manage your family vehicles and subscription details. All members
+                    share access to unlimited washes.
+                  </p>
+                  <p className="mt-2 text-label-sm text-on-primary/60">
                     Created {formatDateTime(group.createdAt)}
+                    {group.subscription &&
+                      ` · Expires ${formatDate(group.subscription.endDate)} · ${group.subscription.status}`}
                   </p>
                 </div>
-                {group.owner && (
-                  <span className="flex items-center gap-1.5 rounded-full border border-primary/30 bg-primary/10 px-2.5 py-1 text-label-sm font-bold uppercase tracking-wider text-primary">
-                    <Crown size={12} />
-                    Owner
-                  </span>
+
+                {usage && (
+                  <div className="shrink-0 rounded-xl bg-on-primary/10 px-5 py-3 text-center">
+                    <p className="text-label-sm font-bold uppercase tracking-wider text-on-primary/70">
+                      Slots Used
+                    </p>
+                    <p className="mt-1 font-heading text-headline-md font-bold">
+                      {usage.used}
+                      <span className="text-body-lg font-medium text-on-primary/70">
+                        /{usage.total}
+                      </span>
+                    </p>
+                  </div>
                 )}
               </div>
+            </div>
 
-              {group.subscription && (
-                <div className="mt-4 rounded-xl border border-outline-variant/40 bg-surface-container p-3">
-                  <p className="text-body-md font-semibold text-on-surface">
-                    {group.subscription.planName} · {group.subscription.status}
-                  </p>
-                  <p className="text-label-sm text-on-surface-variant">
-                    Expires {formatDate(group.subscription.endDate)} ·{" "}
-                    {group.subscription.usageSummary} members
-                  </p>
-                </div>
-              )}
-
-              <div className="mt-5 flex flex-wrap items-center gap-3 border-t border-outline-variant pt-4">
+            {/* Action row - Renew/Buy/Cancel plan, tách khỏi banner để banner giữ đúng
+                vai trò "hero" thuần thông tin như mockup. */}
+            {(!group.subscription || showRenewOptions || showCancelPlan) && (
+              <div className="mt-4 flex flex-wrap items-center gap-3">
                 {!group.subscription ? (
                   <button
                     type="button"
@@ -282,61 +334,101 @@ export default function FamilyGroupDetail() {
                     Cancel Plan
                   </button>
                 )}
+              </div>
+            )}
+            {renewError && <p className="mt-2 text-label-sm text-error">{renewError}</p>}
 
+            <div className="mt-8">
+              <div className="flex flex-wrap items-center justify-between gap-3">
+                <h2 className="font-heading text-headline-md font-bold text-on-surface">
+                  Members
+                </h2>
                 {/* API-17-02 AC01: chỉ owner mới thêm được thành viên */}
                 {group.owner && (
                   <button
                     type="button"
                     onClick={() => setIsAddMemberOpen(true)}
-                    className="rounded-lg border border-outline-variant px-4 py-2 text-label-md font-semibold text-on-surface hover:border-primary/40 hover:text-primary"
+                    className="flex items-center gap-2 rounded-lg bg-primary px-4 py-2.5 text-label-md font-semibold text-on-primary hover:opacity-90"
                   >
-                    Invite Member
+                    <UserPlus size={16} />
+                    Add Member
                   </button>
                 )}
               </div>
-              {renewError && (
-                <p className="mt-2 text-label-sm text-error">{renewError}</p>
-              )}
-            </div>
 
-            <div className="mt-6">
-              <p className="mb-3 text-label-md text-on-surface-variant">
-                Members ({group.members.length})
-              </p>
-              <div className="flex flex-col gap-2.5">
+              <div className="mt-4 flex flex-col gap-3">
                 {/* AC03: Owner luôn ở dòng đầu tiên - tự sort ở FE, không phụ thuộc thứ tự
                     BE trả về (BE có thể đổi thứ tự trong response mà không báo trước). */}
                 {[...group.members]
                   .sort((a, b) =>
                     a.roleInGroup === "OWNER" ? -1 : b.roleInGroup === "OWNER" ? 1 : 0,
                   )
-                  .map((m) => (
-                    <button
-                      key={m.customerId}
-                      type="button"
-                      onClick={() => setOpenMemberId(m.customerId)}
-                      className="flex w-full items-center justify-between gap-3 rounded-xl border border-outline-variant bg-surface-container-lowest p-3.5 text-left transition-colors hover:border-primary/40"
-                    >
-                      <p className="truncate text-body-md font-semibold text-on-surface">
-                        {m.fullName}
-                      </p>
+                  .map((m) => {
+                    const isYou = !!user && user.email.toLowerCase() === m.email.toLowerCase();
+                    return (
+                      <button
+                        key={m.customerId}
+                        type="button"
+                        onClick={() => setOpenMemberId(m.customerId)}
+                        className="flex w-full items-center gap-4 rounded-xl border border-outline-variant bg-surface-container-lowest p-4 text-left transition-colors hover:border-primary/40"
+                      >
+                        <span className="flex size-11 shrink-0 items-center justify-center rounded-full bg-primary/10 text-label-md font-bold text-primary">
+                          {getInitials(m.fullName)}
+                        </span>
 
-                      {m.linkedVehicle ? (
-                        <span className="inline-flex shrink-0 items-center gap-1.5 rounded-lg border border-outline-variant bg-surface-container px-3 py-1.5 text-label-sm font-semibold text-on-surface">
-                          <Car size={14} />
-                          {m.linkedVehicle.licensePlate}
+                        <span className="min-w-0 flex-1">
+                          <span className="flex items-center gap-2">
+                            <span className="truncate text-body-md font-semibold text-on-surface">
+                              {m.fullName}
+                            </span>
+                            {isYou && (
+                              <span className="shrink-0 rounded-full bg-primary/10 px-2 py-0.5 text-label-sm font-semibold text-primary">
+                                You
+                              </span>
+                            )}
+                          </span>
+                          <span className="block text-label-sm text-on-surface-variant">
+                            {m.roleInGroup === "OWNER" ? "Owner" : "Member"}
+                          </span>
                         </span>
-                      ) : (
-                        <span className="shrink-0 text-label-sm text-on-surface-variant">
-                          No vehicle linked
-                        </span>
-                      )}
-                    </button>
-                  ))}
+
+                        {m.linkedVehicle ? (
+                          <span className="inline-flex shrink-0 items-center gap-1.5 rounded-lg border border-outline-variant bg-surface-container px-3 py-1.5 text-label-sm font-semibold text-on-surface">
+                            <Car size={14} />
+                            {m.linkedVehicle.licensePlate}
+                          </span>
+                        ) : (
+                          <span className="shrink-0 text-label-sm text-on-surface-variant">
+                            No vehicle registered
+                          </span>
+                        )}
+                      </button>
+                    );
+                  })}
+
+                {/* Ô "Add" cuối danh sách - chỉ hiện cho owner khi còn/chưa rõ hạn mức
+                    (canShowAddTile), số slot trống lấy từ usageSummary thật, không bịa. */}
+                {canShowAddTile && (
+                  <button
+                    type="button"
+                    onClick={() => setIsAddMemberOpen(true)}
+                    className="flex flex-col items-center justify-center gap-2 rounded-xl border-2 border-dashed border-outline-variant p-8 text-on-surface-variant transition-colors hover:border-primary/40 hover:text-primary"
+                  >
+                    <span className="flex size-9 items-center justify-center rounded-full bg-surface-container">
+                      <Plus size={18} />
+                    </span>
+                    <span className="text-body-md font-semibold">Add</span>
+                    {slotsRemaining !== null && (
+                      <span className="text-label-sm">
+                        {slotsRemaining} slot{slotsRemaining > 1 ? "s" : ""} remaining
+                      </span>
+                    )}
+                  </button>
+                )}
               </div>
 
               {/* AC04: member (không phải owner) chỉ thấy nút Rời khỏi nhóm, không thấy
-                  Invite Member hay nút xóa người khác - placeholder, chưa có API rời nhóm. */}
+                  Add Member hay nút xóa người khác - placeholder, chưa có API rời nhóm. */}
               {!group.owner && (
                 <button
                   type="button"

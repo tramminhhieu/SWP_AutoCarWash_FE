@@ -1,3 +1,5 @@
+import type { BookingStatus } from "../types/booking";
+
 /**
  * Formats a backend `yyyy-MM-dd` date string into the long display form
  * used on the card, e.g. `"2023-10-18"` -> `"October 18, 2023"`.
@@ -38,7 +40,34 @@ export function formatCheckInTime(isoDateTime: string): string {
   });
 }
 
-/** Formats a VND amount, e.g. `150000` -> `"150.000 ₫"`. */
-export function formatCurrency(amount: number): string {
-  return new Intl.NumberFormat("vi-VN", { style: "currency", currency: "VND" }).format(amount);
+/** Masks all but the last 4 digits of a bank account number, e.g. `"0123456789"` -> `"•••6789"`. */
+export function maskAccount(accountNumber: string): string {
+  return `•••${accountNumber.slice(-4)}`;
+}
+
+/** Formats a backend ISO datetime into `"HH:mm dd/MM/yyyy"`, e.g. `"14:30 12/07/2026"`. */
+export function formatRefundedAt(iso: string): string {
+  const date = new Date(iso);
+  const hh = String(date.getHours()).padStart(2, "0");
+  const mm = String(date.getMinutes()).padStart(2, "0");
+  const dd = String(date.getDate()).padStart(2, "0");
+  const MM = String(date.getMonth() + 1).padStart(2, "0");
+  return `${hh}:${mm} ${dd}/${MM}/${date.getFullYear()}`;
+}
+
+/**
+ * Derives the status to actually display (badge + refund captions) from a
+ * booking's refund fields, instead of trusting the raw `status` string to
+ * ever literally equal "REFUND_PENDING"/"REFUNDED" — the backend's "past"
+ * list endpoint is only documented to return PAID/CANCELED/NO_SHOW, so
+ * refund progress must be read from refundedAt/refundAmount instead.
+ */
+export function getEffectiveBookingStatus(booking: {
+  status: BookingStatus;
+  refundedAt?: string | null;
+  refundAmount?: number | null;
+}): BookingStatus {
+  if (booking.refundedAt) return "REFUNDED";
+  if (booking.refundAmount != null) return "REFUND_PENDING";
+  return booking.status;
 }

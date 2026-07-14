@@ -54,3 +54,22 @@ export const formatDate = (value: string | Date | null | undefined): string => {
   const yyyy = date.getFullYear();
   return `${dd}/${mm}/${yyyy}`;
 };
+
+/**
+ * Format ngày giờ về dạng dd/mm/yyyy HH:mm.
+ * Dùng cho các mốc thời gian ngắn hạn (vd QR payment hết hạn sau 15 phút) - chỉ hiện
+ * ngày như formatDate() sẽ làm mất thông tin giờ, khiến người dùng không biết còn bao lâu.
+ */
+export const formatDateTime = (value: string | Date | null | undefined): string => {
+  if (!value) return "—";
+
+  const date = parseToLocalDate(value);
+  if (!date || Number.isNaN(date.getTime())) return "—";
+
+  const dd = String(date.getDate()).padStart(2, "0");
+  const mm = String(date.getMonth() + 1).padStart(2, "0");
+  const yyyy = date.getFullYear();
+  const hh = String(date.getHours()).padStart(2, "0");
+  const min = String(date.getMinutes()).padStart(2, "0");
+  return `${dd}/${mm}/${yyyy} ${hh}:${min}`;
+};

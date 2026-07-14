@@ -157,7 +157,7 @@ const AddonForm = ({
             htmlFor="addonPrice"
             className="mb-1.5 block text-label-md uppercase tracking-wide text-on-surface-variant"
           >
-            Price (VND)
+            Price (VNĐ)
           </label>
           <input
             id="addonPrice"

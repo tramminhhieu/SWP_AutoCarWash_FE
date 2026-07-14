@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
+import { useAuth } from "../../../hooks/useAuth";
 import {
   ChevronLeft,
   ChevronRight,
@@ -14,6 +15,9 @@ import {
   getAdminCustomerDetail,
   getAdminCustomers,
 } from "../api/adminCustomerApi";
+import BranchFilterDropdown, {
+  type BranchFilterSelection,
+} from "../../station/components/BranchFilterDropdown";
 import type {
   AdminCustomerDetail,
   AdminCustomerRow,
@@ -97,6 +101,10 @@ function KpiCard({
 
 export default function AdminCustomers() {
   const navigate = useNavigate();
+  const location = useLocation();
+  const { user } = useAuth();
+  const isAdmin = user?.role === "ADMIN";
+  const routePrefix = location.pathname.startsWith("/staff") ? "/staff" : "/admin";
   const [rows, setRows] = useState<AdminCustomerRow[]>([]);
   const [totalCustomers, setTotalCustomers] = useState(0);
   const [newThisMonth, setNewThisMonth] = useState(0);
@@ -116,6 +124,10 @@ export default function AdminCustomers() {
   const [month, setMonth] = useState("");
   const [tier, setTier] = useState("");
   const [active, setActive] = useState("");
+
+  // Filter theo chi nhánh - chọn dừng ở cấp Province/Commune/Station nào thì
+  // lọc khách hàng theo phạm vi cấp đó (không chọn gì = tất cả).
+  const [branchFilter, setBranchFilter] = useState<BranchFilterSelection>(null);
 
   // Modal chi tiết khách hàng - mở khi click 1 row.
   const [viewingCustomerId, setViewingCustomerId] = useState<number | null>(
@@ -223,6 +235,9 @@ export default function AdminCustomers() {
       month: month ? Number(month) : undefined,
       tier: tier || undefined,
       active: active === "" ? undefined : active === "true",
+      provinceId: branchFilter?.level === "province" ? branchFilter.id : undefined,
+      communeId: branchFilter?.level === "commune" ? branchFilter.id : undefined,
+      stationId: branchFilter?.level === "station" ? branchFilter.id : undefined,
     })
       .then((res) => {
         if (!isMounted) return;
@@ -242,7 +257,7 @@ export default function AdminCustomers() {
     return () => {
       isMounted = false;
     };
-  }, [page, appliedKeyword, year, month, tier, active, refreshKey]);
+  }, [page, appliedKeyword, year, month, tier, active, branchFilter, refreshKey]);
 
   // Fetch chi tiết khách hàng khi mở modal.
   useEffect(() => {
@@ -361,10 +376,15 @@ export default function AdminCustomers() {
             </option>
           ))}
         </select>
+        {isAdmin && (
+          <BranchFilterDropdown
+            onChange={(sel) => handleFilterChange(() => setBranchFilter(sel))}
+          />
+        )}
       </div>
 
       {/* ─── Table ────────────────────────────────────────────────── */}
-      <div className="overflow-hidden rounded-lg border border-outline-variant bg-white shadow-[0_1px_2px_rgba(0,0,0,0.05)]">
+      <div className="overflow-x-auto rounded-lg border border-outline-variant bg-white shadow-[0_1px_2px_rgba(0,0,0,0.05)]">
         {error ? (
           <div className="flex h-48 items-center justify-center text-base text-error">
             {error}
@@ -622,24 +642,28 @@ export default function AdminCustomers() {
                   <button
                     type="button"
                     onClick={() =>
-                      navigate(`/admin/customers/${detail.customerId}/bookings`)
+                      navigate(
+                        `${routePrefix}/customers/${detail.customerId}/bookings`,
+                      )
                     }
                     className="flex items-center justify-center gap-2 rounded-lg border border-primary px-6 py-3 text-sm font-semibold text-primary hover:bg-primary/5"
                   >
                     <History className="size-4" />
                     View Booking History
                   </button>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setDeleteError(null);
-                      setConfirmingDelete(true);
-                    }}
-                    className="flex items-center justify-center gap-2 rounded-lg bg-error px-6 py-3 text-sm font-semibold text-on-error hover:opacity-90"
-                  >
-                    <Trash2 className="size-4" />
-                    Delete Customer
-                  </button>
+                  {isAdmin && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setDeleteError(null);
+                        setConfirmingDelete(true);
+                      }}
+                      className="flex items-center justify-center gap-2 rounded-lg bg-error px-6 py-3 text-sm font-semibold text-on-error hover:opacity-90"
+                    >
+                      <Trash2 className="size-4" />
+                      Delete Customer
+                    </button>
+                  )}
                 </div>
               </>
             )

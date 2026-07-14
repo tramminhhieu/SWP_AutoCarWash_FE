@@ -73,7 +73,10 @@ const Login = () => {
       const decoded = jwtDecode<import("../types/auth").JwtPayload>(
         result.token,
       );
-      const role = decoded.roles ?? "CUSTOMER";
+      // BE trả role có tiền tố "ROLE_" (Spring Security) - cắt tiền tố để so khớp
+      // với dạng "CUSTOMER"/"STAFF"/"ADMIN" dùng chung trong FE (xem AuthContext.tsx)
+      const rawRole = decoded.roles ?? "CUSTOMER";
+      const role = rawRole.startsWith("ROLE_") ? rawRole.slice(5) : rawRole;
       const redirectPath =
         role === "STAFF" ? "/staff" : role === "ADMIN" ? "/admin" : "/";
       navigate(redirectPath, {
@@ -85,7 +88,7 @@ const Login = () => {
       // AC-01.4: tài khoản Inactive - BE trả message riêng, hiện đúng message đó
       // AC-01.2 + AC-01.3: sai mật khẩu hoặc tài khoản không tồn tại - dùng CHUNG 1 message
       // để không tiết lộ tài khoản có tồn tại hay không, đúng yêu cầu AC-01.3
-      if (errorCode === "AUTH_002") {
+      if (errorCode === "ACCOUNT_INACTIVE") {
         setFormError(message ?? "Your account has been disabled.");
       } else {
         setFormError("Incorrect email/phone or password");

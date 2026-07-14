@@ -33,10 +33,7 @@ import { NO_VEHICLE_REGISTERED } from "../types/booking";
 import type { BookingSlot } from "../types/bookingSlot";
 import { getSubscriptionStyle } from "../../../constants/subscriptionStyles";
 import { saveBookingDraft, loadBookingDraft } from "../utils/bookingDraft";
-
-// Format số tiền VND, vd 110000 -> "110,000 VND"
-const formatCurrency = (amount: number) =>
-  `${amount.toLocaleString("en-US")} VND`;
+import { formatCurrency } from "../../../utils";
 
 // Icon minh họa cho 3 gói service theo thứ tự (Basic, Medium, Premium) - mockup dùng giọt nước,
 // bọt xà phòng, và đũa thần tương ứng độ "cao cấp" tăng dần
@@ -862,7 +859,7 @@ const BookingCreate = () => {
                       <span className="mr-1.5 text-on-surface-variant line-through">
                         {formatCurrency(selectedService.basePrice)}
                       </span>
-                      <span className="text-tertiary">0 VND</span>
+                      <span className="text-tertiary">{formatCurrency(0)}</span>
                     </>
                   ) : (
                     formatCurrency(selectedService.basePrice)
@@ -1061,7 +1058,7 @@ const ServiceOption = ({
           <span className="mr-2 text-body-lg font-medium text-on-surface-variant line-through">
             {formatCurrency(service.basePrice)}
           </span>
-          <span className="text-tertiary">0 VND</span>
+          <span className="text-tertiary">{formatCurrency(0)}</span>
         </>
       ) : (
         formatCurrency(service.basePrice)

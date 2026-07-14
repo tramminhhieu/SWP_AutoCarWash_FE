@@ -21,6 +21,7 @@ export type AdminTransactionTypeFilter =
 export interface AdminPaymentRow {
   id: number; // transaction ID
   bookingId: number | null; // null cho subscription payment
+  customerName: string | null;
   customerPhone: string | null;
   paymentMethod: AdminPaymentMethod;
   amount: number;

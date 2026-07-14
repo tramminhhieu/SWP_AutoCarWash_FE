@@ -13,9 +13,12 @@ import BookingStatusBadge from "../../../components/ui/BookingStatusBadge";
 import {
   formatAppointmentDate,
   formatCheckInTime,
-  formatCurrency,
+  formatRefundedAt,
   formatTimeRange,
+  getEffectiveBookingStatus,
+  maskAccount,
 } from "../utils/bookingFormatters";
+import { formatCurrency } from "../../../utils";
 
 export default function BookingDetail() {
   const { bookingId } = useParams<{ bookingId: string }>();
@@ -88,7 +91,7 @@ export default function BookingDetail() {
                     </div>
                   </div>
                 </div>
-                <BookingStatusBadge status={booking.status} />
+                <BookingStatusBadge status={getEffectiveBookingStatus(booking)} />
               </div>
 
               <div className="grid grid-cols-2 gap-8 border-t border-outline-variant/20 pt-[33px]">
@@ -272,6 +275,62 @@ export default function BookingDetail() {
               )}
             </div>
           </div>
+
+          {(getEffectiveBookingStatus(booking) === "REFUND_PENDING" ||
+            getEffectiveBookingStatus(booking) === "REFUNDED") && (
+            <div className="flex flex-col rounded-[8px] border border-outline-variant/50 bg-white shadow-[0px_10px_25px_-5px_rgba(17,24,39,0.05)]">
+              <div className="flex flex-col gap-6 p-8">
+                <h3 className="font-heading text-lg font-semibold text-on-surface">
+                  Refund Information
+                </h3>
+
+                <div className="flex flex-col gap-2 border-t border-outline-variant/20 pt-4">
+                  <div className="flex items-center justify-between text-sm">
+                    <span className="text-on-surface-variant">Bank</span>
+                    <span className="font-semibold text-on-surface">
+                      {booking.refundBankName ?? "—"}
+                    </span>
+                  </div>
+                  <div className="flex items-center justify-between text-sm">
+                    <span className="text-on-surface-variant">Account Number</span>
+                    <span className="font-semibold text-on-surface">
+                      {booking.refundAccountNumber
+                        ? maskAccount(booking.refundAccountNumber)
+                        : "—"}
+                    </span>
+                  </div>
+                  <div className="flex items-center justify-between text-sm">
+                    <span className="text-on-surface-variant">Refund Amount</span>
+                    <span className="font-semibold text-on-surface">
+                      {booking.refundAmount != null
+                        ? formatCurrency(booking.refundAmount)
+                        : "—"}
+                    </span>
+                  </div>
+                  <div className="flex items-center justify-between text-sm">
+                    <span className="text-on-surface-variant">
+                      Processing Status
+                    </span>
+                    <span className="font-semibold text-on-surface">
+                      {getEffectiveBookingStatus(booking) === "REFUND_PENDING"
+                        ? "Processing"
+                        : "Completed"}
+                    </span>
+                  </div>
+                  {booking.refundedAt && (
+                    <div className="flex items-center justify-between text-sm">
+                      <span className="text-on-surface-variant">
+                        Refunded At
+                      </span>
+                      <span className="font-semibold text-on-surface">
+                        {formatRefundedAt(booking.refundedAt)}
+                      </span>
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+          )}
 
         </div>
       )}

@@ -8,6 +8,7 @@ import {
   Tag,
   Receipt,
   Users,
+  Settings,
   Banknote,
   Users2,
 } from "lucide-react";
@@ -21,6 +22,7 @@ const navItems = [
   { path: "/admin/promotions", label: "Promotions", icon: Tag },
   { path: "/admin/transactions", label: "Transaction History", icon: Receipt },
   { path: "/admin/customers", label: "Customers", icon: Users },
+  { path: "/admin/system-settings", label: "System Settings", icon: Settings },
   { path: "/admin/refunds", label: "Refund Management", icon: Banknote },
   {
     path: "/admin/family-subscriptions",

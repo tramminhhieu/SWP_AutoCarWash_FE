@@ -1,9 +1,11 @@
 import { NavLink, useNavigate } from "react-router-dom";
-import { CalendarCheck, LogOut } from "lucide-react";
+import { CalendarCheck, LogOut, Receipt, Users } from "lucide-react";
 import { useAuth } from "../hooks/useAuth";
 
 const navItems = [
   { path: "/staff/queue", label: "Queue", icon: CalendarCheck },
+  { path: "/staff/customers", label: "Customers", icon: Users },
+  { path: "/staff/transactions", label: "Transactions", icon: Receipt },
 ];
 
 export default function StaffSidebar() {

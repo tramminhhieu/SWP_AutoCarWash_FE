@@ -9,13 +9,18 @@ import {
   Wallet,
 } from "lucide-react";
 import { getAdminTransactions } from "../api/adminTransactionApi";
-import { MOCK_STATIONS } from "../api/mockStations";
+import { getInvoiceDetail } from "../../payment/api/paymentApi";
+import type { InvoiceDetail } from "../../payment/types/payment";
+import BranchFilterDropdown, {
+  type BranchFilterSelection,
+} from "../../station/components/BranchFilterDropdown";
 import type {
   AdminPaymentRow,
   AdminPaymentMethod,
   AdminPaymentStatus,
 } from "../types/adminTransaction";
 import Modal from "../../../components/ui/Modal";
+import { useAuth } from "../../../hooks/useAuth";
 import {
   formatCheckInTime,
   formatCurrency,
@@ -94,7 +99,15 @@ function KpiCard({
 }
 
 export default function AdminTransactionHistory() {
+  const { user } = useAuth();
+  const isAdmin = user?.role === "ADMIN";
   const [activeTab, setActiveTab] = useState<Tab>("subscription");
+
+  // Staff chỉ xem giao dịch Single Wash (booking cọc/tại quầy) - không có
+  // khái niệm Subscription, nên không hiện tab bar và luôn khoá ở tab này.
+  useEffect(() => {
+    if (!isAdmin) setActiveTab("singleWash");
+  }, [isAdmin]);
 
   const [rows, setRows] = useState<AdminPaymentRow[]>([]);
   const [totalRevenue, setTotalRevenue] = useState(0);
@@ -109,10 +122,15 @@ export default function AdminTransactionHistory() {
   const [status, setStatus] = useState<AdminPaymentStatus | "">("");
   // Chỉ dùng ở tab Single Wash
   const [typeFilter, setTypeFilter] = useState<SingleWashTypeFilter>("");
-  const [stationId, setStationId] = useState<number | "">("");
+  const [branchFilter, setBranchFilter] = useState<BranchFilterSelection>(null);
 
   const [page, setPage] = useState(1);
   const [viewingRow, setViewingRow] = useState<AdminPaymentRow | null>(null);
+  const [invoiceDetail, setInvoiceDetail] = useState<InvoiceDetail | null>(
+    null,
+  );
+  const [isLoadingInvoice, setIsLoadingInvoice] = useState(false);
+  const [invoiceError, setInvoiceError] = useState<string | null>(null);
 
   // Search bar: gõ tự do, chỉ apply khi bấm Enter/nút search - tránh gọi API
   // mỗi lần gõ phím. appliedSearch mới là thứ thực sự đưa vào query BE.
@@ -160,6 +178,13 @@ export default function AdminTransactionHistory() {
           : undefined,
     };
 
+    const branchFilters = {
+      stationId: branchFilter?.level === "station" ? branchFilter.id : undefined,
+      communeId: branchFilter?.level === "commune" ? branchFilter.id : undefined,
+      provinceId:
+        branchFilter?.level === "province" ? branchFilter.id : undefined,
+    };
+
     const request =
       activeTab === "subscription"
         ? getAdminTransactions({ ...commonFilters, type: "SUBSCRIPTION" }).then(
@@ -169,7 +194,7 @@ export default function AdminTransactionHistory() {
           ? getAdminTransactions({
               ...commonFilters,
               type: typeFilter,
-              stationId: stationId || undefined,
+              ...branchFilters,
             }).then((res) => [res])
           : // "All types" ở tab Single Wash: BE type filter chỉ nhận 1 giá trị,
             // nên gọi riêng DEPOSIT và FULL_PAYMENT rồi gộp lại - không để lẫn
@@ -178,12 +203,12 @@ export default function AdminTransactionHistory() {
               getAdminTransactions({
                 ...commonFilters,
                 type: "DEPOSIT",
-                stationId: stationId || undefined,
+                ...branchFilters,
               }),
               getAdminTransactions({
                 ...commonFilters,
                 type: "FULL_PAYMENT",
-                stationId: stationId || undefined,
+                ...branchFilters,
               }),
             ]);
 
@@ -219,9 +244,36 @@ export default function AdminTransactionHistory() {
     fromDate,
     toDate,
     typeFilter,
-    stationId,
+    branchFilter,
     appliedSearch,
   ]);
+
+  // Chi tiết hoá đơn thật (services, discount, final amount) khi click 1 giao
+  // dịch Single Wash - Subscription không gắn 1 booking/invoice cụ thể nên
+  // vẫn dùng lại modal tóm tắt cũ.
+  useEffect(() => {
+    if (viewingRow == null || activeTab !== "singleWash") return;
+    let isMounted = true;
+    setInvoiceDetail(null);
+    setInvoiceError(null);
+    setIsLoadingInvoice(true);
+
+    getInvoiceDetail(viewingRow.id)
+      .then((res) => {
+        if (isMounted) setInvoiceDetail(res);
+      })
+      .catch(() => {
+        if (isMounted)
+          setInvoiceError("Không thể tải chi tiết hoá đơn. Vui lòng thử lại sau.");
+      })
+      .finally(() => {
+        if (isMounted) setIsLoadingInvoice(false);
+      });
+
+    return () => {
+      isMounted = false;
+    };
+  }, [viewingRow, activeTab]);
 
   const successCount = useMemo(
     () => rows.filter((r) => r.paymentStatus === "SUCCESS").length,
@@ -236,7 +288,7 @@ export default function AdminTransactionHistory() {
   function handleTabChange(tab: Tab) {
     setActiveTab(tab);
     setTypeFilter("");
-    setStationId("");
+    setBranchFilter(null);
     setPage(1);
     setIsLoading(true);
     setError(null);
@@ -260,29 +312,31 @@ export default function AdminTransactionHistory() {
         </p>
       </div>
 
-      {/* ─── Tabs ─────────────────────────────────────────────────── */}
-      <div className="flex gap-8 border-b border-outline-variant/30">
-        <button
-          onClick={() => handleTabChange("subscription")}
-          className={`pb-[14px] text-sm tracking-[0.14px] ${
-            activeTab === "subscription"
-              ? "border-b-2 border-primary font-semibold text-primary"
-              : "font-medium text-on-surface-variant"
-          }`}
-        >
-          Subscription
-        </button>
-        <button
-          onClick={() => handleTabChange("singleWash")}
-          className={`pb-[14px] text-sm tracking-[0.14px] ${
-            activeTab === "singleWash"
-              ? "border-b-2 border-primary font-semibold text-primary"
-              : "font-medium text-on-surface-variant"
-          }`}
-        >
-          Single Wash
-        </button>
-      </div>
+      {/* ─── Tabs (chỉ Admin - Staff luôn ở Single Wash) ──────────── */}
+      {isAdmin && (
+        <div className="flex gap-8 border-b border-outline-variant/30">
+          <button
+            onClick={() => handleTabChange("subscription")}
+            className={`pb-[14px] text-sm tracking-[0.14px] ${
+              activeTab === "subscription"
+                ? "border-b-2 border-primary font-semibold text-primary"
+                : "font-medium text-on-surface-variant"
+            }`}
+          >
+            Subscription
+          </button>
+          <button
+            onClick={() => handleTabChange("singleWash")}
+            className={`pb-[14px] text-sm tracking-[0.14px] ${
+              activeTab === "singleWash"
+                ? "border-b-2 border-primary font-semibold text-primary"
+                : "font-medium text-on-surface-variant"
+            }`}
+          >
+            Single Wash
+          </button>
+        </div>
+      )}
 
       {/* ─── KPI summary ──────────────────────────────────────────── */}
       <div className="flex flex-wrap gap-4">
@@ -398,28 +452,19 @@ export default function AdminTransactionHistory() {
                 </option>
               ))}
             </select>
-            <select
-              value={stationId}
-              onChange={(e) =>
-                handleFilterChange(() =>
-                  setStationId(e.target.value ? Number(e.target.value) : ""),
-                )
-              }
-              className="rounded-lg border border-outline-variant bg-white px-3 py-2 text-sm font-medium text-on-surface"
-            >
-              <option value="">All branches</option>
-              {MOCK_STATIONS.map((s) => (
-                <option key={s.id} value={s.id}>
-                  {s.name}
-                </option>
-              ))}
-            </select>
+            {isAdmin && (
+              <BranchFilterDropdown
+                onChange={(sel) =>
+                  handleFilterChange(() => setBranchFilter(sel))
+                }
+              />
+            )}
           </>
         )}
       </div>
 
       {/* ─── Table ────────────────────────────────────────────────── */}
-      <div className="overflow-hidden rounded-lg border border-outline-variant bg-white shadow-[0_1px_2px_rgba(0,0,0,0.05)]">
+      <div className="overflow-x-auto rounded-lg border border-outline-variant bg-white shadow-[0_1px_2px_rgba(0,0,0,0.05)]">
         {error ? (
           <div className="flex h-48 items-center justify-center text-base text-error">
             {error}
@@ -440,14 +485,17 @@ export default function AdminTransactionHistory() {
                   <th className="px-6 py-4 text-left text-sm font-medium uppercase tracking-wider text-on-surface-variant">
                     Transaction ID
                   </th>
-                  <th className="px-6 py-4 text-left text-sm font-medium uppercase tracking-wider text-on-surface-variant">
-                    Phone
-                  </th>
                   {activeTab === "singleWash" && (
                     <th className="px-6 py-4 text-left text-sm font-medium uppercase tracking-wider text-on-surface-variant">
                       Booking ID
                     </th>
                   )}
+                  <th className="px-6 py-4 text-left text-sm font-medium uppercase tracking-wider text-on-surface-variant">
+                    Customer Name
+                  </th>
+                  <th className="px-6 py-4 text-left text-sm font-medium uppercase tracking-wider text-on-surface-variant">
+                    Phone
+                  </th>
                   <th className="px-6 py-4 text-left text-sm font-medium uppercase tracking-wider text-on-surface-variant">
                     Method
                   </th>
@@ -474,14 +522,17 @@ export default function AdminTransactionHistory() {
                     <td className="px-6 py-6 text-base font-medium text-on-surface">
                       #{row.id}
                     </td>
-                    <td className="px-6 py-6 text-base text-on-surface">
-                      {row.customerPhone ?? "—"}
-                    </td>
                     {activeTab === "singleWash" && (
                       <td className="px-6 py-6 text-base text-on-surface">
                         {row.bookingId != null ? `#${row.bookingId}` : "—"}
                       </td>
                     )}
+                    <td className="px-6 py-6 text-base text-on-surface">
+                      {row.customerName ?? "—"}
+                    </td>
+                    <td className="px-6 py-6 text-base text-on-surface">
+                      {row.customerPhone ?? "—"}
+                    </td>
                     <td className="px-6 py-6 text-base text-on-surface">
                       {row.paymentMethod}
                     </td>
@@ -549,12 +600,19 @@ export default function AdminTransactionHistory() {
         isOpen={viewingRow != null}
         onClose={() => setViewingRow(null)}
         variant="custom"
+        size="lg"
       >
         {viewingRow && (
           <div className="flex w-full flex-col gap-3 text-left text-sm">
             <p className="text-headline-md font-semibold text-on-surface">
               Transaction #{viewingRow.id}
             </p>
+            <div className="flex justify-between">
+              <span className="text-on-surface-variant">Customer Name</span>
+              <span className="font-semibold text-on-surface">
+                {viewingRow.customerName ?? "—"}
+              </span>
+            </div>
             <div className="flex justify-between">
               <span className="text-on-surface-variant">Phone</span>
               <span className="font-semibold text-on-surface">
@@ -593,6 +651,118 @@ export default function AdminTransactionHistory() {
                 {formatCheckInTime(viewingRow.paidAt)}
               </span>
             </div>
+
+            {/* ─── Invoice breakdown (Single Wash only) ──────────────── */}
+            {activeTab === "singleWash" && (
+              <div className="mt-2 border-t border-outline-variant pt-4">
+                {isLoadingInvoice ? (
+                  <div className="flex h-20 items-center justify-center text-outline">
+                    Đang tải...
+                  </div>
+                ) : invoiceError ? (
+                  <div className="flex h-20 items-center justify-center text-error">
+                    {invoiceError}
+                  </div>
+                ) : (
+                  invoiceDetail && (
+                    <div className="flex flex-col gap-3">
+                      <p className="text-xs font-semibold uppercase tracking-wider text-on-surface-variant">
+                        Invoice Details
+                      </p>
+                      <div className="flex justify-between">
+                        <span className="text-on-surface-variant">
+                          Vehicle
+                        </span>
+                        <span className="font-semibold text-on-surface">
+                          {invoiceDetail.vehicleBrand ?? "—"} ·{" "}
+                          {invoiceDetail.vehicleLicensePlate}
+                        </span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-on-surface-variant">
+                          Service Package
+                        </span>
+                        <span className="font-semibold text-on-surface">
+                          {invoiceDetail.servicePackageName}
+                        </span>
+                      </div>
+                      {invoiceDetail.checkInAt && (
+                        <div className="flex justify-between">
+                          <span className="text-on-surface-variant">
+                            Check-in
+                          </span>
+                          <span className="font-semibold text-on-surface">
+                            {formatCheckInTime(invoiceDetail.checkInAt)}
+                          </span>
+                        </div>
+                      )}
+                      {invoiceDetail.checkOutAt && (
+                        <div className="flex justify-between">
+                          <span className="text-on-surface-variant">
+                            Check-out
+                          </span>
+                          <span className="font-semibold text-on-surface">
+                            {formatCheckInTime(invoiceDetail.checkOutAt)}
+                          </span>
+                        </div>
+                      )}
+
+                      <div className="flex flex-col gap-1.5 rounded-lg border border-outline-variant p-3">
+                        {invoiceDetail.services.map((s, idx) => (
+                          <div key={idx} className="flex justify-between">
+                            <span className="text-on-surface-variant">
+                              {s.name}
+                            </span>
+                            <span className="font-medium text-on-surface">
+                              {formatCurrency(s.price)}
+                            </span>
+                          </div>
+                        ))}
+                      </div>
+
+                      <div className="flex flex-col gap-1.5 border-t border-outline-variant pt-3">
+                        <div className="flex justify-between">
+                          <span className="text-on-surface-variant">
+                            Raw Amount
+                          </span>
+                          <span className="text-on-surface">
+                            {formatCurrency(invoiceDetail.rawAmount)}
+                          </span>
+                        </div>
+                        {invoiceDetail.voucherDiscount > 0 && (
+                          <div className="flex justify-between">
+                            <span className="text-on-surface-variant">
+                              Voucher Discount
+                            </span>
+                            <span className="text-tertiary-container">
+                              - {formatCurrency(invoiceDetail.voucherDiscount)}
+                            </span>
+                          </div>
+                        )}
+                        {invoiceDetail.pointDiscount > 0 && (
+                          <div className="flex justify-between">
+                            <span className="text-on-surface-variant">
+                              Point Discount
+                            </span>
+                            <span className="text-tertiary-container">
+                              - {formatCurrency(invoiceDetail.pointDiscount)}
+                            </span>
+                          </div>
+                        )}
+                        <div className="flex justify-between border-t border-outline-variant pt-2 font-bold">
+                          <span className="text-on-surface">
+                            Final Amount
+                          </span>
+                          <span className="text-primary">
+                            {formatCurrency(invoiceDetail.finalAmount)}
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+                  )
+                )}
+              </div>
+            )}
           </div>
         )}
       </Modal>

@@ -9,7 +9,7 @@ import {
   Plus,
 } from "lucide-react";
 import { useAuth } from "../../../../hooks/useAuth";
-import { formatVND } from "../../../../utils/currency";
+import { formatCurrency } from "../../../../utils";
 import {
   getFamilySubscriptionPlans,
   registerFamilySubscription,
@@ -129,14 +129,14 @@ function PlanCard({
         {/* Price per month */}
         <div className="mt-5 flex items-baseline gap-1.5">
           <span className="font-heading text-headline-md font-bold text-primary">
-            {formatVND(pricePerMonth)}
+            {formatCurrency(pricePerMonth)}
           </span>
           <span className="font-body text-body-md text-on-surface-variant">
             /month
           </span>
         </div>
         <p className="mt-1 font-body text-body-sm text-on-surface-variant">
-          {formatVND(plan.price)} total for {plan.durationDays / 30}{" "}
+          {formatCurrency(plan.price)} total for {plan.durationDays / 30}{" "}
           {plan.durationDays / 30 === 1 ? "month" : "months"}
         </p>
 

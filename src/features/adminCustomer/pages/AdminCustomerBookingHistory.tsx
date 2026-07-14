@@ -12,10 +12,8 @@ import BookingStatusBadge from "../../../components/ui/BookingStatusBadge";
 import BackButton from "../../../components/ui/BackButton";
 import { useAuth } from "../../../hooks/useAuth";
 import { BOOKING_STATUS_STYLES } from "../../../constants/bookingStatusStyles";
-import {
-  formatAppointmentDate,
-  formatCurrency,
-} from "../../booking/utils/bookingFormatters";
+import { formatAppointmentDate } from "../../booking/utils/bookingFormatters";
+import { formatCurrency } from "../../../utils";
 
 const PAGE_SIZE = 10;
 

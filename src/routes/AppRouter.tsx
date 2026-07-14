@@ -23,6 +23,21 @@ import ChangePassword from "../features/customer/pages/ChangePassword";
 import LoyaltyRewards from "../features/customer/pages/LoyaltyRewards";
 //Admin
 import AdminLayout from "../layouts/AdminLayout";
+import SubscriptionPlanList from "../features/subscriptionplan/pages/SubscriptionPlanList";
+import SubscriptionPlanCreate from "../features/subscriptionplan/pages/SubscriptionPlanCreate";
+import SubscriptionPlanEdit from "../features/subscriptionplan/pages/SubscriptionPlanEdit";
+// FE-60/56/58: Customer - browse/register/manage Subscription (khác admin CRUD ở trên).
+// FE-59 (transfer vehicle) đã có sẵn trong CustomerProfile, không có route riêng.
+import CustomerSubscriptionPlanList from "../features/subscription/pages/SubscriptionPlanList";
+import SubscriptionRegister from "../features/subscription/pages/SubscriptionRegister";
+import SubscriptionPayment from "../features/subscription/pages/SubscriptionPayment";
+import MySubscriptions from "../features/subscription/pages/MySubscriptions";
+// API-17-01: Family Group - create + minimal detail landing page (AC08). Member CRUD (add/
+// remove/edit) là task riêng, chưa làm ở đây.
+import FamilyGroupDetail from "../features/familyGroup/pages/FamilyGroupDetail";
+import FamilyGroupCreate from "../features/familyGroup/pages/FamilyGroupCreate";
+
+// Add-on + Service Package (từ origin/dev) - thay thế addonservice/ cũ (mock)
 import AddonList from "../features/addon/pages/AddonList";
 import AddonCreate from "../features/addon/pages/AddonCreate";
 import AddonEdit from "../features/addon/pages/AddonEdit";
@@ -34,12 +49,15 @@ import PromotionOverview from "../features/promotion/pages/PromotionOverview";
 import PromotionDetail from "../features/promotion/pages/PromotionDetail";
 import PromotionCreate from "../features/promotion/pages/PromotionCreate";
 import PromotionEdit from "../features/promotion/pages/PromotionEdit";
+// Admin - Transaction History + Customer management (từ origin/dev)
 import AdminTransactionHistory from "../features/adminTransaction/pages/AdminTransactionHistory";
 import AdminCustomers from "../features/adminCustomer/pages/AdminCustomers";
 import AdminCustomerBookingHistory from "../features/adminCustomer/pages/AdminCustomerBookingHistory";
 import SystemSettingList from "../features/systemSetting/pages/SystemSettingList";
 import SystemSettingCreate from "../features/systemSetting/pages/SystemSettingCreate";
 import SystemSettingEdit from "../features/systemSetting/pages/SystemSettingEdit";
+import RefundManagement from "../features/refund/pages/RefundManagement";
+import FamilySubscriptionList from "../features/subscriptionPlans/familySubscription/pages/FamilySubscriptionList";
 
 export default function AppRouter() {
   return (
@@ -50,6 +68,16 @@ export default function AppRouter() {
         <Route path="/register" element={<Register />} />
         <Route path="/add-ons" element={<AddonList />} />
         <Route path="/service-packages" element={<ServicePackageList />} />
+        {/* FE-60-US-01: public, chưa login vẫn xem được, chỉ bắt login khi bấm Subscribe
+            (xử lý trong SubscriptionPlanList.tsx) */}
+        <Route
+          path="/subscription-plans"
+          element={<CustomerSubscriptionPlanList />}
+        />
+        <Route
+          path="/subscriptions/family/plans"
+          element={<FamilySubscriptionList />}
+        />
 
         {/* Toàn bộ flow đặt lịch yêu cầu đăng nhập - bọc trong PrivateRoute,
             chưa login bấm vào sẽ bị redirect về /login (xử lý trong PrivateRoute.tsx) */}
@@ -80,6 +108,22 @@ export default function AppRouter() {
               path="/customer/profile/change-password"
               element={<ChangePassword />}
             />
+            {/* FE-60-US-02.1: chọn xe -> QR payment. FE-56: renew dùng chung route payment. */}
+            <Route
+              path="/subscription-plans/:planId/register"
+              element={<SubscriptionRegister />}
+            />
+            <Route
+              path="/subscription-plans/payment/:invoiceId"
+              element={<SubscriptionPayment />}
+            />
+            {/* FE-60-US-05 + FE-58 + FE-56 entry point - khớp href "/subscription" đã có
+                sẵn trong CustomerHeader NAV_LINKS ("My Subscription") */}
+            <Route path="/subscription" element={<MySubscriptions />} />
+            {/* API-17-01: khớp href "/family" đã có sẵn trong CustomerHeader NAV_LINKS
+                ("My Family") */}
+            <Route path="/family" element={<FamilyGroupDetail />} />
+            <Route path="/family/create" element={<FamilyGroupCreate />} />
           </Route>
         </Route>
       </Route>
@@ -96,6 +140,15 @@ export default function AppRouter() {
             <Route path="/staff/queue" element={<QueuePage />} />
             <Route path="/staff/walk-in" element={<WalkInPage />} />
             <Route path="/staff/payment/:bookingId" element={<PaymentPage />} />
+            <Route path="/staff/customers" element={<AdminCustomers />} />
+            <Route
+              path="/staff/customers/:customerId/bookings"
+              element={<AdminCustomerBookingHistory />}
+            />
+            <Route
+              path="/staff/transactions"
+              element={<AdminTransactionHistory />}
+            />
           </Route>
         </Route>
       </Route>
@@ -128,6 +181,29 @@ export default function AppRouter() {
               element={<ServicePackageEdit />}
             />
 
+            <Route
+              path="/admin/subscription-plans"
+              element={<SubscriptionPlanList />}
+            />
+            {/* Không còn màn chọn loại (Select Package Type) - "+ Add" ở list đi thẳng vào
+                form Unlimited; Family có lối riêng từ FamilySubscriptionList "Add New". */}
+            <Route
+              path="/admin/subscription-plans/create"
+              element={
+                <Navigate
+                  to="/admin/subscription-plans/unlimited/create"
+                  replace
+                />
+              }
+            />
+            <Route
+              path="/admin/subscription-plans/:type/create"
+              element={<SubscriptionPlanCreate />}
+            />
+            <Route
+              path="/admin/subscription-plans/:id/edit"
+              element={<SubscriptionPlanEdit />}
+            />
             <Route path="/admin/wash-lanes" element={<WashLaneManagement />} />
             <Route path="/admin/promotions" element={<PromotionOverview />} />
             <Route
@@ -162,6 +238,11 @@ export default function AppRouter() {
             <Route
               path="/admin/system-settings/:systemSettingId/edit"
               element={<SystemSettingEdit />}
+            />
+            <Route path="/admin/refunds" element={<RefundManagement />} />
+            <Route
+              path="/admin/family-subscriptions"
+              element={<FamilySubscriptionList />}
             />
           </Route>
         </Route>

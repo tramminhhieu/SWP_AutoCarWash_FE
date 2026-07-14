@@ -131,7 +131,9 @@ export type BookingStatus =
   | "COMPLETED"
   | "CANCELED"
   | "NO_SHOW"
-  | "CHECK_OUT";
+  | "CHECK_OUT"
+  | "REFUND_PENDING"
+  | "REFUNDED";
 
 /**
  * Action a customer is allowed to take on a given booking, as returned by
@@ -156,6 +158,9 @@ export interface BookingCard {
   startTime: string | null;
   endTime: string | null;
   allowedActions: BookingAction[];
+  refundAmount?: number | null;
+  refundAccountNumber?: string | null;
+  refundedAt?: string | null;
 }
 
 export interface BookingAddon {
@@ -204,4 +209,8 @@ export interface BookingDetail {
   isDepositPaid: boolean;
   depositAmount: number | null;
   remainingAmount: number;
+  refundBankName?: string | null;
+  refundAccountNumber?: string | null;
+  refundAmount?: number | null;
+  refundedAt?: string | null;
 }

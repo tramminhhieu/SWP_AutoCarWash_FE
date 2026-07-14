@@ -25,8 +25,11 @@ export interface AdminTransactionFilters {
   type?: AdminTransactionTypeFilter;
   fromDate?: string; // "yyyy-MM-ddTHH:mm:ss"
   toDate?: string;
-  // stationId chỉ áp dụng cho single-wash (subscription không gắn station).
+  // stationId/communeId/provinceId chỉ áp dụng cho single-wash (subscription
+  // không gắn station).
   stationId?: number;
+  communeId?: number;
+  provinceId?: number;
   // Tìm theo SĐT khách hàng (partial match, áp dụng cả 2 loại giao dịch) hoặc
   // theo booking ID (exact match, chỉ áp dụng single-wash) - search bar chỉ
   // gửi 1 trong 2, không gửi đồng thời.

@@ -7,7 +7,8 @@ import type {
   PaymentType,
   ActiveSubscriptionInfo,
 } from "../types/transaction";
-import { formatCheckInTime, formatCurrency } from "../../booking/utils/bookingFormatters";
+import { formatCheckInTime } from "../../booking/utils/bookingFormatters";
+import { formatCurrency } from "../../../utils";
 
 function ActiveSubscriptionBanner({
   subscription,

@@ -1,21 +1,19 @@
 import { useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
 import { ChevronLeft, ChevronRight, Search } from "lucide-react";
-import {
-  getAllStations,
-  getCustomerBookingHistory,
-  type AdminStationOption,
-} from "../api/adminCustomerBookingApi";
+import { getCustomerBookingHistory } from "../api/adminCustomerBookingApi";
 import { getAdminCustomerDetail } from "../api/adminCustomerApi";
+import BranchFilterDropdown, {
+  type BranchFilterSelection,
+} from "../../station/components/BranchFilterDropdown";
 import type { AdminCustomerBookingRow } from "../types/adminCustomerBooking";
 import type { BookingStatus } from "../../booking/types/booking";
 import BookingStatusBadge from "../../../components/ui/BookingStatusBadge";
 import BackButton from "../../../components/ui/BackButton";
+import { useAuth } from "../../../hooks/useAuth";
 import { BOOKING_STATUS_STYLES } from "../../../constants/bookingStatusStyles";
-import {
-  formatAppointmentDate,
-  formatCurrency,
-} from "../../booking/utils/bookingFormatters";
+import { formatAppointmentDate } from "../../booking/utils/bookingFormatters";
+import { formatCurrency } from "../../../utils";
 
 const PAGE_SIZE = 10;
 
@@ -47,6 +45,8 @@ const MONTH_OPTIONS = [
 export default function AdminCustomerBookingHistory() {
   const { customerId } = useParams<{ customerId: string }>();
   const id = Number(customerId);
+  const { user } = useAuth();
+  const isAdmin = user?.role === "ADMIN";
 
   const [customerName, setCustomerName] = useState<string | null>(null);
 
@@ -63,8 +63,7 @@ export default function AdminCustomerBookingHistory() {
   const [status, setStatus] = useState("");
   const [year, setYear] = useState("");
   const [month, setMonth] = useState("");
-  const [stationId, setStationId] = useState("");
-  const [stations, setStations] = useState<AdminStationOption[]>([]);
+  const [branchFilter, setBranchFilter] = useState<BranchFilterSelection>(null);
 
   function handleSearchSubmit() {
     setAppliedKeyword(searchInput.trim());
@@ -104,22 +103,6 @@ export default function AdminCustomerBookingHistory() {
   }, [id]);
 
   useEffect(() => {
-    let isMounted = true;
-
-    getAllStations()
-      .then((res) => {
-        if (isMounted) setStations(res);
-      })
-      .catch(() => {
-        // Không chặn trang nếu load danh sách chi nhánh lỗi - chỉ mất filter "Branch".
-      });
-
-    return () => {
-      isMounted = false;
-    };
-  }, []);
-
-  useEffect(() => {
     if (!Number.isFinite(id)) return;
     let isMounted = true;
 
@@ -130,7 +113,19 @@ export default function AdminCustomerBookingHistory() {
       status: status ? (status as BookingStatus) : undefined,
       year: year ? Number(year) : undefined,
       month: month ? Number(month) : undefined,
-      stationId: stationId ? Number(stationId) : undefined,
+      stationId: isAdmin
+        ? branchFilter?.level === "station"
+          ? branchFilter.id
+          : undefined
+        : user?.stationId,
+      communeId:
+        isAdmin && branchFilter?.level === "commune"
+          ? branchFilter.id
+          : undefined,
+      provinceId:
+        isAdmin && branchFilter?.level === "province"
+          ? branchFilter.id
+          : undefined,
     })
       .then((res) => {
         if (!isMounted) return;
@@ -148,10 +143,10 @@ export default function AdminCustomerBookingHistory() {
     return () => {
       isMounted = false;
     };
-  }, [id, page, appliedKeyword, status, year, month, stationId]);
+  }, [id, page, appliedKeyword, status, year, month, branchFilter, isAdmin, user?.stationId]);
 
   return (
-    <div className="flex flex-col gap-8">
+    <div className="mx-auto flex max-w-[1440px] flex-col gap-8 px-12 py-8">
       <div className="flex items-center gap-4">
         <BackButton />
         <div className="flex flex-col gap-1">
@@ -219,24 +214,15 @@ export default function AdminCustomerBookingHistory() {
             </option>
           ))}
         </select>
-        <select
-          value={stationId}
-          onChange={(e) =>
-            handleFilterChange(() => setStationId(e.target.value))
-          }
-          className="rounded-lg border border-outline-variant bg-white px-3 py-2 text-sm font-medium text-on-surface"
-        >
-          <option value="">All branches</option>
-          {stations.map((s) => (
-            <option key={s.id} value={String(s.id)}>
-              {s.stationName}
-            </option>
-          ))}
-        </select>
+        {isAdmin && (
+          <BranchFilterDropdown
+            onChange={(sel) => handleFilterChange(() => setBranchFilter(sel))}
+          />
+        )}
       </div>
 
       {/* ─── Table ────────────────────────────────────────────────── */}
-      <div className="overflow-hidden rounded-lg border border-outline-variant bg-white shadow-[0_1px_2px_rgba(0,0,0,0.05)]">
+      <div className="overflow-x-auto rounded-lg border border-outline-variant bg-white shadow-[0_1px_2px_rgba(0,0,0,0.05)]">
         {error ? (
           <div className="flex h-48 items-center justify-center text-base text-error">
             {error}

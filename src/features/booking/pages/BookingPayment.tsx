@@ -8,8 +8,8 @@ import Modal from "../../../components/ui/Modal";
 import {
   formatAppointmentDate,
   formatTimeRange,
-  formatCurrency,
 } from "../utils/bookingFormatters";
+import { formatCurrency } from "../../../utils";
 import { clearBookingDraft } from "../utils/bookingDraft";
 
 const POLL_INTERVAL_MS = 4000;

@@ -12,11 +12,13 @@ import {
   Banknote,
   Users2,
   Infinity as InfinityIcon,
+  LayoutDashboard,
 } from "lucide-react";
 import { useAuth } from "../hooks/useAuth";
 
 /* Danh sách nav — tạm 2 mục, thêm sau khi cần */
 const navItems = [
+  { path: "/admin/dashboards", label: "Dashboard", icon: LayoutDashboard },
   { path: "/admin/service-packages", label: "Service Package", icon: Package },
   { path: "/admin/add-ons", label: "Add-on", icon: Puzzle },
   { path: "/admin/wash-lanes", label: "Wash Lane", icon: Waves },

@@ -611,7 +611,7 @@ export default function WalkInPage() {
                             <span className="text-body-md text-on-surface-variant line-through">
                               {formatVND(pkg.basePrice)}
                             </span>
-                            <span className="text-headline-md text-primary">Free</span>
+                            <span className="text-headline-md text-primary">0 VNĐ</span>
                           </p>
                         ) : (
                           <p className="mt-2 text-headline-md text-primary">{formatVND(pkg.basePrice)}</p>

@@ -443,8 +443,12 @@ export default function QueuePage() {
     try {
       const board = await completeService(lane.bookingId, lane.laneDbId);
       applyBoard(board);
-    } catch {
-      // show nothing — isLoading will reset and button re-enables
+    } catch (error) {
+      const { message } = getApiErrorInfo(error);
+      setNotice({
+        variant: "danger",
+        message: message ?? QUEUE_MESSAGES.COMPLETE_SERVICE_FAILED,
+      });
     } finally {
       setIsLoading(false);
     }

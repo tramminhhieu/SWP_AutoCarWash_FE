@@ -150,16 +150,17 @@ export default function AppRouter() {
               path="/staff/transactions"
               element={<AdminTransactionHistory />}
             />
+            <Route path="/staff/dashboards" element={<Dashboard />} />
           </Route>
         </Route>
       </Route>
 
       <Route element={<PrivateRoute />}>
         <Route element={<RoleRoute allowedRoles={["ADMIN"]} />}>
-          {/* Admin login về thẳng Transaction History, không qua dashboard placeholder */}
+          {/* Admin login về thẳng Dashboard */}
           <Route
             path="/admin"
-            element={<Navigate to="/admin/transactions" replace />}
+            element={<Navigate to="/admin/dashboards" replace />}
           />
           <Route element={<AdminLayout />}>
             <Route path="/admin/add-ons" element={<AddonList />} />
@@ -245,8 +246,8 @@ export default function AppRouter() {
               path="/admin/family-subscriptions"
               element={<FamilySubscriptionList />}
             />
+            <Route path="/admin/dashboards" element={<Dashboard />} />
           </Route>
-          <Route path="/admin/dashboards" element={<Dashboard />} />
         </Route>
       </Route>
 

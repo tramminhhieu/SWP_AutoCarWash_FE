@@ -1,4 +1,4 @@
-import { Calendar, RefreshCw } from "lucide-react";
+import { Calendar } from "lucide-react";
 import type {
   DashboardTab,
   ProvinceOption,
@@ -50,7 +50,6 @@ export default function DashboardFilter({
   onStationChange,
   onApply,
 }: Props) {
-  // Tìm tên province đang chọn (dùng cho label "All branches in X")
   const selectedProvince = provinces.find((p) => p.provinceId === provinceId);
 
   return (
@@ -97,14 +96,13 @@ export default function DashboardFilter({
           </div>
         </div>
 
-        {/* Apply/Refresh button */}
+        {/* Apply button */}
         <button
           onClick={onApply}
           disabled={!!dateError || isLoading}
-          title="Apply filter"
-          className="flex size-9 items-center justify-center rounded-full bg-primary-container text-white shadow-sm transition-opacity hover:opacity-90 disabled:opacity-40"
+          className="rounded-lg bg-primary-container px-4 py-2 text-sm font-semibold text-white shadow-sm transition-opacity hover:opacity-90 disabled:opacity-40"
         >
-          <RefreshCw className={`size-4 ${isLoading ? "animate-spin" : ""}`} />
+          {isLoading ? "Loading..." : "Apply"}
         </button>
       </div>
 

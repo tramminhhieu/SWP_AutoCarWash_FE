@@ -150,7 +150,7 @@ function TierTable({
 }
 
 // ─── Export: layout 2 cột ──────────────────────────────────────────────────────
-export default function DashboardTablesSection({ tables, isLoading }: Props) {
+export default function DashboardTable({ tables, isLoading }: Props) {
   return (
     <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
       <TopPackagesTable

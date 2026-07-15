@@ -188,11 +188,14 @@ export default function QueuePage() {
     // Active Lanes: render từ data.lanes — mỗi làn WASHING dùng currentBookingId
     // (do BE tính sẵn) để lookup đúng ticket, tránh nhầm lane khi nhiều xe cùng rửa.
     const builtLanes: Lane[] = data.lanes.map((l, idx) => {
-      const label = l.laneName.replace(/\D/g, "") || String(idx + 1).padStart(2, "0");
+      const label =
+        l.laneName.replace(/\D/g, "") || String(idx + 1).padStart(2, "0");
       if (l.status !== "WASHING" || l.currentBookingId == null) {
         return { ...makeEmptyLane(idx, l.id), lane: label };
       }
-      const ticket = data.activeLanes.find(t => t.bookingId === l.currentBookingId);
+      const ticket = data.activeLanes.find(
+        (t) => t.bookingId === l.currentBookingId,
+      );
       if (!ticket) {
         return { ...makeEmptyLane(idx, l.id), lane: label };
       }
@@ -263,7 +266,9 @@ export default function QueuePage() {
     const requiredDeposit = scanResult.depositAmount ?? 0;
     const receivedAmount = Number(depositReceivedInput);
     if (!receivedAmount || receivedAmount < requiredDeposit) {
-      setDepositModalError(`Please enter at least ${formatVND(requiredDeposit)}.`);
+      setDepositModalError(
+        `Please enter at least ${formatVND(requiredDeposit)}.`,
+      );
       return;
     }
     setIsDepositSubmitting(true);
@@ -274,7 +279,9 @@ export default function QueuePage() {
       setShowDepositModal(false);
     } catch (error) {
       const { message } = getApiErrorInfo(error);
-      setDepositModalError(message ?? "Failed to collect deposit, please try again.");
+      setDepositModalError(
+        message ?? "Failed to collect deposit, please try again.",
+      );
     } finally {
       setIsDepositSubmitting(false);
     }
@@ -402,7 +409,10 @@ export default function QueuePage() {
       const board = await startService(next.bookingId);
       applyBoard(board);
     } catch {
-      setNotice({ variant: "danger", message: QUEUE_MESSAGES.ADD_TO_LANE_FAILED });
+      setNotice({
+        variant: "danger",
+        message: QUEUE_MESSAGES.ADD_TO_LANE_FAILED,
+      });
     } finally {
       setIsLoading(false);
     }
@@ -417,7 +427,10 @@ export default function QueuePage() {
       const board = await startService(assignCar.bookingId, laneDbId);
       applyBoard(board);
     } catch {
-      setNotice({ variant: "danger", message: QUEUE_MESSAGES.ADD_TO_LANE_FAILED });
+      setNotice({
+        variant: "danger",
+        message: QUEUE_MESSAGES.ADD_TO_LANE_FAILED,
+      });
     } finally {
       setIsLoading(false);
     }
@@ -475,7 +488,7 @@ export default function QueuePage() {
   };
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="mx-auto flex max-w-[1200px] flex-col gap-6 px-6 py-8">
       {/* Header */}
       <div className="flex items-center justify-between mb-6">
         <div>
@@ -590,7 +603,11 @@ export default function QueuePage() {
               </p>
             )}
             {waitingPool.map((v, idx) => (
-              <div key={v.id} onClick={() => hasEmptyLane && setAssignCar(v)} className={`rounded-xl px-3 py-2.5 flex items-center gap-2 bg-white border border-outline-variant/20 ${hasEmptyLane ? "cursor-pointer hover:bg-surface-container-low transition" : ""}`}>
+              <div
+                key={v.id}
+                onClick={() => hasEmptyLane && setAssignCar(v)}
+                className={`rounded-xl px-3 py-2.5 flex items-center gap-2 bg-white border border-outline-variant/20 ${hasEmptyLane ? "cursor-pointer hover:bg-surface-container-low transition" : ""}`}
+              >
                 <div className="flex flex-col justify-center gap-0.5 shrink-0">
                   <button
                     onClick={() => moveVehicle(idx, -1)}
@@ -789,8 +806,8 @@ export default function QueuePage() {
                         </p>
                         <p className="text-xs text-on-error-container mt-0.5">
                           This vehicle has an active violation restriction. A{" "}
-                          {formatVND(scanResult?.depositAmount ?? 0)} cash deposit
-                          must be collected before check-in.
+                          {formatVND(scanResult?.depositAmount ?? 0)} cash
+                          deposit must be collected before check-in.
                         </p>
                       </div>
                       <button
@@ -883,33 +900,56 @@ export default function QueuePage() {
 
       {/* Lane Select Modal */}
       {assignCar && (
-        <div className="fixed inset-0 flex items-center justify-center z-50 bg-inverse-surface/50" onClick={() => setAssignCar(null)}>
-          <div className="rounded-2xl shadow-xl w-full max-w-sm mx-4 bg-surface-container-lowest" onClick={(e) => e.stopPropagation()}>
+        <div
+          className="fixed inset-0 flex items-center justify-center z-50 bg-inverse-surface/50"
+          onClick={() => setAssignCar(null)}
+        >
+          <div
+            className="rounded-2xl shadow-xl w-full max-w-sm mx-4 bg-surface-container-lowest"
+            onClick={(e) => e.stopPropagation()}
+          >
             <div className="flex items-center justify-between px-6 pt-6 pb-4 border-b border-outline-variant">
               <div>
-                <h2 className="text-base font-bold font-heading text-on-surface">Chọn làn rửa</h2>
-                <p className="text-xs text-outline mt-0.5">{assignCar.licensePlate} • {assignCar.service}</p>
+                <h2 className="text-base font-bold font-heading text-on-surface">
+                  Chọn làn rửa
+                </h2>
+                <p className="text-xs text-outline mt-0.5">
+                  {assignCar.licensePlate} • {assignCar.service}
+                </p>
               </div>
-              <button onClick={() => setAssignCar(null)} className="rounded-full p-1 hover:bg-surface-container transition">
+              <button
+                onClick={() => setAssignCar(null)}
+                className="rounded-full p-1 hover:bg-surface-container transition"
+              >
                 <X className="w-5 h-5 text-outline" />
               </button>
             </div>
             <div className="px-6 py-4 flex flex-col gap-2">
-              {lanes.filter(l => l.status === "Empty").map(l => (
-                <button
-                  key={l.laneDbId}
-                  onClick={() => handleAssignToLane(l.laneDbId)}
-                  disabled={isLoading}
-                  className="flex items-center gap-3 rounded-xl px-4 py-3 border-2 border-outline-variant hover:border-primary hover:bg-primary-fixed transition disabled:opacity-50"
-                >
-                  <div className="w-10 h-10 rounded-xl flex flex-col items-center justify-center bg-primary text-on-primary shrink-0">
-                    <span className="text-[9px] font-medium leading-none">LANE</span>
-                    <span className="text-sm font-bold leading-tight">{l.lane}</span>
-                  </div>
-                  <span className="text-sm font-semibold text-on-surface">Lane {l.lane}</span>
-                  <span className="ml-auto text-xs px-2 py-0.5 rounded-full bg-surface-container text-outline">Trống</span>
-                </button>
-              ))}
+              {lanes
+                .filter((l) => l.status === "Empty")
+                .map((l) => (
+                  <button
+                    key={l.laneDbId}
+                    onClick={() => handleAssignToLane(l.laneDbId)}
+                    disabled={isLoading}
+                    className="flex items-center gap-3 rounded-xl px-4 py-3 border-2 border-outline-variant hover:border-primary hover:bg-primary-fixed transition disabled:opacity-50"
+                  >
+                    <div className="w-10 h-10 rounded-xl flex flex-col items-center justify-center bg-primary text-on-primary shrink-0">
+                      <span className="text-[9px] font-medium leading-none">
+                        LANE
+                      </span>
+                      <span className="text-sm font-bold leading-tight">
+                        {l.lane}
+                      </span>
+                    </div>
+                    <span className="text-sm font-semibold text-on-surface">
+                      Lane {l.lane}
+                    </span>
+                    <span className="ml-auto text-xs px-2 py-0.5 rounded-full bg-surface-container text-outline">
+                      Trống
+                    </span>
+                  </button>
+                ))}
             </div>
           </div>
         </div>
@@ -1024,9 +1064,9 @@ export default function QueuePage() {
         message={
           <div className="flex flex-col gap-3 text-left">
             <p>
-              This vehicle has an active violation restriction. Staff must collect a{" "}
-              {formatVND(scanResult?.depositAmount ?? 0)} cash deposit at the counter
-              before the vehicle can be checked in.
+              This vehicle has an active violation restriction. Staff must
+              collect a {formatVND(scanResult?.depositAmount ?? 0)} cash deposit
+              at the counter before the vehicle can be checked in.
             </p>
             <div>
               <label className="text-xs font-semibold text-on-surface-variant mb-1.5 block">

@@ -17,9 +17,9 @@ import {
   getStationsByProvince,
 } from "../api/dashboardApi";
 import DashboardFilter from "../components/DashboardFilter";
-import SummaryCards from "../components/SummaryCard";
+import SummaryCard from "../components/SummaryCard";
 import RevenueChart from "../components/RevenueChart";
-import DashboardTablesSection from "../components/DashboardTable";
+import DashboardTable from "../components/DashboardTable";
 
 // ─── Helper: tính fromDate / toDate / groupBy từ tab active ──────────────────
 function pad(n: number) {
@@ -81,9 +81,9 @@ export default function Dashboard() {
   const role = (user?.role as "ADMIN" | "STAFF") ?? "ADMIN";
 
   // Khởi tạo với tab Year (default theo spec)
-  const initTabParams = getTabParams("year");
+  const initTabParams = getTabParams("today");
   const initFilter: FilterState = {
-    activeTab: "year",
+    activeTab: "today",
     fromDate: initTabParams.fromDate,
     toDate: initTabParams.toDate,
   };
@@ -256,13 +256,13 @@ export default function Dashboard() {
       )}
 
       {/* 3 Summary cards */}
-      <SummaryCards summary={summary} isLoading={isLoading} />
+      <SummaryCard summary={summary} isLoading={isLoading} />
 
       {/* Revenue Chart */}
       <RevenueChart data={revenueChart} isLoading={isLoading} />
 
       {/* 2 bảng: Service Packages + Tier Distribution */}
-      <DashboardTablesSection tables={tables} isLoading={isLoading} />
+      <DashboardTable tables={tables} isLoading={isLoading} />
     </div>
   );
 }

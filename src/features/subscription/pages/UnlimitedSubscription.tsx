@@ -208,6 +208,13 @@ export default function MySubscriptions() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  // Tự ẩn toast thành công sau 1s, giống pattern ServicePackageList.tsx
+  useEffect(() => {
+    if (!successMessage) return;
+    const timer = setTimeout(() => setSuccessMessage(null), 1000);
+    return () => clearTimeout(timer);
+  }, [successMessage]);
+
   const load = useCallback(() => {
     setIsLoading(true);
     setError(null);

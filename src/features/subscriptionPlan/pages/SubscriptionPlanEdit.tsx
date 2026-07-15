@@ -44,7 +44,7 @@ export default function SubscriptionPlanEdit() {
       <h1 className="font-heading text-headline-lg text-on-surface">
         Edit Subscription Plan
       </h1>
-      <p className="mt-1 text-body-md text-on-surface-variant">
+      <p className="mt-1 font-body text-body-md text-on-surface-variant">
         Update plan details.
       </p>
 
@@ -53,14 +53,14 @@ export default function SubscriptionPlanEdit() {
           <Loading rows={5} />
         ) : error ? (
           <div className="space-y-4">
-            <div className="rounded-lg border border-error/30 bg-error-container px-4 py-3 text-body-md text-on-error-container">
+            <div className="rounded-lg border border-error/30 bg-error-container px-4 py-3 font-body text-body-md text-on-error-container">
               {error}
             </div>
             {/* Không biết planType khi fetch thất bại → navigate(-1) về list trước đó */}
             <button
               type="button"
               onClick={() => navigate(-1)}
-              className="text-body-md font-semibold text-primary hover:opacity-80"
+              className="font-body text-body-md font-semibold text-primary hover:opacity-80"
             >
               ← Go Back
             </button>

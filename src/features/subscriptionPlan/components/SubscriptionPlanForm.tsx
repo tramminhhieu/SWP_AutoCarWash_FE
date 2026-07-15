@@ -22,8 +22,10 @@ const inputClass = (hasError: boolean, hasSuffix = false) =>
   `w-full rounded-lg border px-4 py-2.5 text-body-md text-on-surface outline-none transition-colors placeholder:text-on-surface-variant/60 ${
     hasSuffix ? "pr-14" : ""
   } ${hasError ? "border-error" : "border-outline-variant focus:border-primary"}`;
-const labelClass = "mb-1.5 block text-label-md text-on-surface-variant";
-const errorTextClass = "mt-1.5 text-label-sm text-error";
+// Đồng bộ với VehicleForm: uppercase + tracking-wide cho label, text-label-md cho error
+const labelClass =
+  "mb-1.5 block text-label-md uppercase tracking-wide text-on-surface-variant";
+const errorTextClass = "mt-1.5 text-label-md text-error";
 
 // <select> native có mũi tên do trình duyệt tự vẽ, canh lệch/không đều giữa các trình duyệt
 // khi kết hợp với padding/border-radius tuỳ chỉnh -> tắt appearance mặc định, tự vẽ 1 icon

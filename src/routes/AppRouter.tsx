@@ -120,7 +120,7 @@ export default function AppRouter() {
             />
             {/* FE-60-US-05 + FE-58 + FE-56 entry point - khớp href "/subscription" đã có
                 sẵn trong CustomerHeader NAV_LINKS ("My Subscription") */}
-            <Route path="/subscription" element={<UnlimitedSubscription />} />
+            <Route path="/unlimited" element={<UnlimitedSubscription />} />
             {/* API-17-01: khớp href "/family" đã có sẵn trong CustomerHeader NAV_LINKS
                 ("My Family") */}
             <Route path="/family" element={<FamilyGroupDetail />} />
@@ -187,17 +187,7 @@ export default function AppRouter() {
               path="/admin/unlimited-subscriptions"
               element={<UnlimitedSubscriptionList />}
             />
-            {/* Không còn màn chọn loại (Select Package Type) - "+ Add" ở list đi thẳng vào
-                form Unlimited; Family có lối riêng từ FamilySubscriptionList "Add New". */}
-            <Route
-              path="/admin/subscription-plans/create"
-              element={
-                <Navigate
-                  to="/admin/subscription-plans/unlimited/create"
-                  replace
-                />
-              }
-            />
+            <Route />
             <Route
               path="/admin/subscription-plans/:type/create"
               element={<SubscriptionPlanCreate />}

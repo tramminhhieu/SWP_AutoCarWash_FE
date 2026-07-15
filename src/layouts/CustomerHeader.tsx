@@ -8,8 +8,9 @@ import {
   Calendar,
   Puzzle,
   Package,
-  Repeat,
   Receipt,
+  HeartHandshake,
+  Infinity as InfinityIcon,
 } from "lucide-react";
 
 import NotificationBell from "../features/crm/components/NotificationBell";
@@ -31,14 +32,23 @@ interface CustomerHeaderProps {
 }
 
 const NAV_LINKS = [
-  { label: "My Family", href: "/family" },
-  { label: "My Subscription", href: "/subscription" },
+  { label: "Family", href: "/family" },
+  { label: "Unlimited", href: "/subscription" },
 ];
 
 const SERVICE_LINKS = [
   { label: "Add-on", href: "/add-ons", icon: Puzzle },
   { label: "Service Package", href: "/service-packages", icon: Package },
-  { label: "Subscription Plan", href: "/subscription-plans", icon: Repeat },
+  {
+    label: "Unlimited Subscription",
+    href: "/subscription-plans?type=UNLIMIT",
+    icon: InfinityIcon,
+  },
+  {
+    label: "Family Subscription",
+    href: "/subscriptions/family/plans",
+    icon: HeartHandshake,
+  },
 ];
 
 export default function CustomerHeader({

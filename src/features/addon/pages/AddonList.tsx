@@ -33,9 +33,6 @@ const AddonCard = ({
         <h3 className="text-body-lg font-semibold text-on-surface">
           {addon.name}
         </h3>
-        <p className="mt-0.5 text-body-md text-on-surface-variant line-clamp-2">
-          {addon.description ?? "No description"}
-        </p>
       </div>
     </div>
 

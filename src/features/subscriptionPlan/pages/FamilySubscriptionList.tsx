@@ -121,18 +121,18 @@ function PlanCard({
         )}
 
         {/* Plan name + description badge */}
-        <h3 className="font-heading text-headline-md font-bold text-on-surface">
+        <h3 className="font-heading text-headline-md font-bold text-primary">
           {plan.planName}
         </h3>
         {plan.description && (
-          <span className="mt-2 inline-block self-start rounded-full bg-primary/10 px-3 py-1 text-label-sm font-medium text-primary">
+          <span className="mt-2 font-body text-body-md text-on-surface-variant">
             {plan.description}
           </span>
         )}
 
         {/* Price per month */}
         <div className="mt-5 flex items-baseline gap-1.5">
-          <span className="font-heading text-headline-md font-bold text-primary">
+          <span className="font-heading text-headline-md font-bold text-on-surface">
             {formatCurrency(pricePerMonth)}
           </span>
           <span className="font-body text-body-md text-on-surface-variant">

@@ -123,11 +123,12 @@ export default function Dashboard() {
 
   // Load stations khi chọn province
   useEffect(() => {
-    if (role !== "ADMIN" || !appliedFilter.provinceId) {
-      setStations([]);
-      return;
-    }
-    getStationsByProvince(appliedFilter.provinceId).then((data) => {
+    const fetchStations =
+      role === "ADMIN" && appliedFilter.provinceId
+        ? getStationsByProvince(appliedFilter.provinceId)
+        : Promise.resolve([]);
+
+    fetchStations.then((data) => {
       if (isMountedRef.current) setStations(data);
     });
   }, [role, appliedFilter.provinceId]);
@@ -144,8 +145,12 @@ export default function Dashboard() {
     const locationParams = role === "ADMIN" ? { provinceId, stationId } : {};
 
     let cancelled = false;
-    setIsLoading(true);
-    setError(null);
+    queueMicrotask(() => {
+      if (!cancelled) {
+        setIsLoading(true);
+        setError(null);
+      }
+    });
 
     Promise.all([
       getDashboardSummary({ fromDate, toDate, ...locationParams }),

@@ -37,13 +37,6 @@ const TAB_DURATION: Record<TabType, number> = {
 // Thứ tự card hiển thị theo tier: Basic → Medium → Premium
 const TIER_ORDER: Record<string, number> = { Basic: 0, Medium: 1, Premium: 2 };
 
-// Badge trạng thái ACTIVE/INACTIVE — dùng cùng ngôn ngữ màu với subscriptionStyles.ts
-const STATUS_BADGE: Record<SubscriptionPlan["status"], string> = {
-  ACTIVE: "bg-tertiary/10 text-tertiary border-tertiary/30",
-  INACTIVE:
-    "bg-surface-container-high text-on-surface-variant border-outline-variant/30",
-};
-
 /* ================================================================
    Sub-component: Skeleton card khi đang load
    ================================================================ */
@@ -93,21 +86,21 @@ function PlanCard({
       <div className="flex-1">
         {/* Tên gói + badge trạng thái */}
         <div className="flex items-start justify-between gap-3">
-          <h3 className="font-heading text-headline-md font-bold text-on-surface">
+          <h3 className="font-heading text-headline-md font-bold text-primary">
             {plan.planName}
           </h3>
         </div>
 
         {/* Mô tả ngắn */}
         {plan.description && (
-          <span className="mt-2 inline-block self-start rounded-full bg-primary/10 px-3 py-1 text-label-sm font-medium text-primary">
+          <span className="mt-2 font-body text-body-md text-on-surface-variant">
             {plan.description}
           </span>
         )}
 
         {/* Giá/tháng + tổng giá */}
         <div className="mt-5 flex items-baseline gap-1.5">
-          <span className="font-heading text-headline-md font-bold text-primary">
+          <span className="font-heading text-headline-md font-bold text-on-surface">
             {formatCurrency(pricePerMonth)}
           </span>
           <span className="font-body text-body-md text-on-surface-variant">
@@ -236,8 +229,6 @@ export default function UnlimitedSubscriptionList() {
   // Load lần đầu: fetch song song plans + service packages + addons
   useEffect(() => {
     let isMounted = true;
-    setIsLoading(true);
-    setError(null);
     Promise.all([
       // Hardcode UNLIMIT - trang này chỉ quản lý gói Unlimited
       getAll("ALL", "UNLIMIT"),

@@ -14,17 +14,14 @@ export default function SubscriptionPlanEdit() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const planId = Number(id);
+  const isInvalidId = !planId || Number.isNaN(planId);
 
   const [plan, setPlan] = useState<SubscriptionPlanDetail | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    if (!planId || Number.isNaN(planId)) {
-      setError("Invalid subscription plan.");
-      setIsLoading(false);
-      return;
-    }
+    if (isInvalidId) return;
 
     // AC01: pre-fill toàn bộ dữ liệu hiện tại
     getById(planId)
@@ -34,7 +31,7 @@ export default function SubscriptionPlanEdit() {
         setError(message ?? "Subscription plan not found.");
       })
       .finally(() => setIsLoading(false));
-  }, [planId]);
+  }, [planId, isInvalidId]);
 
   // listRoute từ PLAN_TYPE_LIST_ROUTE (subscriptionPlan.ts) — đồng bộ với Create
   const listRoute = plan ? PLAN_TYPE_LIST_ROUTE[plan.planType] : undefined;
@@ -49,7 +46,20 @@ export default function SubscriptionPlanEdit() {
       </p>
 
       <div className="mt-6">
-        {isLoading ? (
+        {isInvalidId ? (
+          <div className="space-y-4">
+            <div className="rounded-lg border border-error/30 bg-error-container px-4 py-3 font-body text-body-md text-on-error-container">
+              Invalid subscription plan.
+            </div>
+            <button
+              type="button"
+              onClick={() => navigate(-1)}
+              className="font-body text-body-md font-semibold text-primary hover:opacity-80"
+            >
+              ← Go Back
+            </button>
+          </div>
+        ) : isLoading ? (
           <Loading rows={5} />
         ) : error ? (
           <div className="space-y-4">

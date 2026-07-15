@@ -1,14 +1,7 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../../../hooks/useAuth";
-import {
-  Calendar,
-  CalendarPlus,
-  Car,
-  ChevronRight,
-  CirclePlus,
-  Star,
-} from "lucide-react";
+import { Calendar, Car, ChevronRight, CirclePlus } from "lucide-react";
 import { getPastBookings, getUpcomingBookings } from "../api/bookingApi";
 import type { BookingCard } from "../types/booking";
 import BookingStatusBadge from "../../../components/ui/BookingStatusBadge";
@@ -109,12 +102,6 @@ function BookingCardItem({
                 CANCEL
               </button>
             )}
-            {booking.allowedActions.includes("WRITE_REVIEW") && (
-              <button className="flex items-center gap-2 text-sm font-bold tracking-[0.14px] text-primary">
-                WRITE A REVIEW
-                <Star className="size-3.5" />
-              </button>
-            )}
             {booking.allowedActions.includes("VIEW_DETAILS") && (
               <button
                 onClick={() =>
@@ -187,12 +174,6 @@ export default function BookingHistory() {
             Service History &amp; Bookings
           </h1>
         </div>
-        <button className="flex items-center gap-2 rounded-[8px] border border-outline-variant/30 bg-surface-container-high px-[25px] py-[17px]">
-          <CalendarPlus className="size-5 text-on-surface" />
-          <span className="text-sm font-bold tracking-[0.14px] text-on-surface">
-            Book New Service
-          </span>
-        </button>
       </div>
 
       <div className="flex gap-8 border-b border-outline-variant/30">

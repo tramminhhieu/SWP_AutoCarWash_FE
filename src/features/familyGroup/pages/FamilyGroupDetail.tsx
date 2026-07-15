@@ -89,8 +89,10 @@ export default function FamilyGroupDetail() {
   }, [toast]);
 
   const load = useCallback(() => {
-    setIsLoading(true);
-    setError(null);
+    queueMicrotask(() => {
+      setIsLoading(true);
+      setError(null);
+    });
     getMyFamilyGroup()
       .then(setGroup)
       .catch(() =>
@@ -200,9 +202,11 @@ export default function FamilyGroupDetail() {
     }
   };
 
+  const [now] = useState(() => Date.now());
+
   const daysLeft = group?.subscription
     ? Math.ceil(
-        (new Date(group.subscription.endDate).getTime() - Date.now()) /
+        (new Date(group.subscription.endDate).getTime() - now) /
           (1000 * 60 * 60 * 24),
       )
     : null;

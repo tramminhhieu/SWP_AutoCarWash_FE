@@ -13,8 +13,6 @@ import {
   Infinity as InfinityIcon,
 } from "lucide-react";
 
-import NotificationBell from "../features/crm/components/NotificationBell";
-
 /**
  * Thông tin user hiển thị trên header.
  * firstName/lastName lấy trực tiếp từ bảng customer trong DB.
@@ -33,7 +31,7 @@ interface CustomerHeaderProps {
 
 const NAV_LINKS = [
   { label: "Family", href: "/family" },
-  { label: "Unlimited", href: "/subscription" },
+  { label: "Unlimited", href: "/unlimited" },
 ];
 
 const SERVICE_LINKS = [
@@ -165,8 +163,6 @@ export default function CustomerHeader({
             </>
           ) : (
             <>
-              <NotificationBell />
-
               {/* Profile dropdown */}
               <div ref={profileRef} className="relative">
                 <button

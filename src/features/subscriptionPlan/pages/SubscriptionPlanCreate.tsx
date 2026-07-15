@@ -36,7 +36,7 @@ export default function SubscriptionPlanCreate() {
       <h1 className="font-heading text-headline-lg text-on-surface">
         {config.title}
       </h1>
-      <p className="mt-1 text-body-md text-on-surface-variant">
+      <p className="mt-1 font-body text-body-md text-on-surface-variant">
         {config.subtitle}
       </p>
 

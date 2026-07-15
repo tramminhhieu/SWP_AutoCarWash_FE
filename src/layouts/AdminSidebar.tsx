@@ -23,20 +23,20 @@ const navItems = [
   { path: "/admin/service-packages", label: "Service Package", icon: Package },
   {
     path: "/admin/unlimited-subscriptions",
-    label: "Unlimited Plans",
+    label: "Unlimited Subscription",
     icon: InfinityIcon,
   },
   {
     path: "/admin/family-subscriptions",
-    label: "Family Plans",
+    label: "Family Subscription",
     icon: HeartHandshake,
   },
   { path: "/admin/wash-lanes", label: "Wash Lane", icon: Waves },
   { path: "/admin/promotions", label: "Promotions", icon: Tag },
   { path: "/admin/transactions", label: "Transaction History", icon: Receipt },
-  { path: "/admin/customers", label: "Customers", icon: Users },
+  { path: "/admin/customers", label: "Customer", icon: Users },
   { path: "/admin/refunds", label: "Refund Management", icon: Banknote },
-  { path: "/admin/system-settings", label: "System Settings", icon: Settings },
+  { path: "/admin/system-settings", label: "System Setting", icon: Settings },
 ];
 
 export default function AdminSidebar() {

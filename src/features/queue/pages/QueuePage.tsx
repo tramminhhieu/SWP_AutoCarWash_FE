@@ -488,7 +488,7 @@ export default function QueuePage() {
   };
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="mx-auto flex max-w-[1200px] flex-col gap-6 px-6 py-8">
       {/* Header */}
       <div className="flex items-center justify-between mb-6">
         <div>

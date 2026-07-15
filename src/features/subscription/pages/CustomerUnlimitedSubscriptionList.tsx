@@ -50,10 +50,10 @@ function UnlimitedPlanCard({
   return (
     <div className="relative flex h-full flex-col rounded-2xl bg-surface-container-lowest p-8 border border-outline-variant shadow-soft">
       <div className="flex-1">
-        <h3 className="font-heading text-headline-md font-bold text-on-surface">
+        <h3 className="font-heading text-headline-md font-bold text-primary">
           Unlimited {variant.servicePackageName}
         </h3>
-        <p className="mt-2 text-body-md text-on-surface-variant">
+        <p className="mt-2 font-body text-body-md text-on-surface-variant">
           {variant.description}
         </p>
 

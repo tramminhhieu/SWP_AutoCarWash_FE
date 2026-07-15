@@ -41,7 +41,7 @@ function PackageCard({
   return (
     <div className="flex h-full flex-col rounded-md border border-outline-variant bg-surface-container-lowest p-8 shadow-soft">
       <div className="flex-1">
-        <h3 className="font-heading text-headline-md font-bold text-on-surface">
+        <h3 className="font-heading text-headline-md font-bold text-primary">
           {pkg.name}
         </h3>
         <p className="mt-2 font-body text-body-md text-on-surface-variant">

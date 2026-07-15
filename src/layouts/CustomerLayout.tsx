@@ -37,7 +37,7 @@ export default function CustomerLayout() {
       .then((res) => {
         if (cancelled) return;
         const { firstName, lastName } = res.data.customer;
-        updateUserName(`${firstName} ${lastName}`.trim());
+        updateUserName(`${lastName} ${firstName}`.trim());
       })
       .catch(() => {});
     return () => {

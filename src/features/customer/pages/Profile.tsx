@@ -49,10 +49,6 @@ function TierCard({
   onClick?: () => void;
 }) {
   const style = getTierStyle(tier.currentTierName);
-  // Progress bar: tính % điểm hiện tại so với mốc tier tiếp theo
-  const progress = tier.nextTierMinPoints
-    ? Math.min((tier.currentPoints / tier.nextTierMinPoints) * 100, 100)
-    : 100;
 
   return (
     <div
@@ -80,25 +76,22 @@ function TierCard({
         />
       </div> */}
 
+      <div className="mb-4 flex items-center justify-between">
+        <div className="flex items-center gap-2">
+          <Coins className="size-4 text-primary" />
+          <span className="text-xs font-semibold uppercase tracking-widest text-on-surface-variant">
+            Current Points
+          </span>
+          {/* Nhãn điểm hai đầu */}
+        </div>
 
-
-<div className="mb-4 flex items-center justify-between">
-  <div className="flex items-center gap-2">
-    <Coins className="size-4 text-primary" />
-    <span className="text-xs font-semibold uppercase tracking-widest text-on-surface-variant">
-      Current Points
-    </span>
-    {/* Nhãn điểm hai đầu */}
-  </div>
-
-  <span>
-    {tier.currentPoints.toLocaleString()}
-    {/* {tier.nextTierMinPoints && (
+        <span>
+          {tier.currentPoints.toLocaleString()}
+          {/* {tier.nextTierMinPoints && (
       <span>{tier.nextTierMinPoints.toLocaleString()} pts</span>
     )} */}
-  </span>
-</div>
-      
+        </span>
+      </div>
 
       {/* Thông tin cần bao nhiêu điểm để lên tier tiếp */}
       {/* {tier.pointsToNextTier != null && tier.nextTierName ? (
@@ -577,7 +570,7 @@ export default function CustomerProfile() {
     try {
       const res = await updateCustomerProfile(formData);
       setProfile((prev) => (prev ? { ...prev, customer: res.data } : prev));
-      updateUserName(`${res.data.firstName} ${res.data.lastName}`); // đồng bộ tên header
+      updateUserName(`${res.data.lastName} ${res.data.firstName}`); // đồng bộ tên header
       setOriginalData(formData);
       setIsEditing(false);
       setSaveSuccess(true);
@@ -687,7 +680,7 @@ export default function CustomerProfile() {
 
                 {/* Tên */}
                 <h2 className="font-heading text-xl font-bold text-on-surface">
-                  {customer.firstName} {customer.lastName}
+                  {customer.lastName} {customer.firstName}
                 </h2>
 
                 {/* Badges tier + gói */}

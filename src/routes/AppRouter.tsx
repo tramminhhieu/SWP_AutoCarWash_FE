@@ -26,6 +26,7 @@ import AdminLayout from "../layouts/AdminLayout";
 import UnlimitedSubscriptionList from "../features/subscriptionPlan/pages/UnlimitedSubscriptionList";
 import SubscriptionPlanCreate from "../features/subscriptionPlan/pages/SubscriptionPlanCreate";
 import SubscriptionPlanEdit from "../features/subscriptionPlan/pages/SubscriptionPlanEdit";
+import Dashboard from "../features/dashboard/pages/Dashboard";
 // FE-60/56/58: Customer - browse/register/manage Subscription (khác admin CRUD ở trên).
 // FE-59 (transfer vehicle) đã có sẵn trong CustomerProfile, không có route riêng.
 import CustomerSubscriptionPlanList from "../features/subscription/pages/CustomerUnlimitedSubscriptionList";
@@ -149,16 +150,17 @@ export default function AppRouter() {
               path="/staff/transactions"
               element={<AdminTransactionHistory />}
             />
+            <Route path="/staff/dashboards" element={<Dashboard />} />
           </Route>
         </Route>
       </Route>
 
       <Route element={<PrivateRoute />}>
         <Route element={<RoleRoute allowedRoles={["ADMIN"]} />}>
-          {/* Admin login về thẳng Transaction History, không qua dashboard placeholder */}
+          {/* Admin login về thẳng Dashboard */}
           <Route
             path="/admin"
-            element={<Navigate to="/admin/transactions" replace />}
+            element={<Navigate to="/admin/dashboards" replace />}
           />
           <Route element={<AdminLayout />}>
             <Route path="/admin/add-ons" element={<AddonList />} />
@@ -244,6 +246,7 @@ export default function AppRouter() {
               path="/admin/family-subscriptions"
               element={<FamilySubscriptionList />}
             />
+            <Route path="/admin/dashboards" element={<Dashboard />} />
           </Route>
         </Route>
       </Route>

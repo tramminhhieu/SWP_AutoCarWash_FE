@@ -1,11 +1,19 @@
 import { NavLink, useNavigate } from "react-router-dom";
-import { CalendarCheck, LogOut, Receipt, Users } from "lucide-react";
+import {
+  CalendarCheck,
+  LogOut,
+  Receipt,
+  Users,
+  LayoutDashboard,
+  User as UserIcon,
+} from "lucide-react";
 import { useAuth } from "../hooks/useAuth";
 
 const navItems = [
   { path: "/staff/queue", label: "Queue", icon: CalendarCheck },
   { path: "/staff/customers", label: "Customers", icon: Users },
   { path: "/staff/transactions", label: "Transactions", icon: Receipt },
+  { path: "/staff/dashboards", label: "Dashboard", icon: LayoutDashboard },
 ];
 
 export default function StaffSidebar() {
@@ -13,19 +21,19 @@ export default function StaffSidebar() {
   const { user, logout } = useAuth();
 
   return (
-    <aside className="fixed top-0 left-0 z-20 flex h-screen w-56 flex-col py-6 px-4 bg-surface-container-lowest border-r border-outline-variant">
-      {/* Logo */}
-      <div className="mb-8 px-2">
-        <h1 className="text-xl font-bold leading-tight font-heading text-primary">
+    <aside className="fixed top-0 left-0 z-20 flex h-screen w-62 flex-col bg-surface-container-lowest border-r border-outline-variant">
+      {/* Logo — đồng bộ kích thước với AdminSidebar */}
+      <div className="px-6 pt-8 pb-6">
+        <h1 className="font-heading text-3xl font-bold tracking-[-0.01em] text-primary">
           HydroLux
         </h1>
-        <p className="text-xs mt-1 text-on-surface-variant">
-          Management Portal
+        <p className="text-sm mt-1 tracking-widest text-on-surface-variant font-bold">
+          Management Station
         </p>
       </div>
 
-      {/* Nav */}
-      <nav className="flex flex-col gap-1 flex-1">
+      {/* Nav — spacing, padding, icon size khớp Admin */}
+      <nav className="flex flex-col gap-1 flex-1 px-4 pt-2">
         {navItems.map((item) => {
           const Icon = item.icon;
           return (
@@ -33,54 +41,59 @@ export default function StaffSidebar() {
               key={item.path}
               to={item.path}
               className={({ isActive }) =>
-                `flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-colors ${
+                `flex items-center gap-3 px-4 py-3 rounded-md text-sm font-medium transition-colors ${
                   isActive
                     ? "bg-primary text-on-primary"
                     : "text-on-surface-variant hover:bg-surface-container hover:text-on-surface"
                 }`
               }
             >
-              <Icon className="w-4 h-4 shrink-0" strokeWidth={1.75} />
+              <Icon className="w-5 h-5 shrink-0" strokeWidth={1.5} />
               {item.label}
             </NavLink>
           );
         })}
       </nav>
 
-      {/* Bottom */}
-      <div className="flex flex-col gap-3 pt-4 border-t border-outline-variant">
-        {/* User info - only show when logged in */}
+      {/* Bottom — user info + Walk-in button + logout */}
+      <div className="flex flex-col gap-3 px-4 py-4 border-t border-outline-variant">
+        {/* Hiển thị thông tin staff đang đăng nhập */}
         {user && (
           <div className="flex items-center gap-3 px-2">
-            <div className="w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold shrink-0 bg-primary-fixed text-on-primary-fixed">
-              {user.name?.[0]?.toUpperCase() ?? "?"}
+            {/* Avatar dùng icon giống Admin thay vì chữ cái đầu */}
+            <div className="flex h-8 w-8 items-center justify-center rounded-full bg-surface-container-high text-primary">
+              <UserIcon className="h-4 w-4" strokeWidth={1.75} />
             </div>
-            <div>
-              <p className="text-xs font-semibold text-on-surface">
-                {user.name}
+            <div className="min-w-0">
+              <p className="font-body text-sm font-semibold text-on-surface">
+                {user.name && !user.name.startsWith("ROLE_")
+                  ? user.name
+                  : "Staff"}
               </p>
-              <p className="text-xs text-on-surface-variant">{user.email}</p>
+              <p className="font-body text-sm text-on-surface-variant truncate">
+                {user.email}
+              </p>
             </div>
           </div>
         )}
 
-        {/* Create Walk-in */}
+        {/* Nút tạo Walk-in — đặc thù Staff, giữ nguyên */}
         <button
           onClick={() => navigate("/staff/walk-in")}
-          className="w-full py-2.5 rounded-xl text-sm font-semibold bg-primary text-on-primary transition hover:bg-primary-container"
+          className="w-full py-2.5 rounded-md text-sm font-semibold bg-primary text-on-primary transition hover:opacity-90"
         >
           + Create Walk-in
         </button>
 
-        {/* Logout */}
+        {/* Logout — style đỏ khớp Admin */}
         <button
           onClick={() => {
             logout();
             navigate("/login");
           }}
-          className="flex items-center gap-2 px-2 py-1.5 rounded-lg w-full text-xs transition-colors hover:bg-surface-container text-on-surface-variant"
+          className="flex items-center gap-2 px-2 py-1.5 rounded-lg w-full text-sm transition-colors hover:bg-error-container text-error"
         >
-          <LogOut className="w-3.5 h-3.5" strokeWidth={1.75} />
+          <LogOut className="w-5 h-5" strokeWidth={1.75} />
           Logout
         </button>
       </div>

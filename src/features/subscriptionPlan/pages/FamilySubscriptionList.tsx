@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 import {
   CheckCircle2,
   XCircle,
@@ -311,6 +311,7 @@ function SkeletonCard() {
    ================================================================ */
 export default function FamilySubscriptionList() {
   const navigate = useNavigate();
+  const location = useLocation();
   const { user, isAuthenticated } = useAuth();
   const isAdmin = user?.role === "ADMIN";
 
@@ -326,6 +327,11 @@ export default function FamilySubscriptionList() {
   /* ---- Toast lỗi từ API đăng ký / xóa ---- */
   const [errorToast, setErrorToast] = useState<string | null>(null);
 
+  const [successMessage, setSuccessMessage] = useState<string | null>(
+    (location.state as { successMessage?: string } | null)?.successMessage ??
+      null,
+  );
+
   /* ---- State xóa: popup confirm + loading ---- */
   const [planToDelete, setPlanToDelete] =
     useState<FamilySubscriptionPlan | null>(null);
@@ -333,6 +339,21 @@ export default function FamilySubscriptionList() {
 
   /* ---- Filter tab ---- */
   const [activeTab, setActiveTab] = useState<TabType>("1-Month");
+
+  // Xóa message khỏi history state sau khi đã hiển thị, tránh F5 hiện lại
+  useEffect(() => {
+    if (location.state) {
+      navigate(location.pathname, { replace: true, state: null });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // Tự ẩn toast thành công sau 1s, giống pattern UnlimitedSubscriptionList.tsx
+  useEffect(() => {
+    if (!successMessage) return;
+    const timer = setTimeout(() => setSuccessMessage(null), 1000);
+    return () => clearTimeout(timer);
+  }, [successMessage]);
 
   /* ---- Load song song plans + addons ---- */
   useEffect(() => {
@@ -459,6 +480,7 @@ export default function FamilySubscriptionList() {
     try {
       await remove(planToDelete.id);
       setPlanToDelete(null);
+      setSuccessMessage("Subscription plan deleted successfully.");
       await reloadPlans();
     } catch (err) {
       const { message } = getApiErrorInfo(err);
@@ -475,17 +497,10 @@ export default function FamilySubscriptionList() {
   /* ================================================================ */
   return (
     <div className="mx-auto max-w-page px-margin-mobile py-20 md:px-margin-desktop">
-      {/* ---- Error toast từ API đăng ký / xóa ---- */}
-      {errorToast && (
-        <div className="fixed bottom-6 left-1/2 z-50 -translate-x-1/2 rounded-lg border border-error/30 bg-error-container px-5 py-3 text-body-md font-medium text-on-error-container shadow-soft">
-          {errorToast}
-        </div>
-      )}
-
       {/* ---- Header ---- */}
       <div className="text-center">
         <h1 className="font-heading text-headline-lg font-bold text-on-surface">
-          Family Unlimited Club
+          Family Subscription Plans
         </h1>
         <p className="mt-3 font-body text-body-md text-on-surface-variant">
           Keep the whole household shining with our tiered family detailing
@@ -575,21 +590,41 @@ export default function FamilySubscriptionList() {
           </div>
         )}
       </div>
+      {/* Thông báo thành công (create/update/delete) */}
+      <Modal
+        isOpen={!!successMessage}
+        onClose={() => setSuccessMessage(null)}
+        variant="success"
+        title="Success"
+        message={successMessage}
+      />
 
-      {/* ---- Modal xác nhận xóa (soft delete) ---- */}
+      {/* Thông báo lỗi (đăng ký/gia hạn/xóa thất bại) */}
+      <Modal
+        isOpen={!!errorToast}
+        onClose={() => setErrorToast(null)}
+        variant="danger"
+        title="Error"
+        message={errorToast ?? ""}
+        confirmText="Got it"
+        onConfirm={() => setErrorToast(null)}
+      />
+
+      {/* ---- Modal xác nhận xóa ---- */}
       <Modal
         isOpen={!!planToDelete}
         onClose={() => setPlanToDelete(null)}
         variant="danger"
-        title="Delete Subscription Plan"
+        title="Delete Subscription Plan?"
         message={
           <>
             Are you sure you want to delete{" "}
-            <span className="font-semibold">{planToDelete?.planName}</span>?
-            This plan will be set to INACTIVE and hidden from customers.
+            <strong className="text-on-surface">
+              {planToDelete?.planName}
+            </strong>
+            ? This action cannot be undone.
           </>
         }
-        confirmText="Delete"
         onConfirm={handleConfirmDelete}
         isConfirmLoading={isDeleting}
       />

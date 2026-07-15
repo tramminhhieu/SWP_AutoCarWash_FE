@@ -96,11 +96,6 @@ function PlanCard({
           <h3 className="font-heading text-headline-md font-bold text-on-surface">
             {plan.planName}
           </h3>
-          <span
-            className={`shrink-0 rounded-full border px-2.5 py-1 text-label-sm font-bold uppercase tracking-wider ${STATUS_BADGE[plan.status]}`}
-          >
-            {plan.status}
-          </span>
         </div>
 
         {/* Mô tả ngắn */}
@@ -231,6 +226,13 @@ export default function UnlimitedSubscriptionList() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  // Tự ẩn toast thành công sau 1s, giống pattern ServicePackageList.tsx
+  useEffect(() => {
+    if (!successMessage) return;
+    const timer = setTimeout(() => setSuccessMessage(null), 1000);
+    return () => clearTimeout(timer);
+  }, [successMessage]);
+
   // Load lần đầu: fetch song song plans + service packages + addons
   useEffect(() => {
     let isMounted = true;
@@ -311,21 +313,21 @@ export default function UnlimitedSubscriptionList() {
 
   return (
     <div className="mx-auto max-w-page px-margin-mobile py-16 md:px-margin-desktop">
-      {/* Header: tiêu đề + nút Add New */}
-      <div className="flex items-start justify-between gap-4">
-        <div>
-          <h1 className="font-heading text-headline-lg font-bold text-on-surface">
-            Unlimited Membership Plans
-          </h1>
-          <p className="mt-1 font-body text-body-md text-on-surface-variant">
-            Manage unlimited wash memberships for individual vehicles.
-          </p>
-        </div>
+      {/* Header: tiêu đề căn giữa */}
+      <div className="text-center">
+        <h1 className="font-heading text-headline-lg font-bold text-on-surface">
+          Unlimited Subscription Plans
+        </h1>
+        <p className="mt-1 font-body text-body-md text-on-surface-variant">
+          Manage unlimited wash memberships for individual vehicles.
+        </p>
+      </div>
+
+      {/* Toolbar: nút Add New */}
+      <div className="mt-6 flex justify-end">
         <button
           type="button"
-          onClick={() =>
-            navigate("/admin/subscription-plans/create?type=UNLIMIT")
-          }
+          onClick={() => navigate("/admin/subscription-plans/unlimited/create")}
           className="flex shrink-0 items-center gap-2 rounded-lg bg-primary px-5 py-2.5 font-body text-body-md font-semibold text-on-primary shadow-soft transition-colors hover:bg-primary/90"
         >
           <Plus size={16} strokeWidth={2.5} />
@@ -410,20 +412,21 @@ export default function UnlimitedSubscriptionList() {
         onConfirm={() => setErrorToast(null)}
       />
 
-      {/* Modal xác nhận xóa (soft delete → INACTIVE) */}
+      {/* Modal xác nhận xóa */}
       <Modal
         isOpen={!!planToDelete}
         onClose={() => setPlanToDelete(null)}
         variant="danger"
-        title="Delete Subscription Plan"
+        title="Delete Subscription Plan?"
         message={
           <>
             Are you sure you want to delete{" "}
-            <span className="font-semibold">{planToDelete?.planName}</span>?
-            This plan will be set to INACTIVE and hidden from customers.
+            <strong className="text-on-surface">
+              {planToDelete?.planName}
+            </strong>
+            ? This action cannot be undone.
           </>
         }
-        confirmText="Delete"
         onConfirm={handleConfirmDelete}
         isConfirmLoading={isDeleting}
       />

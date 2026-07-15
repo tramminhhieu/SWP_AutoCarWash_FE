@@ -15,14 +15,14 @@ import {
   getFamilySubscriptionPlans,
   registerFamilySubscription,
   renewFamilySubscription,
-} from "../../subscriptionPlans/familySubscription/api/familySubscriptionApi";
+} from "../api/subscriptionPlanApi";
 import { remove } from "../api/subscriptionPlanApi";
 import { getApiErrorInfo } from "../../../lib/axiosClient";
 import { getAllAddonServices } from "../../addon/api/addonApi";
 import type {
   FamilySubscriptionPlan,
   CurrentGroup,
-} from "../../subscriptionPlans/familySubscription/types/familySubscription";
+} from "../types/subscriptionPlan";
 import type { AddonService } from "../../addon/types/addon";
 
 /* ================================================================

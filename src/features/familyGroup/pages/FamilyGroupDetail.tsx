@@ -6,7 +6,11 @@ import Modal from "../../../components/ui/Modal";
 import { formatDate, formatDateTime } from "../../../utils";
 import { getApiErrorInfo } from "../../../lib/axiosClient";
 import { useAuth } from "../../../hooks/useAuth";
-import { dissolveFamilyGroup, getMyFamilyGroup, removeMember } from "../api/familyGroupApi";
+import {
+  dissolveFamilyGroup,
+  getMyFamilyGroup,
+  removeMember,
+} from "../api/familyGroupApi";
 import type { FamilyGroupDetails, GroupMemberDto } from "../types/familyGroup";
 import { getFamilyGroupErrorMessage } from "../utils/familyGroupErrorMessages";
 import AddMemberModal from "../components/AddMemberModal";
@@ -15,11 +19,13 @@ import {
   cancelFamilySubscription,
   getFamilySubscriptionPlans,
   renewFamilySubscription,
-} from "../../subscriptionPlans/familySubscription/api/familySubscriptionApi";
+} from "../../subscriptionPlan/api/subscriptionPlanApi";
 
 // "SLOTS USED x/y" ở banner - usageSummary BE trả sẵn dạng chuỗi "3/5", parse ra số để
 // vừa hiện to (Slots Used) vừa tính số chỗ trống còn lại cho ô "Add" cuối danh sách.
-function parseUsageSummary(usageSummary: string): { used: number; total: number } | null {
+function parseUsageSummary(
+  usageSummary: string,
+): { used: number; total: number } | null {
   const match = usageSummary.match(/(\d+)\s*\/\s*(\d+)/);
   if (!match) return null;
   return { used: Number(match[1]), total: Number(match[2]) };
@@ -51,11 +57,14 @@ export default function FamilyGroupDetail() {
   const [error, setError] = useState<string | null>(null);
   const [toast, setToast] = useState<string | null>(
     () =>
-      (location.state as { successMessage?: string } | null)?.successMessage ?? null,
+      (location.state as { successMessage?: string } | null)?.successMessage ??
+      null,
   );
   const [isAddMemberOpen, setIsAddMemberOpen] = useState(false);
   const [openMemberId, setOpenMemberId] = useState<number | null>(null);
-  const [memberToRemove, setMemberToRemove] = useState<GroupMemberDto | null>(null);
+  const [memberToRemove, setMemberToRemove] = useState<GroupMemberDto | null>(
+    null,
+  );
   const [isRemoving, setIsRemoving] = useState(false);
   const [removeError, setRemoveError] = useState<string | null>(null);
   const [isDissolveOpen, setIsDissolveOpen] = useState(false);
@@ -84,12 +93,16 @@ export default function FamilyGroupDetail() {
     setError(null);
     getMyFamilyGroup()
       .then(setGroup)
-      .catch(() => setError("Unable to load your family group. Please try again."))
+      .catch(() =>
+        setError("Unable to load your family group. Please try again."),
+      )
       .finally(() => setIsLoading(false));
     // Best-effort - không chặn hiển thị trang chính nếu lỗi, chỉ ảnh hưởng nút Renew
     getFamilySubscriptionPlans()
       .then((res) =>
-        setCurrentPlanId(res.data.currentGroup?.subscription?.subscriptionPlanId ?? null),
+        setCurrentPlanId(
+          res.data.currentGroup?.subscription?.subscriptionPlanId ?? null,
+        ),
       )
       .catch(() => setCurrentPlanId(null));
   }, []);
@@ -116,7 +129,9 @@ export default function FamilyGroupDetail() {
       await removeMember(memberToRemove.customerId);
       setMemberToRemove(null);
       setOpenMemberId(null);
-      setToast(`Removed ${memberToRemove.fullName} from the group successfully.`);
+      setToast(
+        `Removed ${memberToRemove.fullName} from the group successfully.`,
+      );
       load();
     } catch (err) {
       const { errorCode, message } = getApiErrorInfo(err);
@@ -150,7 +165,9 @@ export default function FamilyGroupDetail() {
     setIsRenewing(true);
     setRenewError(null);
     try {
-      const result = await renewFamilySubscription({ subscriptionPlanId: currentPlanId });
+      const result = await renewFamilySubscription({
+        subscriptionPlanId: currentPlanId,
+      });
       navigate(`/subscription-plans/payment/${result.invoiceId}`, {
         state: {
           isRenewal: true,
@@ -191,18 +208,23 @@ export default function FamilyGroupDetail() {
     : null;
   const showRenewOptions =
     !!group?.subscription &&
-    (group.subscription.status !== "ACTIVE" || (daysLeft !== null && daysLeft <= 3));
+    (group.subscription.status !== "ACTIVE" ||
+      (daysLeft !== null && daysLeft <= 3));
   const showCancelPlan = group?.subscription?.status === "ACTIVE";
 
-  const openMember = group?.members.find((m) => m.customerId === openMemberId) ?? null;
+  const openMember =
+    group?.members.find((m) => m.customerId === openMemberId) ?? null;
 
   // usageSummary ("3/5") -> số slot đã dùng/tổng, dùng cho box "SLOTS USED" ở banner và
   // để tính số chỗ trống còn lại cho ô "Add" cuối danh sách thành viên.
-  const usage = group?.subscription ? parseUsageSummary(group.subscription.usageSummary) : null;
+  const usage = group?.subscription
+    ? parseUsageSummary(group.subscription.usageSummary)
+    : null;
   const slotsRemaining = usage ? usage.total - usage.used : null;
   // Không có subscription thì chưa biết hạn mức thật - vẫn cho owner bấm Add (giữ đúng
   // hành vi cũ của nút Invite Member, chỉ ẩn ô Add khi ĐÃ biết chắc hết slot).
-  const canShowAddTile = !!group?.owner && (slotsRemaining === null || slotsRemaining > 0);
+  const canShowAddTile =
+    !!group?.owner && (slotsRemaining === null || slotsRemaining > 0);
   const planDurationLabel = group?.subscription
     ? parsePlanDurationLabel(group.subscription.planName)
     : null;
@@ -261,8 +283,8 @@ export default function FamilyGroupDetail() {
                     )}
                   </div>
                   <p className="mt-2 text-body-md text-on-primary/80">
-                    Manage your family vehicles and subscription details. All members
-                    share access to unlimited washes.
+                    Manage your family vehicles and subscription details. All
+                    members share access to unlimited washes.
                   </p>
                   <p className="mt-2 text-label-sm text-on-primary/60">
                     Created {formatDateTime(group.createdAt)}
@@ -336,7 +358,9 @@ export default function FamilyGroupDetail() {
                 )}
               </div>
             )}
-            {renewError && <p className="mt-2 text-label-sm text-error">{renewError}</p>}
+            {renewError && (
+              <p className="mt-2 text-label-sm text-error">{renewError}</p>
+            )}
 
             <div className="mt-8">
               <div className="flex flex-wrap items-center justify-between gap-3">
@@ -361,10 +385,16 @@ export default function FamilyGroupDetail() {
                     BE trả về (BE có thể đổi thứ tự trong response mà không báo trước). */}
                 {[...group.members]
                   .sort((a, b) =>
-                    a.roleInGroup === "OWNER" ? -1 : b.roleInGroup === "OWNER" ? 1 : 0,
+                    a.roleInGroup === "OWNER"
+                      ? -1
+                      : b.roleInGroup === "OWNER"
+                        ? 1
+                        : 0,
                   )
                   .map((m) => {
-                    const isYou = !!user && user.email.toLowerCase() === m.email.toLowerCase();
+                    const isYou =
+                      !!user &&
+                      user.email.toLowerCase() === m.email.toLowerCase();
                     return (
                       <button
                         key={m.customerId}
@@ -420,7 +450,8 @@ export default function FamilyGroupDetail() {
                     <span className="text-body-md font-semibold">Add</span>
                     {slotsRemaining !== null && (
                       <span className="text-label-sm">
-                        {slotsRemaining} slot{slotsRemaining > 1 ? "s" : ""} remaining
+                        {slotsRemaining} slot{slotsRemaining > 1 ? "s" : ""}{" "}
+                        remaining
                       </span>
                     )}
                   </button>
@@ -449,8 +480,8 @@ export default function FamilyGroupDetail() {
                   Advanced
                 </p>
                 <p className="mt-1 text-body-md text-on-surface-variant">
-                  Dissolving the group permanently removes all members and cancels the
-                  linked family plan. This action cannot be undone.
+                  Dissolving the group permanently removes all members and
+                  cancels the linked family plan. This action cannot be undone.
                 </p>
                 <button
                   type="button"
@@ -503,8 +534,9 @@ export default function FamilyGroupDetail() {
         message={
           <>
             Are you sure you want to remove{" "}
-            <span className="font-semibold">{memberToRemove?.fullName}</span> from the
-            group? Their vehicle will immediately lose all family plan benefits.
+            <span className="font-semibold">{memberToRemove?.fullName}</span>{" "}
+            from the group? Their vehicle will immediately lose all family plan
+            benefits.
             {removeError && (
               <p className="mt-3 text-label-sm text-error">{removeError}</p>
             )}
@@ -529,9 +561,12 @@ export default function FamilyGroupDetail() {
         message={
           <>
             This will permanently remove all{" "}
-            <span className="font-semibold">{group?.members.length ?? 0} member(s)</span>{" "}
-            from <span className="font-semibold">{group?.groupName}</span> and cancel its
-            linked family plan immediately — no refund. This action cannot be undone.
+            <span className="font-semibold">
+              {group?.members.length ?? 0} member(s)
+            </span>{" "}
+            from <span className="font-semibold">{group?.groupName}</span> and
+            cancel its linked family plan immediately — no refund. This action
+            cannot be undone.
             {dissolveError && (
               <p className="mt-3 text-label-sm text-error">{dissolveError}</p>
             )}
@@ -554,9 +589,9 @@ export default function FamilyGroupDetail() {
         title="Cancel Family Plan?"
         message={
           <>
-            This will cancel your family plan immediately — all members lose their
-            benefits right away, and there's no refund for the remaining period. This
-            action cannot be undone.
+            This will cancel your family plan immediately — all members lose
+            their benefits right away, and there's no refund for the remaining
+            period. This action cannot be undone.
             {cancelSubError && (
               <p className="mt-3 text-label-sm text-error">{cancelSubError}</p>
             )}

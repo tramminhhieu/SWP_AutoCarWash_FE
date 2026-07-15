@@ -48,7 +48,7 @@ function CardSkeleton() {
   );
 }
 
-export default function SummaryCards({ summary, isLoading }: Props) {
+export default function SummaryCard({ summary, isLoading }: Props) {
   if (isLoading || !summary) {
     return (
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">

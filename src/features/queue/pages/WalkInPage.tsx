@@ -1,7 +1,7 @@
 //author: Ngọc
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { Search, ChevronLeft, Check, X, User, Star, Plus, Calendar, Car } from "lucide-react";
+import { Search, ChevronLeft, Check, X, User, Star, Plus, Calendar, Car, Droplet, Sparkles, Wand2 } from "lucide-react";
 import {
   checkPhone,
   calculateInvoice,
@@ -17,11 +17,13 @@ import {
 // ported onto dev: dev không có utils/currency.ts, dùng formatCurrency của dev thay formatVND
 import { formatCurrency as formatVND } from "../../../utils/format";
 import { getApiErrorInfo } from "../../../lib/axiosClient";
-import { getSubscriptionStyle } from "../../../constants/subscriptionStyles";
+import { getSubscriptionStyle, getSubscriptionTypeLabel } from "../../../constants/subscriptionStyles";
 import { useAuth } from "../../../hooks/useAuth";
 import Modal from "../../../components/ui/Modal";
 
 const SLOT_DURATION_MINUTES = 15; // 1 requiredSlot = 15 phút, theo comment BE WalkInFormDataResponse
+// Icon minh họa cho gói service, đồng bộ với BookingCreate.tsx (Basic, Medium, Premium)
+const SERVICE_ICONS = [Droplet, Sparkles, Wand2];
 
 type CustomerType = "GUEST" | "MEMBER";
 type Step = "select-type" | "booking-form" | "done";
@@ -166,17 +168,27 @@ export default function WalkInPage() {
       existingVehicleId: v.id,
     }));
     setDepositCollected(false);
+    if (selectedServiceId) {
+      recalcInvoice(selectedServiceId, selectedAddonIds, v.licensePlate);
+    }
   };
 
-  const recalcInvoice = async (serviceId: number, addonIds: number[]) => {
+  // licensePlate nhận tham số riêng (thay vì luôn đọc từ vehicleInfo state) vì các nơi gọi
+  // ngay sau khi đổi xe (handleSelectSavedVehicle / đổi biển số tay) cần tính giá cho xe MỚI
+  // ngay lập tức — setVehicleInfo là async nên state cũ vẫn còn trong closure lúc đó.
+  const recalcInvoice = async (
+    serviceId: number,
+    addonIds: number[],
+    licensePlate: string = vehicleInfo.licensePlate
+  ) => {
     setSelectedSlot(null);
     setSummary(null);
-    if (!vehicleInfo.licensePlate.trim() || !stationId) return;
+    if (!licensePlate.trim() || !stationId) return;
     setIsCalculating(true);
     try {
       const result = await calculateInvoice({
         customerId: vehicleInfo.customerId,
-        licensePlate: vehicleInfo.licensePlate,
+        licensePlate,
         servicePackageId: serviceId,
         addonIds,
         stationId,
@@ -314,6 +326,11 @@ export default function WalkInPage() {
     !isSubmitting &&
     (!(summary?.actionBlock ?? false) || depositCollected);
 
+  // Khoá các bước chưa đủ điều kiện — vẫn hiện UI nhưng disable, không ẩn hẳn
+  const vehicleLocked = customerType === "MEMBER" && !phoneResult?.existed;
+  const serviceLocked = !vehicleInfo.licensePlate.trim();
+  const addonsLocked = !selectedServiceId;
+
   // Số thứ tự section: MEMBER có thêm bước "Member Lookup" trước "Select Vehicle"
   const sectionNum = {
     lookup: 1,
@@ -442,7 +459,8 @@ export default function WalkInPage() {
                 </section>
               )}
 
-              {/* Select Vehicle (MEMBER: cards from saved vehicles, giống BookingCreate) / Vehicle Info (GUEST) */}
+              {/* Select Vehicle (MEMBER: chỉ chọn từ card xe đã lưu, không cho nhập tay) / Vehicle Info (GUEST: nhập biển số) —
+                  MEMBER phải tra cứu số điện thoại thành công trước mới được chọn xe (vẫn hiện UI, chỉ disable) */}
               <section>
                 <div className="flex items-center gap-2 pb-4">
                   <span className="flex h-6 w-6 items-center justify-center rounded-full bg-primary text-label-sm font-semibold text-on-primary">
@@ -452,7 +470,20 @@ export default function WalkInPage() {
                     {customerType === "MEMBER" ? "Select Vehicle" : "Vehicle Info"}
                   </h2>
                 </div>
-                <div className="flex flex-col gap-4 rounded-2xl border border-outline-variant bg-surface-container-lowest p-5">
+                <div
+                  className={`flex flex-col gap-4 rounded-2xl border border-outline-variant bg-surface-container-lowest p-5
+                    ${vehicleLocked ? "pointer-events-none opacity-50" : ""}`}
+                >
+                  {vehicleLocked && (
+                    <p className="text-body-md text-on-surface-variant">
+                      Look up a phone number above to select a vehicle.
+                    </p>
+                  )}
+                  {customerType === "MEMBER" && !vehicleLocked && (!phoneResult?.savedVehicles || phoneResult.savedVehicles.length === 0) && (
+                    <p className="text-body-md text-on-surface-variant">
+                      No saved vehicles found for this account.
+                    </p>
+                  )}
                   {customerType === "MEMBER" && phoneResult?.savedVehicles && phoneResult.savedVehicles.length > 0 && (
                     <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                       {phoneResult.savedVehicles.map((v) => {
@@ -474,9 +505,10 @@ export default function WalkInPage() {
                             <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-primary text-on-primary">
                               <Car size={18} />
                             </span>
-                            <div className="flex-1">
-                              <div className="flex flex-wrap items-center gap-1.5">
-                                <p className="text-body-lg font-semibold text-on-surface">{v.brandName}</p>
+                            <div className="min-w-0 flex-1">
+                              <p className="truncate text-body-lg font-semibold text-on-surface">{v.brandName}</p>
+                              <div className="flex flex-wrap items-center gap-2">
+                                <p className="text-body-md text-on-surface-variant">{v.licensePlate}</p>
                                 {activeSubscriptions.map((sub) => {
                                   const style = getSubscriptionStyle(sub.planType);
                                   return (
@@ -484,67 +516,58 @@ export default function WalkInPage() {
                                       key={sub.subscriptionId}
                                       className={`rounded-full border px-2 py-0.5 text-label-sm font-semibold ${style.badge} ${style.border}`}
                                     >
-                                      {sub.planName}
+                                      {getSubscriptionTypeLabel(sub.planType)}
                                     </span>
                                   );
                                 })}
                               </div>
-                              <p className="text-body-md text-on-surface-variant">{v.licensePlate}</p>
                             </div>
                             {selectedSavedVehicle?.id === v.id && (
-                              <Check size={18} className="text-primary shrink-0" />
+                              <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-primary text-on-primary">
+                                <Check size={12} strokeWidth={3} />
+                              </span>
                             )}
                           </button>
                         );
                       })}
                     </div>
                   )}
-                  {customerType === "MEMBER" && phoneResult?.savedVehicles && phoneResult.savedVehicles.length > 0 && (
-                    <p className="text-label-md text-outline">— or enter a new license plate below —</p>
-                  )}
-                  <div>
-                    <label className="text-label-md font-semibold text-on-surface-variant mb-1.5 block">
-                      License Plate <span className="text-error">*</span>
-                    </label>
-                    <input
-                      type="text"
-                      value={vehicleInfo.licensePlate}
-                      onChange={(e) => {
-                        // Chuẩn hoá biển số ngay lúc nhập: viết hoa toàn bộ + bỏ khoảng trắng
-                        // (kể cả khoảng trắng ở giữa) để tránh sai lệch khi so khớp/tra cứu
-                        // theo chuỗi biển số ở BE (vd "51a 12345" và "51A-12345" là cùng 1 xe).
-                        const normalizedPlate = e.target.value.toUpperCase().replace(/\s+/g, "");
-                        setVehicleInfo((prev) => ({ ...prev, licensePlate: normalizedPlate, existingVehicleId: undefined }));
-                        setSelectedSavedVehicle(null);
-                        setDepositCollected(false);
-                      }}
-                      placeholder="e.g. 51A-12345"
-                      className="w-full rounded-xl px-3 py-2.5 text-body-md border border-outline-variant outline-none focus:border-primary bg-surface-container-lowest text-on-surface"
-                    />
-                  </div>
-                  {customerType === "MEMBER" && (
-                    <div>
-                      <label className="text-label-md font-semibold text-on-surface-variant mb-1.5 block">Brand</label>
-                      <input
-                        type="text"
-                        value={vehicleInfo.brandName}
-                        onChange={(e) => setVehicleInfo((prev) => ({ ...prev, brandName: e.target.value }))}
-                        placeholder="e.g. Toyota"
-                        className="w-full rounded-xl px-3 py-2.5 text-body-md border border-outline-variant outline-none focus:border-primary bg-surface-container-lowest text-on-surface"
-                      />
-                    </div>
-                  )}
                   {customerType === "GUEST" && (
-                    <div className="rounded-xl px-4 py-3 bg-surface-container border border-outline-variant/30">
-                      <p className="text-body-md text-on-surface-variant">
-                        Customer will be booked under the <span className="font-semibold text-on-surface">GUEST</span> tier — vouchers and discounts do not apply.
-                      </p>
-                    </div>
+                    <>
+                      <div>
+                        <label className="text-label-md font-semibold text-on-surface-variant mb-1.5 block">
+                          License Plate <span className="text-error">*</span>
+                        </label>
+                        <input
+                          type="text"
+                          value={vehicleInfo.licensePlate}
+                          onChange={(e) => {
+                            // Chuẩn hoá biển số ngay lúc nhập: viết hoa toàn bộ + bỏ khoảng trắng
+                            // (kể cả khoảng trắng ở giữa) để tránh sai lệch khi so khớp/tra cứu
+                            // theo chuỗi biển số ở BE (vd "51a 12345" và "51A-12345" là cùng 1 xe).
+                            const normalizedPlate = e.target.value.toUpperCase().replace(/\s+/g, "");
+                            setVehicleInfo((prev) => ({ ...prev, licensePlate: normalizedPlate, existingVehicleId: undefined }));
+                            setSelectedSavedVehicle(null);
+                            setDepositCollected(false);
+                            if (selectedServiceId) {
+                              recalcInvoice(selectedServiceId, selectedAddonIds, normalizedPlate);
+                            }
+                          }}
+                          placeholder="e.g. 51A-12345"
+                          className="w-full rounded-xl px-3 py-2.5 text-body-md border border-outline-variant outline-none focus:border-primary bg-surface-container-lowest text-on-surface"
+                        />
+                      </div>
+                      <div className="rounded-xl px-4 py-3 bg-surface-container border border-outline-variant/30">
+                        <p className="text-body-md text-on-surface-variant">
+                          Customer will be booked under the <span className="font-semibold text-on-surface">GUEST</span> tier — vouchers and discounts do not apply.
+                        </p>
+                      </div>
+                    </>
                   )}
                 </div>
               </section>
 
-              {/* Choose Service */}
+              {/* Choose Service — vẫn hiện, disable đến khi có xe. UI card + icon giống ServiceOption bên BookingCreate.tsx */}
               <section>
                 <div className="flex items-center gap-2 pb-4">
                   <span className="flex h-6 w-6 items-center justify-center rounded-full bg-primary text-label-sm font-semibold text-on-primary">
@@ -555,45 +578,51 @@ export default function WalkInPage() {
                 {isLoadingOptions && (
                   <p className="pb-2 text-body-md text-outline">Loading services...</p>
                 )}
-                {!isLoadingOptions && !vehicleInfo.licensePlate.trim() && (
+                {!isLoadingOptions && serviceLocked && (
                   <p className="pb-2 text-body-md text-on-surface-variant">
-                    Enter a license plate above to choose a service.
+                    Select a vehicle above to choose a service.
                   </p>
                 )}
-                <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
-                  {servicePackages.map((pkg) => (
-                    <button
-                      key={pkg.id}
-                      type="button"
-                      onClick={() => handleSelectService(pkg.id)}
-                      disabled={!vehicleInfo.licensePlate.trim()}
-                      className={`rounded-xl p-4 text-left transition-colors disabled:opacity-50 disabled:cursor-not-allowed
-                        ${
-                          selectedServiceId === pkg.id
-                            ? "border-2 border-primary bg-primary-container/5"
-                            : "border border-outline-variant bg-surface-container-lowest hover:border-primary/40"
-                        }`}
-                    >
-                      <p className="text-body-lg font-semibold text-on-surface">{pkg.name}</p>
-                      <p className="text-body-md text-on-surface-variant">
-                        {pkg.requiredSlot * SLOT_DURATION_MINUTES} min
-                      </p>
-                      {freeServicePackageIds.has(pkg.id) ? (
-                        <p className="mt-2 flex items-baseline gap-2">
-                          <span className="text-body-md text-on-surface-variant line-through">
-                            {formatVND(pkg.basePrice)}
-                          </span>
-                          <span className="text-headline-md text-primary">0 VNĐ</span>
+                <div className={`grid grid-cols-1 gap-3 sm:grid-cols-3 ${serviceLocked ? "pointer-events-none opacity-50" : ""}`}>
+                  {servicePackages.map((pkg, idx) => {
+                    const Icon = SERVICE_ICONS[idx % SERVICE_ICONS.length];
+                    return (
+                      <button
+                        key={pkg.id}
+                        type="button"
+                        onClick={() => handleSelectService(pkg.id)}
+                        disabled={serviceLocked}
+                        className={`rounded-xl p-4 text-left transition-colors
+                          ${
+                            selectedServiceId === pkg.id
+                              ? "border-2 border-primary bg-primary-container/5"
+                              : "border border-outline-variant bg-surface-container-lowest hover:border-primary/40"
+                          }`}
+                      >
+                        <span className="flex h-10 w-10 items-center justify-center rounded-lg bg-secondary-fixed text-secondary">
+                          <Icon size={18} />
+                        </span>
+                        <p className="mt-3 text-body-lg font-semibold text-on-surface">{pkg.name}</p>
+                        <p className="text-body-md text-on-surface-variant">
+                          {pkg.requiredSlot * SLOT_DURATION_MINUTES} min
                         </p>
-                      ) : (
-                        <p className="mt-2 text-headline-md text-primary">{formatVND(pkg.basePrice)}</p>
-                      )}
-                    </button>
-                  ))}
+                        {freeServicePackageIds.has(pkg.id) ? (
+                          <p className="mt-2 flex items-baseline gap-2">
+                            <span className="text-body-md text-on-surface-variant line-through">
+                              {formatVND(pkg.basePrice)}
+                            </span>
+                            <span className="text-headline-md text-primary">0 VNĐ</span>
+                          </p>
+                        ) : (
+                          <p className="mt-2 text-headline-md text-primary">{formatVND(pkg.basePrice)}</p>
+                        )}
+                      </button>
+                    );
+                  })}
                 </div>
               </section>
 
-              {/* Add-ons */}
+              {/* Add-ons — vẫn hiện, disable đến khi đã chọn Service */}
               <section>
                 <div className="flex items-center gap-2 pb-4">
                   <span className="flex h-6 w-6 items-center justify-center rounded-full bg-primary text-label-sm font-semibold text-on-primary">
@@ -601,12 +630,18 @@ export default function WalkInPage() {
                   </span>
                   <h2 className="text-headline-md text-on-surface">Add-ons</h2>
                 </div>
-                <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                {addonsLocked && (
+                  <p className="pb-2 text-body-md text-on-surface-variant">
+                    Choose a service above to see add-ons.
+                  </p>
+                )}
+                <div className={`grid grid-cols-1 gap-3 sm:grid-cols-2 ${addonsLocked ? "pointer-events-none opacity-50" : ""}`}>
                   {selectableAddons.map((addon) => (
                     <button
                       key={addon.id}
                       type="button"
                       onClick={() => handleToggleAddon(addon.id)}
+                      disabled={addonsLocked}
                       className={`flex items-center gap-3 rounded-xl p-4 text-left transition-colors
                         ${
                           selectedAddonIds.includes(addon.id)
@@ -614,6 +649,9 @@ export default function WalkInPage() {
                             : "border border-outline-variant bg-surface-container-lowest hover:border-primary/40"
                         }`}
                     >
+                      <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-surface-container-high text-on-surface-variant">
+                        <Sparkles size={18} />
+                      </span>
                       <div className="flex-1">
                         <p className="text-body-lg font-semibold text-on-surface">{addon.name}</p>
                         <p className="text-body-md text-on-surface-variant">{addon.durationMinutes} min</p>
@@ -784,9 +822,7 @@ export default function WalkInPage() {
               <div className="mt-3 mb-5 border-t border-outline-variant" />
 
               <div className="flex items-center justify-between pb-6">
-                <span className="text-body-lg font-semibold text-on-surface">
-                  {summary ? "Amount Due" : "Total"}
-                </span>
+                <span className="text-body-lg font-semibold text-on-surface">Total Due</span>
                 <span className="text-headline-md text-primary">{formatVND(displayTotal)}</span>
               </div>
 

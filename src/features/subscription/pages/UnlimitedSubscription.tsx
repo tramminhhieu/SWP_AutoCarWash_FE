@@ -45,7 +45,8 @@ function SubscriptionCard({
   isRenewing: boolean;
 }) {
   const daysLeft = daysUntil(sub.endDate);
-  const isExpiringSoon = sub.status === "ACTIVE" && daysLeft >= 0 && daysLeft <= 3;
+  const isExpiringSoon =
+    sub.status === "ACTIVE" && daysLeft >= 0 && daysLeft <= 3;
   const planDurationLabel = parsePlanDurationLabel(sub.planName);
 
   const canCancel = sub.status === "ACTIVE";
@@ -62,7 +63,9 @@ function SubscriptionCard({
         <div className="flex flex-wrap items-start justify-between gap-6">
           <div className="max-w-xl">
             <div className="flex flex-wrap items-center gap-3">
-              <h3 className="font-heading text-headline-md font-bold">{sub.planName}</h3>
+              <h3 className="font-heading text-headline-md font-bold">
+                {sub.planName}
+              </h3>
               {planDurationLabel && (
                 <span className="rounded-full bg-on-primary/15 px-3 py-1 text-label-sm font-semibold">
                   {planDurationLabel}
@@ -125,15 +128,21 @@ function SubscriptionCard({
         <div className="mt-4 grid grid-cols-3 gap-3 text-label-sm">
           <div>
             <p className="text-on-surface-variant">Start</p>
-            <p className="font-semibold text-on-surface">{formatDate(sub.startDate)}</p>
+            <p className="font-semibold text-on-surface">
+              {formatDate(sub.startDate)}
+            </p>
           </div>
           <div>
             <p className="text-on-surface-variant">End</p>
-            <p className="font-semibold text-on-surface">{formatDate(sub.endDate)}</p>
+            <p className="font-semibold text-on-surface">
+              {formatDate(sub.endDate)}
+            </p>
           </div>
           <div>
             <p className="text-on-surface-variant">Price</p>
-            <p className="font-semibold text-on-surface">{formatCurrency(sub.price)}</p>
+            <p className="font-semibold text-on-surface">
+              {formatCurrency(sub.price)}
+            </p>
           </div>
         </div>
 
@@ -176,14 +185,19 @@ export default function MySubscriptions() {
   const navigate = useNavigate();
   const location = useLocation();
 
-  const [subscriptions, setSubscriptions] = useState<UnlimitedSubscription[]>([]);
+  const [subscriptions, setSubscriptions] = useState<UnlimitedSubscription[]>(
+    [],
+  );
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(
-    (location.state as { successMessage?: string } | null)?.successMessage ?? null,
+    (location.state as { successMessage?: string } | null)?.successMessage ??
+      null,
   );
 
-  const [subToCancel, setSubToCancel] = useState<UnlimitedSubscription | null>(null);
+  const [subToCancel, setSubToCancel] = useState<UnlimitedSubscription | null>(
+    null,
+  );
   const [isCancelling, setIsCancelling] = useState(false);
   const [renewingId, setRenewingId] = useState<number | null>(null);
 
@@ -194,12 +208,21 @@ export default function MySubscriptions() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  // Tự ẩn toast thành công sau 1s, giống pattern ServicePackageList.tsx
+  useEffect(() => {
+    if (!successMessage) return;
+    const timer = setTimeout(() => setSuccessMessage(null), 1000);
+    return () => clearTimeout(timer);
+  }, [successMessage]);
+
   const load = useCallback(() => {
     setIsLoading(true);
     setError(null);
     getMySubscriptions()
       .then(setSubscriptions)
-      .catch(() => setError("Unable to load your subscriptions. Please try again."))
+      .catch(() =>
+        setError("Unable to load your subscriptions. Please try again."),
+      )
       .finally(() => setIsLoading(false));
   }, []);
 
@@ -243,17 +266,20 @@ export default function MySubscriptions() {
   return (
     <div className="max-w-3xl mx-auto px-margin-mobile py-12 md:px-margin-desktop">
       <h1 className="font-heading text-headline-lg text-on-surface">
-        My Subscriptions
+        Unlimited Subscription Plans
       </h1>
       <p className="mt-1 text-body-md text-on-surface-variant">
         Manage your membership plans and vehicles.
       </p>
 
-      {successMessage && (
-        <div className="mt-4 rounded-lg border border-tertiary-fixed-dim/30 bg-tertiary-container px-4 py-3 text-body-md text-on-tertiary-container">
-          {successMessage}
-        </div>
-      )}
+      {/* Modal thông báo thành công (cancel/renew) thay cho banner inline cũ */}
+      <Modal
+        isOpen={!!successMessage}
+        onClose={() => setSuccessMessage(null)}
+        variant="success"
+        title="Success"
+        message={successMessage}
+      />
 
       <div className="mt-6">
         {isLoading ? (
@@ -302,9 +328,13 @@ export default function MySubscriptions() {
             <span className="font-semibold">
               {subToCancel ? daysUntil(subToCancel.endDate) : 0} day(s)
             </span>{" "}
-            left on <span className="font-semibold">{subToCancel?.planName}</span> for{" "}
-            <span className="font-semibold">{subToCancel?.vehicle.licensePlate}</span>. Canceling
-            now forfeits all remaining benefits immediately — no refund.
+            left on{" "}
+            <span className="font-semibold">{subToCancel?.planName}</span> for{" "}
+            <span className="font-semibold">
+              {subToCancel?.vehicle.licensePlate}
+            </span>
+            . Canceling now forfeits all remaining benefits immediately — no
+            refund.
           </>
         }
         confirmText="Cancel Subscription"

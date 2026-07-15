@@ -32,7 +32,7 @@ import Dashboard from "../features/dashboard/pages/Dashboard";
 import CustomerSubscriptionPlanList from "../features/subscription/pages/CustomerUnlimitedSubscriptionList";
 import SubscriptionRegister from "../features/subscription/pages/SubscriptionRegister";
 import SubscriptionPayment from "../features/subscription/pages/SubscriptionPayment";
-import MySubscriptions from "../features/subscription/pages/MySubscriptions";
+import UnlimitedSubscription from "../features/subscription/pages/UnlimitedSubscription";
 // API-17-01: Family Group - create + minimal detail landing page (AC08). Member CRUD (add/
 // remove/edit) là task riêng, chưa làm ở đây.
 import FamilyGroupDetail from "../features/familyGroup/pages/FamilyGroupDetail";
@@ -120,7 +120,7 @@ export default function AppRouter() {
             />
             {/* FE-60-US-05 + FE-58 + FE-56 entry point - khớp href "/subscription" đã có
                 sẵn trong CustomerHeader NAV_LINKS ("My Subscription") */}
-            <Route path="/subscription" element={<MySubscriptions />} />
+            <Route path="/subscription" element={<UnlimitedSubscription />} />
             {/* API-17-01: khớp href "/family" đã có sẵn trong CustomerHeader NAV_LINKS
                 ("My Family") */}
             <Route path="/family" element={<FamilyGroupDetail />} />

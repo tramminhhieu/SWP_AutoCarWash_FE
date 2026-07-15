@@ -215,6 +215,7 @@ export default function UnlimitedSubscriptionList() {
     null,
   );
   const [isDeleting, setIsDeleting] = useState(false);
+  const [errorToast, setErrorToast] = useState<string | null>(null);
 
   // Thông báo thành công từ Create/Edit page truyền qua router state
   const [successMessage, setSuccessMessage] = useState<string | null>(
@@ -301,8 +302,8 @@ export default function UnlimitedSubscriptionList() {
       reloadPlans();
     } catch (err) {
       const { message } = getApiErrorInfo(err);
-      setError(message ?? "Failed to delete subscription plan.");
       setPlanToDelete(null);
+      setErrorToast(message ?? "Failed to delete subscription plan.");
     } finally {
       setIsDeleting(false);
     }
@@ -331,13 +332,6 @@ export default function UnlimitedSubscriptionList() {
           Add New
         </button>
       </div>
-
-      {/* Thông báo thành công từ Create/Edit */}
-      {successMessage && (
-        <div className="mt-6 rounded-lg border border-tertiary-fixed-dim/30 bg-tertiary-container px-4 py-3 text-body-md text-on-tertiary-container">
-          {successMessage}
-        </div>
-      )}
 
       {/* Tab chọn kỳ hạn — pill segmented control */}
       <div className="mt-10 flex justify-center">
@@ -396,6 +390,25 @@ export default function UnlimitedSubscriptionList() {
           </div>
         )}
       </div>
+      {/* Thông báo thành công (create/update/delete) */}
+      <Modal
+        isOpen={!!successMessage}
+        onClose={() => setSuccessMessage(null)}
+        variant="success"
+        title="Success"
+        message={successMessage}
+      />
+
+      {/* Thông báo lỗi khi xóa thất bại */}
+      <Modal
+        isOpen={!!errorToast}
+        onClose={() => setErrorToast(null)}
+        variant="danger"
+        title="Unable to Delete"
+        message={errorToast ?? ""}
+        confirmText="Got it"
+        onConfirm={() => setErrorToast(null)}
+      />
 
       {/* Modal xác nhận xóa (soft delete → INACTIVE) */}
       <Modal

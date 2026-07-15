@@ -1,3 +1,4 @@
+import { Coins } from "lucide-react";
 import { isAxiosError } from "axios";
 import { useEffect, useRef, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
@@ -71,24 +72,36 @@ function TierCard({
         </span>
       </div>
 
-      {/* Progress bar */}
+      {/* Progress bar
       <div className="mb-2 h-2.5 overflow-hidden rounded-full bg-outline-variant/30">
         <div
           className={`h-full rounded-full transition-all ${style.bar}`}
           style={{ width: `${progress}%` }}
         />
-      </div>
+      </div> */}
 
-      {/* Nhãn điểm hai đầu */}
-      <div className="mb-4 flex justify-between text-xs text-on-surface-variant">
-        <span>{tier.currentPoints.toLocaleString()} pts</span>
-        {tier.nextTierMinPoints && (
-          <span>{tier.nextTierMinPoints.toLocaleString()} pts</span>
-        )}
-      </div>
+
+
+<div className="mb-4 flex items-center justify-between">
+  <div className="flex items-center gap-2">
+    <Coins className="size-4 text-primary" />
+    <span className="text-xs font-semibold uppercase tracking-widest text-on-surface-variant">
+      Current Points
+    </span>
+    {/* Nhãn điểm hai đầu */}
+  </div>
+
+  <span>
+    {tier.currentPoints.toLocaleString()}
+    {/* {tier.nextTierMinPoints && (
+      <span>{tier.nextTierMinPoints.toLocaleString()} pts</span>
+    )} */}
+  </span>
+</div>
+      
 
       {/* Thông tin cần bao nhiêu điểm để lên tier tiếp */}
-      {tier.pointsToNextTier != null && tier.nextTierName ? (
+      {/* {tier.pointsToNextTier != null && tier.nextTierName ? (
         <div className="rounded-lg border border-outline-variant/40 py-2 text-center text-sm font-semibold text-primary">
           {tier.pointsToNextTier.toLocaleString()} pts to {tier.nextTierName}
         </div>
@@ -96,7 +109,7 @@ function TierCard({
         <div className="rounded-lg border border-outline-variant/40 py-2 text-center text-sm font-semibold text-on-surface-variant">
           Maximum Tier Reached
         </div>
-      )}
+      )} */}
     </div>
   );
 }

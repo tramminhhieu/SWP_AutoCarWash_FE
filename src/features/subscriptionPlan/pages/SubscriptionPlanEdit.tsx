@@ -11,7 +11,7 @@ import {
 
 // FE-53-US-03
 export default function SubscriptionPlanEdit() {
-  const { id } = useParams<{ id: string }>();
+  const { id } = useParams<{ type: string; id: string }>();
   const navigate = useNavigate();
   const planId = Number(id);
   const isInvalidId = !planId || Number.isNaN(planId);
@@ -37,7 +37,7 @@ export default function SubscriptionPlanEdit() {
   const listRoute = plan ? PLAN_TYPE_LIST_ROUTE[plan.planType] : undefined;
 
   return (
-    <div className="mx-auto max-w-4xl">
+    <div className="mx-auto max-w-5xl px-margin-mobile py-20 md:px-margin-desktop">
       <h1 className="font-heading text-headline-lg text-on-surface">
         Edit Subscription Plan
       </h1>

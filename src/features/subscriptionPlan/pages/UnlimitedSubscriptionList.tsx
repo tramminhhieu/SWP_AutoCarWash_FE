@@ -375,7 +375,7 @@ export default function UnlimitedSubscriptionList() {
                 }
                 isDeleting={isDeleting}
                 onEdit={(p) =>
-                  navigate(`/admin/subscription-plans/${p.id}/edit`)
+                  navigate(`/admin/subscription-plans/unlimited/${p.id}/edit`)
                 }
                 onDelete={setPlanToDelete}
               />

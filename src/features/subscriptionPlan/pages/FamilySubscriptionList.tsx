@@ -496,7 +496,7 @@ export default function FamilySubscriptionList() {
   };
 
   const handleEdit = (plan: FamilySubscriptionPlan) => {
-    navigate(`/admin/subscription-plans/${plan.id}/edit`);
+    navigate(`/admin/subscription-plans/family/${plan.id}/edit`);
   };
 
   /* ---- Xác nhận xóa: gọi API soft delete rồi refetch list ---- */

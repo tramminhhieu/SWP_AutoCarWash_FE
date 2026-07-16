@@ -49,7 +49,6 @@ export default function PaymentPage() {
   );
   const [isPaying, setIsPaying] = useState(false);
 
-  const [paymentMethod, setPaymentMethod] = useState<"cash" | "card">("cash");
   const [receivedInput, setReceivedInput] = useState(""); // staff nhập tiền mặt nhận được
   const [redeemInput, setRedeemInput] = useState(""); // điểm staff nhập để đổi thưởng
   const [payError, setPayError] = useState("");
@@ -77,13 +76,19 @@ export default function PaymentPage() {
   const voucherDiscount = detail?.voucherDiscountAmount ?? 0;
   const pointDiscount = detail?.pointDiscountAmount ?? 0; // điểm đã đổi sẵn (nếu có)
 
+  // Tổng trước khi trừ điểm staff đổi (ưu tiên số BE trả, fallback tự tính) — cần tính trước
+  // để biết đơn có còn tiền phải thu không (đơn 0đ thì không cho đổi điểm nữa).
+  const baseTotal =
+    detail?.remainingAmount ??
+    Math.max(subtotal - voucherDiscount - pointDiscount, 0);
+
   // ── Đổi điểm thưởng tại quầy ──────────────────────────────────────────────
   const currentPoints = detail?.loyaltyPoint ?? 0;
-  // Điểm hợp lệ khi: 0 < điểm nhập < điểm hiện có của khách
+  // Điểm hợp lệ khi: đơn còn tiền phải thu (baseTotal > 0) và 0 <= điểm nhập <= điểm hiện có
   const redeemPoints = Math.floor(Number(redeemInput)) || 0;
   const isRedeemInvalid =
     redeemInput.trim() !== "" &&
-    (redeemPoints <= 0 || redeemPoints >= currentPoints);
+    (redeemPoints < 0 || redeemPoints > currentPoints || baseTotal <= 0);
   const redeemDiscount = isRedeemInvalid ? 0 : redeemPoints * POINT_TO_VND;
 
   // Tiền mặt staff đã nhận — tách state text riêng để có thể hiển thị đúng khi nhập "0"
@@ -104,10 +109,6 @@ export default function PaymentPage() {
           ? "Advance"
           : null;
 
-  // Tổng trước khi trừ điểm staff đổi (ưu tiên số BE trả, fallback tự tính)
-  const baseTotal =
-    detail?.remainingAmount ??
-    Math.max(subtotal - voucherDiscount - pointDiscount, 0);
   const total = Math.max(baseTotal - redeemDiscount, 0);
   const change = received - total;
   const isInsufficient = received > 0 && received < total;
@@ -272,19 +273,9 @@ export default function PaymentPage() {
                     state: { paidBookingId: bookingId },
                   })
                 }
-                className="flex-1 py-3 rounded-xl text-sm font-semibold border-2 border-outline-variant text-on-surface transition"
-              >
-                Back to Queue
-              </button>
-              <button
-                onClick={() =>
-                  navigate("/staff/queue", {
-                    state: { paidBookingId: bookingId },
-                  })
-                }
                 className="flex-1 py-3 rounded-xl text-sm font-semibold bg-primary text-on-primary transition"
               >
-                Done
+                Back to Queue
               </button>
             </div>
           </div>
@@ -414,14 +405,14 @@ export default function PaymentPage() {
                 value={redeemInput}
                 onChange={(e) => setRedeemInput(e.target.value)}
                 placeholder="Points to redeem"
-                min={1}
-                max={currentPoints > 0 ? currentPoints - 1 : 0}
-                disabled={currentPoints <= 0}
+                min={0}
+                max={currentPoints}
+                disabled={currentPoints <= 0 || baseTotal <= 0}
                 className="w-full rounded-lg px-3 py-2 text-sm border border-outline-variant outline-none focus:border-primary bg-surface-container-lowest text-on-surface disabled:opacity-50 disabled:cursor-not-allowed"
               />
               {isRedeemInvalid ? (
                 <p className="text-xs text-error mt-1">
-                  Points must be greater than 0 and less than {currentPoints}.
+                  Points must be between 0 and {currentPoints}.
                 </p>
               ) : redeemDiscount > 0 ? (
                 <p className="text-xs text-green-600 mt-1">
@@ -469,6 +460,15 @@ export default function PaymentPage() {
                   </span>
                 </div>
               )}
+              {/* Đã cọc trước (nếu có) */}
+              {detail.isDepositPaid && (
+                <div className="flex justify-between">
+                  <span className="text-on-surface-variant">Deposit Paid</span>
+                  <span className="text-error">
+                    - {formatVND(detail.depositAmount ?? 0)}
+                  </span>
+                </div>
+              )}
               <div className="border-t border-outline-variant pt-2 flex justify-between font-bold">
                 <span className="text-on-surface">Total Due</span>
                 <span className="text-primary">{formatVND(total)}</span>
@@ -490,16 +490,6 @@ export default function PaymentPage() {
     </span>
                     </div>
                 )}
-
-              {/* Đã cọc trước (nếu có) */}
-              {detail.isDepositPaid && (
-                <div className="flex justify-between">
-                  <span className="text-on-surface-variant">Deposit Paid</span>
-                  <span className="text-on-surface">
-                    {formatVND(detail.depositAmount ?? 0)}
-                  </span>
-                </div>
-              )}
             </div>
           </div>
 
@@ -507,51 +497,35 @@ export default function PaymentPage() {
             <p className="text-sm font-bold text-on-surface mb-3">
               Payment Method
             </p>
-            <div className="grid grid-cols-2 gap-2 mb-4">
-              <button
-                onClick={() => setPaymentMethod("cash")}
-                className={`py-2 rounded-xl text-sm font-semibold border-2 transition ${paymentMethod === "cash" ? "border-primary bg-primary-fixed/10 text-primary" : "border-outline-variant text-on-surface-variant"}`}
-              >
+            <div className="mb-4">
+              <span className="inline-block py-2 px-4 rounded-xl text-sm font-semibold border-2 border-primary bg-primary-fixed/10 text-primary">
                 Cash
-              </button>
-              <button
-                onClick={() => setPaymentMethod("card")}
-                className={`py-2 rounded-xl text-sm font-semibold border-2 transition ${paymentMethod === "card" ? "border-primary bg-primary-fixed/10 text-primary" : "border-outline-variant text-on-surface-variant"}`}
-              >
-                Card
-              </button>
+              </span>
             </div>
 
-            {paymentMethod === "cash" && (
-              <div className="space-y-2">
-                <label className="text-xs font-semibold uppercase text-outline block">
-                  Received Amount
-                </label>
-                <input
-                  type="number"
-                  value={receivedInput}
-                  onChange={(e) => setReceivedInput(e.target.value)}
-                  placeholder="0"
-                  className="w-full rounded-xl px-3 py-2.5 text-sm border border-outline-variant outline-none focus:border-primary bg-surface-container-lowest text-on-surface"
-                />
-                {isInsufficient && (
-                  <p className="text-xs text-error">
-                    Received amount is insufficient.
-                  </p>
-                )}
-                {received >= total && total > 0 && (
-                  <p className="text-xs text-green-600">
-                    Change to return: {formatVND(change)}
-                  </p>
-                )}
-              </div>
-            )}
-
-            {paymentMethod === "card" && (
-              <p className="text-xs text-on-surface-variant">
-                Demo currently supports Cash payment only.
-              </p>
-            )}
+            <div className="space-y-2">
+              <label className="text-xs font-semibold uppercase text-outline block">
+                Received Amount
+              </label>
+              <input
+                type="number"
+                value={receivedInput}
+                onChange={(e) => setReceivedInput(e.target.value)}
+                placeholder="0"
+                disabled={total <= 0}
+                className="w-full rounded-xl px-3 py-2.5 text-sm border border-outline-variant outline-none focus:border-primary bg-surface-container-lowest text-on-surface disabled:opacity-50 disabled:cursor-not-allowed"
+              />
+              {isInsufficient && (
+                <p className="text-xs text-error">
+                  Received amount is insufficient.
+                </p>
+              )}
+              {received >= total && total > 0 && (
+                <p className="text-xs text-green-600">
+                  Change to return: {formatVND(change)}
+                </p>
+              )}
+            </div>
           </div>
 
           {payError && (

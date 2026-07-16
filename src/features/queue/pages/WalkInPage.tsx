@@ -1,7 +1,19 @@
 //author: Ngọc
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { Search, ChevronLeft, Check, X, User, Star, Plus, Calendar, Car, Droplet, Sparkles, Wand2 } from "lucide-react";
+import {
+  Search,
+  ChevronLeft,
+  Check,
+  User,
+  Star,
+  Plus,
+  Calendar,
+  Car,
+  Droplet,
+  Sparkles,
+  Wand2,
+} from "lucide-react";
 import {
   checkPhone,
   calculateInvoice,
@@ -17,11 +29,16 @@ import {
 // ported onto dev: dev không có utils/currency.ts, dùng formatCurrency của dev thay formatVND
 import { formatCurrency as formatVND } from "../../../utils/format";
 import { getApiErrorInfo } from "../../../lib/axiosClient";
-import { getSubscriptionStyle, getSubscriptionTypeLabel } from "../../../constants/subscriptionStyles";
+import {
+  getSubscriptionStyle,
+  getSubscriptionTypeLabel,
+} from "../../../constants/subscriptionStyles";
 import { useAuth } from "../../../hooks/useAuth";
 import Modal from "../../../components/ui/Modal";
 
 const SLOT_DURATION_MINUTES = 15; // 1 requiredSlot = 15 phút, theo comment BE WalkInFormDataResponse
+// Regex biển số VN — giống VehicleForm.tsx, dùng chung để validate nhất quán
+const LICENSE_PLATE_REGEX = /^[0-9]{2}[A-HJ-NP-Z]{1,2}-[0-9]{4,5}$/;
 // Icon minh họa cho gói service, đồng bộ với BookingCreate.tsx (Basic, Medium, Premium)
 const SERVICE_ICONS = [Droplet, Sparkles, Wand2];
 
@@ -57,8 +74,13 @@ export default function WalkInPage() {
 
   // MEMBER phone lookup
   const [phone, setPhone] = useState("");
-  const [phoneResult, setPhoneResult] = useState<CheckPhoneResponse | null>(null);
+  const [phoneResult, setPhoneResult] = useState<CheckPhoneResponse | null>(
+    null,
+  );
   const [phoneError, setPhoneError] = useState("");
+  const [licensePlateError, setLicensePlateError] = useState<string | null>(
+    null,
+  );
   const [isPhoneLoading, setIsPhoneLoading] = useState(false);
 
   // vehicle info
@@ -67,10 +89,13 @@ export default function WalkInPage() {
     brandName: "",
     color: "",
   });
-  const [selectedSavedVehicle, setSelectedSavedVehicle] = useState<SavedVehicleDTO | null>(null);
+  const [selectedSavedVehicle, setSelectedSavedVehicle] =
+    useState<SavedVehicleDTO | null>(null);
 
   // service selection
-  const [selectedServiceId, setSelectedServiceId] = useState<number | null>(null);
+  const [selectedServiceId, setSelectedServiceId] = useState<number | null>(
+    null,
+  );
   const [selectedAddonIds, setSelectedAddonIds] = useState<number[]>([]);
   const [summary, setSummary] = useState<BookingSummaryResponse | null>(null);
   const [selectedSlot, setSelectedSlot] = useState<SlotWindow | null>(null);
@@ -93,8 +118,12 @@ export default function WalkInPage() {
   const [remainingBalance, setRemainingBalance] = useState(0);
 
   // service package / addon options (mock — xem walkInApi.ts để biết API thật đề xuất)
-  const [servicePackages, setServicePackages] = useState<WalkInServicePackageDTO[]>([]);
-  const [addonServices, setAddonServices] = useState<WalkInAddonServiceDTO[]>([]);
+  const [servicePackages, setServicePackages] = useState<
+    WalkInServicePackageDTO[]
+  >([]);
+  const [addonServices, setAddonServices] = useState<WalkInAddonServiceDTO[]>(
+    [],
+  );
   const [isLoadingOptions, setIsLoadingOptions] = useState(true);
 
   useEffect(() => {
@@ -119,6 +148,7 @@ export default function WalkInPage() {
     setSummary(null);
     setSelectedSlot(null);
     setConfirmError(null);
+    setLicensePlateError(null);
     setPeriod("AM");
     setDepositCollected(false);
     setShowDepositModal(false);
@@ -179,7 +209,7 @@ export default function WalkInPage() {
   const recalcInvoice = async (
     serviceId: number,
     addonIds: number[],
-    licensePlate: string = vehicleInfo.licensePlate
+    licensePlate: string = vehicleInfo.licensePlate,
   ) => {
     setSelectedSlot(null);
     setSummary(null);
@@ -206,7 +236,10 @@ export default function WalkInPage() {
     // Addons already bundled into the newly chosen package must not stay selected —
     // otherwise they'd be double-counted (once via package, once via addon).
     const newAddonIds = selectedAddonIds.filter(
-      (id) => !addonServices.find((a) => a.id === id)?.includedInPackageIds.includes(serviceId)
+      (id) =>
+        !addonServices
+          .find((a) => a.id === id)
+          ?.includedInPackageIds.includes(serviceId),
     );
     setSelectedAddonIds(newAddonIds);
     recalcInvoice(serviceId, newAddonIds);
@@ -226,7 +259,9 @@ export default function WalkInPage() {
     const requiredDeposit = summary?.penaltyDeposit ?? 0;
     const receivedAmount = Number(depositReceivedInput);
     if (!receivedAmount || receivedAmount < requiredDeposit) {
-      setDepositModalError(`Please enter at least ${formatVND(requiredDeposit)}.`);
+      setDepositModalError(
+        `Please enter at least ${formatVND(requiredDeposit)}.`,
+      );
       return;
     }
     setIsCollectingDeposit(true);
@@ -237,7 +272,9 @@ export default function WalkInPage() {
       setShowDepositModal(false);
     } catch (error) {
       const { message } = getApiErrorInfo(error);
-      setDepositModalError(message ?? "Failed to confirm deposit, please try again.");
+      setDepositModalError(
+        message ?? "Failed to confirm deposit, please try again.",
+      );
     } finally {
       setIsCollectingDeposit(false);
     }
@@ -250,6 +287,23 @@ export default function WalkInPage() {
 
   const handleConfirm = async () => {
     if (!selectedServiceId || !selectedSlot || !stationId) return;
+
+    // Validate biển số chỉ với GUEST (MEMBER lấy xe từ danh sách đã lưu, không nhập tay)
+    if (customerType === "GUEST") {
+      const plate = vehicleInfo.licensePlate.trim();
+      if (!plate) {
+        setLicensePlateError("License plate is required");
+        return;
+      }
+      if (!LICENSE_PLATE_REGEX.test(plate)) {
+        setLicensePlateError(
+          "Invalid license plate format (e.g., 29A-12345 or 51AB-12345)",
+        );
+        return;
+      }
+      setLicensePlateError(null);
+    }
+
     setIsSubmitting(true);
     setConfirmError(null);
     try {
@@ -270,7 +324,9 @@ export default function WalkInPage() {
       setStep("done");
     } catch (error) {
       const { errorCode, message } = getApiErrorInfo(error);
-      setConfirmError(message ?? errorCode ?? "Failed to create walk-in, please try again.");
+      setConfirmError(
+        message ?? errorCode ?? "Failed to create walk-in, please try again.",
+      );
     } finally {
       setIsSubmitting(false);
     }
@@ -279,25 +335,33 @@ export default function WalkInPage() {
   // Gói dịch vụ đang được xe này miễn phí nhờ subscription (Unlimited/Family) đang ACTIVE —
   // dùng để hiển thị giá 0 VNĐ ngay tại card chọn gói, trước khi tính invoice.
   const freeServicePackageIds = new Set(
-    selectedSavedVehicle?.subscriptionInfo?.map((sub) => sub.servicePackageId) ?? []
+    selectedSavedVehicle?.subscriptionInfo?.map(
+      (sub) => sub.servicePackageId,
+    ) ?? [],
   );
 
   // Order summary computed values (booking-form step)
-  const selectedService = servicePackages.find((p) => p.id === selectedServiceId) ?? null;
-  const selectedAddons = addonServices.filter((a) => selectedAddonIds.includes(a.id));
+  const selectedService =
+    servicePackages.find((p) => p.id === selectedServiceId) ?? null;
+  const selectedAddons = addonServices.filter((a) =>
+    selectedAddonIds.includes(a.id),
+  );
   // Addons already bundled into the selected package are hidden from selection —
   // staff shouldn't be able to add (and double-charge) something already included.
   const selectableAddons = addonServices.filter(
-    (a) => !selectedServiceId || !a.includedInPackageIds.includes(selectedServiceId)
+    (a) =>
+      !selectedServiceId || !a.includedInPackageIds.includes(selectedServiceId),
   );
   const computedSubTotal =
-    (selectedService?.basePrice ?? 0) + selectedAddons.reduce((sum, a) => sum + a.price, 0);
+    (selectedService?.basePrice ?? 0) +
+    selectedAddons.reduce((sum, a) => sum + a.price, 0);
   const displayTotal = summary?.remainingBalance ?? computedSubTotal;
 
   // Tổng thời gian = thời lượng gói dịch vụ + tổng thời lượng các addon đã chọn (chỉ để hiển thị)
   const totalDurationMinutes =
-    (selectedService ? selectedService.requiredSlot * SLOT_DURATION_MINUTES : 0) +
-    selectedAddons.reduce((sum, a) => sum + a.durationMinutes, 0);
+    (selectedService
+      ? selectedService.requiredSlot * SLOT_DURATION_MINUTES
+      : 0) + selectedAddons.reduce((sum, a) => sum + a.durationMinutes, 0);
 
   // summary.availableSlots đã là khối giờ hoàn chỉnh từ BE — map sang SlotWindow, dùng
   // associatedSlotIds làm slotIds thật để gửi lên khi confirm (không tự gộp lại ở FE).
@@ -308,7 +372,7 @@ export default function WalkInPage() {
         startTime: s.startTime,
         endTime: s.endTime,
       })),
-    [summary?.availableSlots]
+    [summary?.availableSlots],
   );
 
   // Lọc khối giờ theo buổi sáng (AM, trước 12h) / chiều (PM, từ 12h)
@@ -344,7 +408,9 @@ export default function WalkInPage() {
     <div className="min-h-screen bg-background">
       <div
         className={`mx-auto flex flex-col gap-8 py-8 ${
-          step === "booking-form" ? "max-w-container-max px-4 md:px-12" : "max-w-2xl px-4"
+          step === "booking-form"
+            ? "max-w-container-max px-4 md:px-12"
+            : "max-w-2xl px-4"
         }`}
       >
         {/* Header */}
@@ -375,13 +441,6 @@ export default function WalkInPage() {
               </p>
             </div>
           </div>
-          <button
-            onClick={() => navigate("/staff/queue")}
-            aria-label="Close, back to Queue Page"
-            className="rounded-full p-1.5 hover:bg-surface-container transition"
-          >
-            <X className="w-5 h-5 text-outline" />
-          </button>
         </div>
 
         {/* Step: Select type */}
@@ -395,7 +454,9 @@ export default function WalkInPage() {
                 <User className="size-6 text-primary" />
               </div>
               <p className="font-bold text-base text-on-surface">GUEST</p>
-              <p className="text-body-md text-on-surface-variant">Walk-in customer, no account</p>
+              <p className="text-body-md text-on-surface-variant">
+                Walk-in customer, no account
+              </p>
             </button>
             <button
               onClick={() => handleSelectType("MEMBER")}
@@ -405,7 +466,9 @@ export default function WalkInPage() {
                 <Star className="size-6 text-primary" />
               </div>
               <p className="font-bold text-base text-on-surface">MEMBER</p>
-              <p className="text-body-md text-on-surface-variant">Customer with a member account</p>
+              <p className="text-body-md text-on-surface-variant">
+                Customer with a member account
+              </p>
             </button>
           </div>
         )}
@@ -422,17 +485,23 @@ export default function WalkInPage() {
                     <span className="flex h-6 w-6 items-center justify-center rounded-full bg-primary text-label-sm font-semibold text-on-primary">
                       {sectionNum.lookup}
                     </span>
-                    <h2 className="text-headline-md text-on-surface">Member Lookup</h2>
+                    <h2 className="text-headline-md text-on-surface">
+                      Member Lookup
+                    </h2>
                   </div>
                   <div className="flex flex-col gap-3 rounded-2xl border border-outline-variant bg-surface-container-lowest p-5">
                     <div>
-                      <label className="text-label-md font-semibold text-on-surface-variant mb-1.5 block">Phone Number</label>
+                      <label className="text-label-md font-semibold text-on-surface-variant mb-1.5 block">
+                        Phone Number
+                      </label>
                       <div className="flex gap-2">
                         <input
                           type="tel"
                           value={phone}
                           onChange={(e) => setPhone(e.target.value)}
-                          onKeyDown={(e) => e.key === "Enter" && handlePhoneSearch()}
+                          onKeyDown={(e) =>
+                            e.key === "Enter" && handlePhoneSearch()
+                          }
                           placeholder="Enter phone number..."
                           className="flex-1 rounded-xl px-3 py-2.5 text-body-md border border-outline-variant outline-none focus:border-primary bg-surface-container-lowest text-on-surface"
                         />
@@ -445,11 +514,17 @@ export default function WalkInPage() {
                           <Search className="w-4 h-4" />
                         </button>
                       </div>
-                      {phoneError && <p className="text-body-md text-error mt-1.5">{phoneError}</p>}
+                      {phoneError && (
+                        <p className="text-body-md text-error mt-1.5">
+                          {phoneError}
+                        </p>
+                      )}
                     </div>
                     {phoneResult?.existed && (
                       <div className="flex items-center gap-2 rounded-xl p-3 bg-surface-container-low border border-outline-variant/30">
-                        <p className="font-semibold text-body-md text-on-surface">{phoneResult.customerName}</p>
+                        <p className="font-semibold text-body-md text-on-surface">
+                          {phoneResult.customerName}
+                        </p>
                         <span className="text-label-sm px-2 py-0.5 rounded-full font-medium bg-primary-fixed text-on-primary-fixed">
                           {phoneResult.tierName ?? "MEMBER"}
                         </span>
@@ -467,7 +542,9 @@ export default function WalkInPage() {
                     {sectionNum.vehicle}
                   </span>
                   <h2 className="text-headline-md text-on-surface">
-                    {customerType === "MEMBER" ? "Select Vehicle" : "Vehicle Info"}
+                    {customerType === "MEMBER"
+                      ? "Select Vehicle"
+                      : "Vehicle Info"}
                   </h2>
                 </div>
                 <div
@@ -479,59 +556,70 @@ export default function WalkInPage() {
                       Look up a phone number above to select a vehicle.
                     </p>
                   )}
-                  {customerType === "MEMBER" && !vehicleLocked && (!phoneResult?.savedVehicles || phoneResult.savedVehicles.length === 0) && (
-                    <p className="text-body-md text-on-surface-variant">
-                      No saved vehicles found for this account.
-                    </p>
-                  )}
-                  {customerType === "MEMBER" && phoneResult?.savedVehicles && phoneResult.savedVehicles.length > 0 && (
-                    <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-                      {phoneResult.savedVehicles.map((v) => {
-                        // BE (check-phone) chỉ trả subscriptionInfo gồm các gói Unlimited/Family đang
-                        // ACTIVE và chưa hết hạn tính đến hôm nay -> có phần tử là xe đang được miễn phí.
-                        const activeSubscriptions = v.subscriptionInfo ?? [];
-                        return (
-                          <button
-                            key={v.id}
-                            type="button"
-                            onClick={() => handleSelectSavedVehicle(v)}
-                            className={`flex items-center gap-3 rounded-xl p-4 text-left transition-colors
+                  {customerType === "MEMBER" &&
+                    !vehicleLocked &&
+                    (!phoneResult?.savedVehicles ||
+                      phoneResult.savedVehicles.length === 0) && (
+                      <p className="text-body-md text-on-surface-variant">
+                        No saved vehicles found for this account.
+                      </p>
+                    )}
+                  {customerType === "MEMBER" &&
+                    phoneResult?.savedVehicles &&
+                    phoneResult.savedVehicles.length > 0 && (
+                      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                        {phoneResult.savedVehicles.map((v) => {
+                          // BE (check-phone) chỉ trả subscriptionInfo gồm các gói Unlimited/Family đang
+                          // ACTIVE và chưa hết hạn tính đến hôm nay -> có phần tử là xe đang được miễn phí.
+                          const activeSubscriptions = v.subscriptionInfo ?? [];
+                          return (
+                            <button
+                              key={v.id}
+                              type="button"
+                              onClick={() => handleSelectSavedVehicle(v)}
+                              className={`flex items-center gap-3 rounded-xl p-4 text-left transition-colors
                               ${
                                 selectedSavedVehicle?.id === v.id
                                   ? "border-2 border-primary bg-primary-container/10"
                                   : "border border-outline-variant bg-surface-container-lowest hover:border-primary/40"
                               }`}
-                          >
-                            <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-primary text-on-primary">
-                              <Car size={18} />
-                            </span>
-                            <div className="min-w-0 flex-1">
-                              <p className="truncate text-body-lg font-semibold text-on-surface">{v.brandName}</p>
-                              <div className="flex flex-wrap items-center gap-2">
-                                <p className="text-body-md text-on-surface-variant">{v.licensePlate}</p>
-                                {activeSubscriptions.map((sub) => {
-                                  const style = getSubscriptionStyle(sub.planType);
-                                  return (
-                                    <span
-                                      key={sub.subscriptionId}
-                                      className={`rounded-full border px-2 py-0.5 text-label-sm font-semibold ${style.badge} ${style.border}`}
-                                    >
-                                      {getSubscriptionTypeLabel(sub.planType)}
-                                    </span>
-                                  );
-                                })}
-                              </div>
-                            </div>
-                            {selectedSavedVehicle?.id === v.id && (
-                              <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-primary text-on-primary">
-                                <Check size={12} strokeWidth={3} />
+                            >
+                              <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-primary text-on-primary">
+                                <Car size={18} />
                               </span>
-                            )}
-                          </button>
-                        );
-                      })}
-                    </div>
-                  )}
+                              <div className="min-w-0 flex-1">
+                                <p className="truncate text-body-lg font-semibold text-on-surface">
+                                  {v.brandName}
+                                </p>
+                                <div className="flex flex-wrap items-center gap-2">
+                                  <p className="text-body-md text-on-surface-variant">
+                                    {v.licensePlate}
+                                  </p>
+                                  {activeSubscriptions.map((sub) => {
+                                    const style = getSubscriptionStyle(
+                                      sub.planType,
+                                    );
+                                    return (
+                                      <span
+                                        key={sub.subscriptionId}
+                                        className={`rounded-full border px-2 py-0.5 text-label-sm font-semibold ${style.badge} ${style.border}`}
+                                      >
+                                        {getSubscriptionTypeLabel(sub.planType)}
+                                      </span>
+                                    );
+                                  })}
+                                </div>
+                              </div>
+                              {selectedSavedVehicle?.id === v.id && (
+                                <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-primary text-on-primary">
+                                  <Check size={12} strokeWidth={3} />
+                                </span>
+                              )}
+                            </button>
+                          );
+                        })}
+                      </div>
+                    )}
                   {customerType === "GUEST" && (
                     <>
                       <div>
@@ -545,21 +633,44 @@ export default function WalkInPage() {
                             // Chuẩn hoá biển số ngay lúc nhập: viết hoa toàn bộ + bỏ khoảng trắng
                             // (kể cả khoảng trắng ở giữa) để tránh sai lệch khi so khớp/tra cứu
                             // theo chuỗi biển số ở BE (vd "51a 12345" và "51A-12345" là cùng 1 xe).
-                            const normalizedPlate = e.target.value.toUpperCase().replace(/\s+/g, "");
-                            setVehicleInfo((prev) => ({ ...prev, licensePlate: normalizedPlate, existingVehicleId: undefined }));
+                            const normalizedPlate = e.target.value
+                              .toUpperCase()
+                              .replace(/\s+/g, "");
+                            setVehicleInfo((prev) => ({
+                              ...prev,
+                              licensePlate: normalizedPlate,
+                              existingVehicleId: undefined,
+                            }));
                             setSelectedSavedVehicle(null);
                             setDepositCollected(false);
+                            // Xoá lỗi khi user bắt đầu sửa lại
+                            setLicensePlateError(null);
                             if (selectedServiceId) {
-                              recalcInvoice(selectedServiceId, selectedAddonIds, normalizedPlate);
+                              recalcInvoice(
+                                selectedServiceId,
+                                selectedAddonIds,
+                                normalizedPlate,
+                              );
                             }
                           }}
                           placeholder="e.g. 51A-12345"
-                          className="w-full rounded-xl px-3 py-2.5 text-body-md border border-outline-variant outline-none focus:border-primary bg-surface-container-lowest text-on-surface"
+                          maxLength={10}
+                          className={`w-full rounded-xl px-3 py-2.5 text-body-md border outline-none bg-surface-container-lowest text-on-surface
+                            ${licensePlateError ? "border-error" : "border-outline-variant focus:border-primary"}`}
                         />
+                        {licensePlateError && (
+                          <p className="mt-1.5 text-label-md text-error">
+                            {licensePlateError}
+                          </p>
+                        )}
                       </div>
                       <div className="rounded-xl px-4 py-3 bg-surface-container border border-outline-variant/30">
                         <p className="text-body-md text-on-surface-variant">
-                          Customer will be booked under the <span className="font-semibold text-on-surface">GUEST</span> tier — vouchers and discounts do not apply.
+                          Customer will be booked under the{" "}
+                          <span className="font-semibold text-on-surface">
+                            GUEST
+                          </span>{" "}
+                          tier — vouchers and discounts do not apply.
                         </p>
                       </div>
                     </>
@@ -573,17 +684,23 @@ export default function WalkInPage() {
                   <span className="flex h-6 w-6 items-center justify-center rounded-full bg-primary text-label-sm font-semibold text-on-primary">
                     {sectionNum.service}
                   </span>
-                  <h2 className="text-headline-md text-on-surface">Choose Service</h2>
+                  <h2 className="text-headline-md text-on-surface">
+                    Choose Service
+                  </h2>
                 </div>
                 {isLoadingOptions && (
-                  <p className="pb-2 text-body-md text-outline">Loading services...</p>
+                  <p className="pb-2 text-body-md text-outline">
+                    Loading services...
+                  </p>
                 )}
                 {!isLoadingOptions && serviceLocked && (
                   <p className="pb-2 text-body-md text-on-surface-variant">
                     Select a vehicle above to choose a service.
                   </p>
                 )}
-                <div className={`grid grid-cols-1 gap-3 sm:grid-cols-3 ${serviceLocked ? "pointer-events-none opacity-50" : ""}`}>
+                <div
+                  className={`grid grid-cols-1 gap-3 sm:grid-cols-3 ${serviceLocked ? "pointer-events-none opacity-50" : ""}`}
+                >
                   {servicePackages.map((pkg, idx) => {
                     const Icon = SERVICE_ICONS[idx % SERVICE_ICONS.length];
                     return (
@@ -602,7 +719,9 @@ export default function WalkInPage() {
                         <span className="flex h-10 w-10 items-center justify-center rounded-lg bg-secondary-fixed text-secondary">
                           <Icon size={18} />
                         </span>
-                        <p className="mt-3 text-body-lg font-semibold text-on-surface">{pkg.name}</p>
+                        <p className="mt-3 text-body-lg font-semibold text-on-surface">
+                          {pkg.name}
+                        </p>
                         <p className="text-body-md text-on-surface-variant">
                           {pkg.requiredSlot * SLOT_DURATION_MINUTES} min
                         </p>
@@ -611,10 +730,14 @@ export default function WalkInPage() {
                             <span className="text-body-md text-on-surface-variant line-through">
                               {formatVND(pkg.basePrice)}
                             </span>
-                            <span className="text-headline-md text-primary">0 VNĐ</span>
+                            <span className="text-headline-md text-primary">
+                              0 VNĐ
+                            </span>
                           </p>
                         ) : (
-                          <p className="mt-2 text-headline-md text-primary">{formatVND(pkg.basePrice)}</p>
+                          <p className="mt-2 text-headline-md text-primary">
+                            {formatVND(pkg.basePrice)}
+                          </p>
                         )}
                       </button>
                     );
@@ -635,7 +758,9 @@ export default function WalkInPage() {
                     Choose a service above to see add-ons.
                   </p>
                 )}
-                <div className={`grid grid-cols-1 gap-3 sm:grid-cols-2 ${addonsLocked ? "pointer-events-none opacity-50" : ""}`}>
+                <div
+                  className={`grid grid-cols-1 gap-3 sm:grid-cols-2 ${addonsLocked ? "pointer-events-none opacity-50" : ""}`}
+                >
                   {selectableAddons.map((addon) => (
                     <button
                       key={addon.id}
@@ -653,18 +778,30 @@ export default function WalkInPage() {
                         <Sparkles size={18} />
                       </span>
                       <div className="flex-1">
-                        <p className="text-body-lg font-semibold text-on-surface">{addon.name}</p>
-                        <p className="text-body-md text-on-surface-variant">{addon.durationMinutes} min</p>
+                        <p className="text-body-lg font-semibold text-on-surface">
+                          {addon.name}
+                        </p>
+                        <p className="text-body-md text-on-surface-variant">
+                          {addon.durationMinutes} min
+                        </p>
                         {addon.description && (
-                          <p className="text-body-md text-on-surface-variant">{addon.description}</p>
+                          <p className="text-body-md text-on-surface-variant">
+                            {addon.description}
+                          </p>
                         )}
-                        <p className="text-body-md font-medium text-primary">+{formatVND(addon.price)}</p>
+                        <p className="text-body-md font-medium text-primary">
+                          +{formatVND(addon.price)}
+                        </p>
                       </div>
                       <span
                         className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-full border-2
                           ${selectedAddonIds.includes(addon.id) ? "border-primary bg-primary text-on-primary" : "border-outline-variant"}`}
                       >
-                        {selectedAddonIds.includes(addon.id) ? <Check size={14} strokeWidth={3} /> : <Plus size={14} />}
+                        {selectedAddonIds.includes(addon.id) ? (
+                          <Check size={14} strokeWidth={3} />
+                        ) : (
+                          <Plus size={14} />
+                        )}
                       </span>
                     </button>
                   ))}
@@ -678,16 +815,22 @@ export default function WalkInPage() {
                     <span className="flex h-6 w-6 items-center justify-center rounded-full bg-primary text-label-sm font-semibold text-on-primary">
                       {sectionNum.schedule}
                     </span>
-                    <h2 className="text-headline-md text-on-surface">Schedule</h2>
+                    <h2 className="text-headline-md text-on-surface">
+                      Schedule
+                    </h2>
                     {totalDurationMinutes > 0 && (
                       <span className="ml-auto text-body-md text-on-surface-variant">
-                        Total duration: <span className="font-semibold text-on-surface">{totalDurationMinutes} min</span>
+                        Total duration:{" "}
+                        <span className="font-semibold text-on-surface">
+                          {totalDurationMinutes} min
+                        </span>
                       </span>
                     )}
                   </div>
                   <div className="rounded-2xl border border-outline-variant bg-surface-container-lowest p-5">
                     <p className="pb-4 text-body-md text-on-surface-variant">
-                      Walk-in bookings are for today only — pick an available time slot below.
+                      Walk-in bookings are for today only — pick an available
+                      time slot below.
                     </p>
 
                     {/* Toggle AM/PM */}
@@ -697,7 +840,9 @@ export default function WalkInPage() {
                           type="button"
                           onClick={() => setPeriod("AM")}
                           className={`rounded-md px-3 py-1.5 text-label-md transition-colors ${
-                            period === "AM" ? "bg-surface-container-high text-on-surface" : "text-on-surface-variant"
+                            period === "AM"
+                              ? "bg-surface-container-high text-on-surface"
+                              : "text-on-surface-variant"
                           }`}
                         >
                           Morning (AM)
@@ -706,7 +851,9 @@ export default function WalkInPage() {
                           type="button"
                           onClick={() => setPeriod("PM")}
                           className={`rounded-md px-3 py-1.5 text-label-md transition-colors ${
-                            period === "PM" ? "bg-surface-container-high text-on-surface" : "text-on-surface-variant"
+                            period === "PM"
+                              ? "bg-surface-container-high text-on-surface"
+                              : "text-on-surface-variant"
                           }`}
                         >
                           Afternoon (PM)
@@ -715,7 +862,9 @@ export default function WalkInPage() {
                     </div>
 
                     {isCalculating ? (
-                      <p className="text-center text-body-md text-outline">Calculating invoice...</p>
+                      <p className="text-center text-body-md text-outline">
+                        Calculating invoice...
+                      </p>
                     ) : filteredSlots.length > 0 ? (
                       <div className="flex flex-wrap gap-2">
                         {filteredSlots.map((slot) => (
@@ -724,18 +873,21 @@ export default function WalkInPage() {
                             type="button"
                             onClick={() => setSelectedSlot(slot)}
                             className={`px-3 py-1.5 rounded-lg text-body-md font-medium border transition ${
-                              selectedSlot?.slotIds.join("-") === slot.slotIds.join("-")
+                              selectedSlot?.slotIds.join("-") ===
+                              slot.slotIds.join("-")
                                 ? "bg-primary text-on-primary border-primary"
                                 : "bg-surface-container-lowest text-on-surface border-outline-variant hover:border-primary"
                             }`}
                           >
-                            {slot.startTime.slice(0, 5)} - {slot.endTime.slice(0, 5)}
+                            {slot.startTime.slice(0, 5)} -{" "}
+                            {slot.endTime.slice(0, 5)}
                           </button>
                         ))}
                       </div>
                     ) : (
                       <p className="text-body-md text-on-surface-variant">
-                        No available time slots for this period. Try the other period.
+                        No available time slots for this period. Try the other
+                        period.
                       </p>
                     )}
                   </div>
@@ -747,17 +899,23 @@ export default function WalkInPage() {
             <aside className="h-fit rounded-2xl border border-outline-variant bg-surface-container-lowest p-6 shadow-[0_10px_25px_-5px_rgba(29,78,216,0.05)] lg:sticky lg:top-24">
               <div className="flex items-center gap-2 pb-5">
                 <Calendar size={18} className="text-primary" />
-                <h2 className="text-headline-md text-on-surface">Order Summary</h2>
+                <h2 className="text-headline-md text-on-surface">
+                  Order Summary
+                </h2>
               </div>
 
               {selectedService ? (
                 <div className="flex items-start justify-between gap-2 pb-3">
                   <div>
-                    <p className="text-body-lg font-semibold text-on-surface">{selectedService.name}</p>
+                    <p className="text-body-lg font-semibold text-on-surface">
+                      {selectedService.name}
+                    </p>
                     {vehicleInfo.licensePlate && (
                       <p className="text-body-md text-on-surface-variant">
                         {vehicleInfo.licensePlate}
-                        {vehicleInfo.customerName ? ` • ${vehicleInfo.customerName}` : ""}
+                        {vehicleInfo.customerName
+                          ? ` • ${vehicleInfo.customerName}`
+                          : ""}
                       </p>
                     )}
                   </div>
@@ -766,13 +924,22 @@ export default function WalkInPage() {
                   </span>
                 </div>
               ) : (
-                <p className="pb-3 text-body-md text-on-surface-variant">No service selected</p>
+                <p className="pb-3 text-body-md text-on-surface-variant">
+                  No service selected
+                </p>
               )}
 
               {selectedAddons.map((addon) => (
-                <div key={addon.id} className="flex items-center justify-between gap-2 pb-3">
-                  <p className="text-body-md font-medium text-on-surface">{addon.name}</p>
-                  <span className="text-body-md font-medium text-on-surface">{formatVND(addon.price)}</span>
+                <div
+                  key={addon.id}
+                  className="flex items-center justify-between gap-2 pb-3"
+                >
+                  <p className="text-body-md font-medium text-on-surface">
+                    {addon.name}
+                  </p>
+                  <span className="text-body-md font-medium text-on-surface">
+                    {formatVND(addon.price)}
+                  </span>
                 </div>
               ))}
 
@@ -780,7 +947,8 @@ export default function WalkInPage() {
                 <div className="mt-2 flex items-center gap-2 rounded-lg bg-surface-container-low px-3 py-2.5 text-body-md text-on-surface">
                   <Calendar size={16} className="text-on-surface-variant" />
                   <span>
-                    Today • {selectedSlot.startTime.slice(0, 5)} – {selectedSlot.endTime.slice(0, 5)}
+                    Today • {selectedSlot.startTime.slice(0, 5)} –{" "}
+                    {selectedSlot.endTime.slice(0, 5)}
                   </span>
                 </div>
               )}
@@ -790,51 +958,77 @@ export default function WalkInPage() {
               {summary ? (
                 <>
                   <div className="flex items-center justify-between pb-2">
-                    <span className="text-body-md text-on-surface-variant">Base Price</span>
-                    <span className="text-body-md text-on-surface">{formatVND(summary.rawAmount)}</span>
+                    <span className="text-body-md text-on-surface-variant">
+                      Base Price
+                    </span>
+                    <span className="text-body-md text-on-surface">
+                      {formatVND(summary.rawAmount)}
+                    </span>
                   </div>
                   {summary.packageDiscount > 0 && (
                     <div className="flex items-center justify-between pb-2">
-                      <span className="text-body-md text-on-surface-variant">Package Discount</span>
-                      <span className="text-body-md text-error">-{formatVND(summary.packageDiscount)}</span>
+                      <span className="text-body-md text-on-surface-variant">
+                        Package Discount
+                      </span>
+                      <span className="text-body-md text-error">
+                        -{formatVND(summary.packageDiscount)}
+                      </span>
                     </div>
                   )}
                   {summary.penaltyDeposit > 0 && (
                     <div className="flex items-center justify-between pb-2">
-                      <span className="text-body-md text-error">Penalty Deposit</span>
-                      <span className="text-body-md text-error">-{formatVND(summary.penaltyDeposit)}</span>
+                      <span className="text-body-md text-error">
+                        Penalty Deposit
+                      </span>
+                      <span className="text-body-md text-error">
+                        -{formatVND(summary.penaltyDeposit)}
+                      </span>
                     </div>
                   )}
                   {summary.transferredCredit > 0 && (
                     <div className="flex items-center justify-between pb-2">
-                      <span className="text-body-md text-on-surface-variant">Transferred Credit</span>
-                      <span className="text-body-md text-error">-{formatVND(summary.transferredCredit)}</span>
+                      <span className="text-body-md text-on-surface-variant">
+                        Transferred Credit
+                      </span>
+                      <span className="text-body-md text-error">
+                        -{formatVND(summary.transferredCredit)}
+                      </span>
                     </div>
                   )}
                 </>
               ) : (
                 <div className="flex items-center justify-between pb-2">
-                  <span className="text-body-md text-on-surface-variant">Subtotal</span>
-                  <span className="text-body-md text-on-surface">{formatVND(computedSubTotal)}</span>
+                  <span className="text-body-md text-on-surface-variant">
+                    Subtotal
+                  </span>
+                  <span className="text-body-md text-on-surface">
+                    {formatVND(computedSubTotal)}
+                  </span>
                 </div>
               )}
 
               <div className="mt-3 mb-5 border-t border-outline-variant" />
 
               <div className="flex items-center justify-between pb-6">
-                <span className="text-body-lg font-semibold text-on-surface">Total Due</span>
-                <span className="text-headline-md text-primary">{formatVND(displayTotal)}</span>
+                <span className="text-body-lg font-semibold text-on-surface">
+                  Total Due
+                </span>
+                <span className="text-headline-md text-primary">
+                  {formatVND(displayTotal)}
+                </span>
               </div>
 
-              {summary?.systemNotice && summary.systemNotice !== "Provisional invoice valid" && (
-                <p className="mb-3 rounded-lg bg-amber-50 px-3 py-2 text-body-md text-amber-700">
-                  {summary.systemNotice}
-                </p>
-              )}
+              {summary?.systemNotice &&
+                summary.systemNotice !== "Provisional invoice valid" && (
+                  <p className="mb-3 rounded-lg bg-amber-50 px-3 py-2 text-body-md text-amber-700">
+                    {summary.systemNotice}
+                  </p>
+                )}
               {summary?.actionBlock && !depositCollected && (
                 <div className="mb-3 flex flex-col gap-2 rounded-lg border border-error bg-error-container px-3 py-2">
                   <p className="text-body-md font-semibold text-on-error-container">
-                    A {formatVND(summary.penaltyDeposit)} penalty deposit is required before confirming
+                    A {formatVND(summary.penaltyDeposit)} penalty deposit is
+                    required before confirming
                   </p>
                   <button
                     type="button"
@@ -879,14 +1073,26 @@ export default function WalkInPage() {
             <div className="flex size-16 shrink-0 items-center justify-center rounded-[8px] border border-primary/10 bg-primary/5 mb-3">
               <Check className="size-6 text-primary" />
             </div>
-            <h2 className="text-headline-md text-on-surface mb-1">Booking Confirmed!</h2>
-            <p className="text-body-md text-on-surface-variant mb-6">Vehicle is waiting for staff check-in at the counter</p>
+            <h2 className="text-headline-md text-on-surface mb-1">
+              Booking Confirmed!
+            </h2>
+            <p className="text-body-md text-on-surface-variant mb-6">
+              Vehicle is waiting for staff check-in at the counter
+            </p>
             <div className="w-full rounded-xl p-6 bg-surface-container-low border border-outline-variant/30 mb-6">
-              <p className="text-label-md font-semibold text-outline mb-1">Ticket Number</p>
-              <p className="text-4xl font-bold text-primary tracking-widest">{ticketNumber}</p>
+              <p className="text-label-md font-semibold text-outline mb-1">
+                Ticket Number
+              </p>
+              <p className="text-4xl font-bold text-primary tracking-widest">
+                {ticketNumber}
+              </p>
               <div className="border-t border-outline-variant mt-4 pt-4">
-                <p className="text-body-md text-on-surface-variant">Remaining Balance</p>
-                <p className="text-headline-md text-on-surface">{formatVND(remainingBalance)}</p>
+                <p className="text-body-md text-on-surface-variant">
+                  Remaining Balance
+                </p>
+                <p className="text-headline-md text-on-surface">
+                  {formatVND(remainingBalance)}
+                </p>
               </div>
             </div>
             <button
@@ -910,9 +1116,9 @@ export default function WalkInPage() {
         message={
           <div className="flex flex-col gap-3 text-left">
             <p>
-              This vehicle has an active violation restriction. Staff must collect a{" "}
-              {formatVND(summary?.penaltyDeposit ?? 0)} cash deposit at the counter before the
-              vehicle can be checked into the queue.
+              This vehicle has an active violation restriction. Staff must
+              collect a {formatVND(summary?.penaltyDeposit ?? 0)} cash deposit
+              at the counter before the vehicle can be checked into the queue.
             </p>
             <div>
               <label className="text-label-md font-semibold text-on-surface-variant mb-1.5 block">
@@ -929,7 +1135,9 @@ export default function WalkInPage() {
                 className="w-full rounded-xl px-3 py-2.5 text-body-md border border-outline-variant outline-none focus:border-primary bg-surface-container-lowest text-on-surface"
               />
               {depositModalError && (
-                <p className="text-body-md text-error mt-1.5">{depositModalError}</p>
+                <p className="text-body-md text-error mt-1.5">
+                  {depositModalError}
+                </p>
               )}
             </div>
           </div>

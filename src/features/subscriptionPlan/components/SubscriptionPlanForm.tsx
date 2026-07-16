@@ -1,7 +1,6 @@
 import { useEffect, useState, type ReactNode } from "react";
 import { CarFront, ChevronDown, Info, Save, Tag } from "lucide-react";
 import { getApiErrorInfo } from "../../../lib/axiosClient";
-import { getSubscriptionTypeLabel } from "../../../constants/subscriptionStyles";
 import {
   create,
   getServicePackageOptions,
@@ -13,8 +12,6 @@ import {
   type PlanType,
   type ServicePackageOption,
 } from "../types/subscriptionPlan";
-
-const STATUSES: PlanStatus[] = ["ACTIVE", "INACTIVE"];
 
 // Style dùng chung cho input/select/label, theo đúng token trong index.css (@theme) +
 // pattern đã có sẵn ở VehicleForm.tsx (text-body-md, rounded-lg, border-outline-variant)
@@ -157,9 +154,7 @@ export default function SubscriptionPlanForm({
   );
   // maxVehicleCount không còn state riêng - FAMILY cố định = 5, UNLIMIT cố định = 1,
   // FE tự gán khi submit (xem payload bên dưới), không cho admin nhập tự do.
-  const [status, setStatus] = useState<PlanStatus>(
-    initialData?.status ?? "ACTIVE",
-  );
+  const [status] = useState<PlanStatus>(initialData?.status ?? "ACTIVE");
 
   const [servicePackages, setServicePackages] = useState<
     ServicePackageOption[]
@@ -317,20 +312,6 @@ export default function SubscriptionPlanForm({
               ))}
             </SelectField>
 
-            {/* planType không cho sửa: Create khoá theo loại đã chọn ở màn trước
-                (SubscriptionPlanTypeSelect), Edit hiển thị read-only - không cho đổi qua lại
-                loại nữa (BE không hỗ trợ update planType). */}
-            {isEditMode && (
-              <div>
-                <label className={labelClass}>Plan Type</label>
-                <div
-                  className={`${inputClass(false)} flex items-center bg-surface-container-high text-on-surface-variant`}
-                >
-                  {getSubscriptionTypeLabel(planType)}
-                </div>
-              </div>
-            )}
-
             <div>
               <label className={labelClass}>Description</label>
               <textarea
@@ -372,42 +353,24 @@ export default function SubscriptionPlanForm({
             </SelectField>
           </FormSection>
 
-          {/* FAMILY: hiện maxVehicleCount readonly = 5. UNLIMIT: ẩn hoàn toàn (luôn gửi 1).
-              Status chỉ cho sửa ở Edit mode. */}
-          {(planType === "FAMILY" || isEditMode) && (
-            <FormSection icon={<CarFront size={18} />} title="Membership Rules">
-              {planType === "FAMILY" && (
-                <div>
-                  <label className={labelClass}>Max Vehicles</label>
-                  {/* Readonly = 5, cố định theo spec - FE tự gán, không cho nhập tự do */}
-                  <div
-                    className={`${inputClass(false)} flex items-center justify-between bg-surface-container-high text-on-surface-variant`}
-                  >
-                    <span>5</span>
-                    <span className="text-label-sm">cars</span>
-                  </div>
-                  <p className="mt-1.5 text-label-sm text-on-surface-variant">
-                    Fixed at 5 vehicles for all Family plans.
-                  </p>
-                </div>
-              )}
-
-              {/* AC02 US-03: status chỉ cho sửa ở màn Edit */}
-              {isEditMode && (
-                <SelectField
-                  label="Status"
-                  value={status}
-                  onChange={(e) => setStatus(e.target.value as PlanStatus)}
-                >
-                  {STATUSES.map((s) => (
-                    <option key={s} value={s}>
-                      {s}
-                    </option>
-                  ))}
-                </SelectField>
-              )}
-            </FormSection>
-          )}
+          {/* Membership Rules: luôn hiện cho cả UNLIMIT (1 xe) và FAMILY (5 xe) */}
+          <FormSection icon={<CarFront size={18} />} title="Membership Rules">
+            <div>
+              <label className={labelClass}>Max Vehicles</label>
+              {/* Readonly — FE tự gán khi submit, không cho admin nhập tự do */}
+              <div
+                className={`${inputClass(false)} flex items-center justify-between bg-surface-container-high text-on-surface-variant`}
+              >
+                <span>{planType === "FAMILY" ? 5 : 1}</span>
+                <span className="text-label-sm">cars</span>
+              </div>
+              <p className="mt-1.5 text-label-sm text-on-surface-variant">
+                {planType === "FAMILY"
+                  ? "Fixed at 5 vehicles for all Family plans."
+                  : "Fixed at 1 vehicle for all Unlimited plans."}
+              </p>
+            </div>
+          </FormSection>
         </div>
       </div>
 
@@ -418,7 +381,7 @@ export default function SubscriptionPlanForm({
           type="button"
           onClick={onCancel}
           disabled={isSubmitting}
-          className="text-body-md font-semibold text-on-surface-variant transition-colors hover:text-on-surface disabled:opacity-50"
+          className="rounded-lg border border-outline-variant px-5 py-2.5 text-sm font-semibold text-on-surface transition-colors hover:bg-surface-ice disabled:opacity-50"
         >
           Cancel
         </button>

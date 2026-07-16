@@ -277,6 +277,16 @@ export default function PaymentPage() {
               >
                 Back to Queue
               </button>
+              {/*<button*/}
+              {/*  onClick={() =>*/}
+              {/*    navigate("/staff/queue", {*/}
+              {/*      state: { paidBookingId: bookingId },*/}
+              {/*    })*/}
+              {/*  }*/}
+              {/*  className="flex-1 py-3 rounded-xl text-sm font-semibold bg-primary text-on-primary transition"*/}
+              {/*>*/}
+              {/*  Done*/}
+              {/*</button>*/}
             </div>
           </div>
         </div>

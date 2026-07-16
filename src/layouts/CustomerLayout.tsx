@@ -1,5 +1,5 @@
 import { useEffect } from "react";
-import { Outlet, useLocation } from "react-router-dom";
+import { Outlet, useLocation, useNavigate } from "react-router-dom";
 import CustomerHeader from "./CustomerHeader";
 import CustomerFooter from "./CustomerFooter";
 import { useAuth } from "../hooks/useAuth";
@@ -26,6 +26,7 @@ function BackButtonWrapper() {
  */
 export default function CustomerLayout() {
   const { isAuthenticated, user, logout, updateUserName } = useAuth();
+  const navigate = useNavigate();
 
   // API login trả về "name" chung (đôi khi là tên tài khoản hệ thống, không phải tên thật
   // của customer) - fetch lại profile thật để header luôn hiện đúng firstName + lastName,
@@ -58,7 +59,10 @@ export default function CustomerLayout() {
               }
             : undefined
         }
-        onLogout={logout}
+        onLogout={() => {
+          logout();
+          navigate("/");
+        }}
       />
 
       <main className="flex-1">

@@ -18,6 +18,7 @@ import {
 import { getApiErrorInfo } from "../../../lib/axiosClient";
 import type { ServicePackage, AddonService } from "../types/servicePackage";
 import Modal from "../../../components/ui/Modal";
+import { useRequireAuth } from "../../../hooks/useRequireAuth";
 
 /* ================================================================
    Sub-component: 1 card gói dịch vụ
@@ -139,7 +140,9 @@ function PackageCard({
 export default function ServicePackageList() {
   const navigate = useNavigate();
   const location = useLocation();
-  const { user, isAuthenticated } = useAuth();
+  const { user } = useAuth();
+  const { requireAuth, authModal } = useRequireAuth();
+
   const isAdmin = user?.role === "ADMIN";
 
   const [packages, setPackages] = useState<ServicePackage[]>([]);
@@ -196,11 +199,7 @@ export default function ServicePackageList() {
 
   /* Customer: bấm Select → bắt đầu luồng đặt lịch */
   function handleSelectPackage() {
-    if (isAuthenticated) {
-      navigate("/booking/location");
-    } else {
-      navigate("/login", { state: { from: "/booking/location" } });
-    }
+    requireAuth("/booking/location");
   }
 
   /* Admin: navigate sang trang edit, truyền package data qua state */
@@ -239,6 +238,9 @@ export default function ServicePackageList() {
 
   return (
     <div className="mx-auto max-w-container-max px-4 py-20 md:px-12">
+      {/* Popup yêu cầu đăng nhập khi bấm Select lúc chưa login */}
+      {authModal}
+
       {/* Thông báo thành công */}
       <Modal
         isOpen={!!toast}

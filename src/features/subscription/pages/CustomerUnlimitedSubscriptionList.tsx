@@ -1,7 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { useNavigate } from "react-router-dom";
 import { CalendarClock, CheckCircle2, XCircle } from "lucide-react";
-import { useAuth } from "../../../hooks/useAuth";
 import { formatCurrency } from "../../../utils";
 
 import { getPlans } from "../api/subscriptionApi";
@@ -14,6 +12,7 @@ import type {
   AddonService,
   ServicePackage,
 } from "../../servicepackage/types/servicePackage";
+import { useRequireAuth } from "../../../hooks/useRequireAuth";
 
 // Nora: kỳ hạn hiện có cho gói Unlimited - khớp data.sql (mỗi combo Basic/Premium
 // luôn có đủ 1/3/6 tháng), dùng cho toggle chọn kỳ hạn ở đầu section Unlimited.
@@ -121,8 +120,8 @@ function UnlimitedPlanCard({
 }
 
 export default function SubscriptionPlanList() {
-  const navigate = useNavigate();
-  const { isAuthenticated } = useAuth();
+  const { requireAuth, authModal } = useRequireAuth();
+
   const [plans, setPlans] = useState<CustomerSubscriptionPlan[]>([]);
   // Chỉ dùng để lấy addons thật (checklist) cho card Unlimited - lỗi ở call này không
   // nên chặn cả trang, nên catch riêng và fallback [] (card Unlimited vẫn hiện, chỉ
@@ -200,22 +199,21 @@ export default function SubscriptionPlanList() {
   // FE-60-US-02.1: chưa login -> chuyển sang /login kèm "from" để quay lại đúng bước
   // chọn xe sau khi login, giống pattern handleSelectPackage ở ServicePackageList.tsx.
   function handleSubscribe(planId: number) {
-    const target = `/subscription-plans/${planId}/register`;
-    if (isAuthenticated) {
-      navigate(target);
-    } else {
-      navigate("/login", { state: { from: target } });
-    }
+    requireAuth(`/subscription-plans/${planId}/register`);
   }
 
   return (
     <div className="max-w-page mx-auto px-margin-mobile py-16 md:px-margin-desktop">
+      {/* Popup yêu cầu đăng nhập khi bấm Booking Now lúc chưa login */}
+      {authModal}
+
       <div className="text-center">
         <h1 className="font-heading text-headline-lg text-on-surface">
-          Membership Plans
+          Unlimited Subscription Plans
         </h1>
         <p className="mt-3 text-body-md text-on-surface-variant">
-          Wash more, pay less. Choose the membership that fits your household.
+          Wash more, pay less. Choose the unlimited plan that fits your
+          household.
         </p>
       </div>
 

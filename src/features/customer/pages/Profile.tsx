@@ -11,7 +11,6 @@ import {
   MoreVertical,
   Phone,
   Plus,
-  Trophy,
   User,
   X,
   Check,
@@ -23,7 +22,6 @@ import {
 } from "../api/profileApi";
 import type {
   CustomerProfileData,
-  CustomerTier,
   CustomerVehicle,
   UpdateProfileRequest,
 } from "../types/profile";
@@ -38,73 +36,6 @@ function formatBirthday(iso: string): string {
   if (!iso) return "";
   const [year, month, day] = iso.split("-");
   return `${month}/${day}/${year}`;
-}
-
-// ─── Sub-component: Tier progress card ───────────────────────────────────────
-function TierCard({
-  tier,
-  onClick,
-}: {
-  tier: CustomerTier;
-  onClick?: () => void;
-}) {
-  const style = getTierStyle(tier.currentTierName);
-
-  return (
-    <div
-      onClick={onClick}
-      className="cursor-pointer rounded-2xl border border-outline-variant/30 bg-white p-5 shadow-[0_10px_25px_-5px_rgba(29,78,216,0.05)]"
-    >
-      {/* Header: label + tên tier hiện tại */}
-      <div className="mb-4 flex items-center justify-between">
-        <div className="flex items-center gap-2">
-          <Trophy className="size-4 text-primary" />
-          <span className="text-xs font-semibold uppercase tracking-widest text-on-surface-variant">
-            Current Tier
-          </span>
-        </div>
-        <span className={`text-sm font-bold ${style.label}`}>
-          {normalizeTierName(tier.currentTierName)}
-        </span>
-      </div>
-
-      {/* Progress bar
-      <div className="mb-2 h-2.5 overflow-hidden rounded-full bg-outline-variant/30">
-        <div
-          className={`h-full rounded-full transition-all ${style.bar}`}
-          style={{ width: `${progress}%` }}
-        />
-      </div> */}
-
-      <div className="mb-4 flex items-center justify-between">
-        <div className="flex items-center gap-2">
-          <Coins className="size-4 text-primary" />
-          <span className="text-xs font-semibold uppercase tracking-widest text-on-surface-variant">
-            Current Points
-          </span>
-          {/* Nhãn điểm hai đầu */}
-        </div>
-
-        <span>
-          {tier.currentPoints.toLocaleString()}
-          {/* {tier.nextTierMinPoints && (
-      <span>{tier.nextTierMinPoints.toLocaleString()} pts</span>
-    )} */}
-        </span>
-      </div>
-
-      {/* Thông tin cần bao nhiêu điểm để lên tier tiếp */}
-      {/* {tier.pointsToNextTier != null && tier.nextTierName ? (
-        <div className="rounded-lg border border-outline-variant/40 py-2 text-center text-sm font-semibold text-primary">
-          {tier.pointsToNextTier.toLocaleString()} pts to {tier.nextTierName}
-        </div>
-      ) : (
-        <div className="rounded-lg border border-outline-variant/40 py-2 text-center text-sm font-semibold text-on-surface-variant">
-          Maximum Tier Reached
-        </div>
-      )} */}
-    </div>
-  );
 }
 
 // ─── Sub-component: 1 xe trong danh sách ─────────────────────────────────────
@@ -693,16 +624,26 @@ export default function CustomerProfile() {
                     </span>
                   )}
                 </div>
+
+                {/* Điểm hiện tại — click → loyalty page, giống TierCard cũ */}
+                {tier && (
+                  <button
+                    onClick={() => navigate("/customer/loyalty")}
+                    className="flex flex-col items-center gap-1 rounded-xl border border-outline-variant/30 bg-surface px-5 py-2.5 transition-colors hover:border-primary/40 hover:bg-primary/5"
+                  >
+                    <span className="text-xs font-semibold uppercase tracking-widest text-on-surface-variant">
+                      Current Points
+                    </span>
+                    <div className="flex items-center gap-1.5">
+                      <Coins className="size-4 text-primary" />
+                      <span className="text-lg font-bold text-on-surface">
+                        {tier.currentPoints.toLocaleString()}
+                      </span>
+                    </div>
+                  </button>
+                )}
               </div>
             </div>
-
-            {/* Tier progress card (ẩn khi tier === null — BE chưa code) */}
-            {tier && (
-              <TierCard
-                tier={tier}
-                onClick={() => navigate("/customer/loyalty")}
-              />
-            )}
           </div>
 
           {/* ═══ CỘT PHẢI: form + vehicles ══════════════════════════════════ */}

@@ -6,7 +6,7 @@ import {
   PiggyBank,
 } from "lucide-react";
 import { useLocation, useNavigate } from "react-router-dom";
-import { useAuth } from "../../../hooks/useAuth";
+import { useRequireAuth } from "../../../hooks/useRequireAuth";
 import Modal from "../../../components/ui/Modal";
 
 // === ẢNH các section khác: tự import file ảnh thật vào đây khi có ===
@@ -18,15 +18,9 @@ import familySubscriptionImg from "../../../assets/familySubscription.jpg";
 const Home = () => {
   const location = useLocation();
   const navigate = useNavigate();
-  const { isAuthenticated } = useAuth();
+  const { requireAuth, authModal } = useRequireAuth();
 
-  const handleBookingNowClick = () => {
-    if (isAuthenticated) {
-      navigate("/booking/location");
-    } else {
-      navigate("/login", { state: { from: "/booking/location" } });
-    }
-  };
+  const handleBookingNowClick = () => requireAuth("/booking/location");
 
   const [toastMessage, setToastMessage] = useState<string | null>(() => {
     const state = location.state as {
@@ -45,12 +39,14 @@ const Home = () => {
 
   useEffect(() => {
     if (!toastMessage) return;
-    const timer = setTimeout(() => setToastMessage(null), 3000);
+    const timer = setTimeout(() => setToastMessage(null), 500);
     return () => clearTimeout(timer);
   }, [toastMessage]);
 
   return (
     <div className="w-full bg-surface">
+      {/* Popup yêu cầu đăng nhập khi bấm Booking Now lúc chưa login */}
+      {authModal}
       {/* Thay cho đoạn JSX overlay viết tay trước đây - giờ chỉ cần field
           title/message vào Modal chung, variant="success" tự lo icon Lime Green + nút */}
       <Modal

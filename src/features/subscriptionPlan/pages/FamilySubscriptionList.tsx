@@ -24,6 +24,7 @@ import type {
   CurrentGroup,
 } from "../types/subscriptionPlan";
 import type { AddonService } from "../../addon/types/addon";
+import { useRequireAuth } from "../../../hooks/useRequireAuth";
 
 /* ================================================================
    Hằng số
@@ -314,6 +315,7 @@ export default function FamilySubscriptionList() {
   const location = useLocation();
   const { user, isAuthenticated } = useAuth();
   const isAdmin = user?.role === "ADMIN";
+  const { requireAuth, authModal } = useRequireAuth();
 
   /* ---- State data ---- */
   const [plans, setPlans] = useState<FamilySubscriptionPlan[]>([]);
@@ -336,6 +338,11 @@ export default function FamilySubscriptionList() {
   const [planToDelete, setPlanToDelete] =
     useState<FamilySubscriptionPlan | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
+
+  /* ---- State: modal xác nhận đổi gói khi đang có ACTIVE subscription ---- */
+  const [pendingPlan, setPendingPlan] = useState<FamilySubscriptionPlan | null>(
+    null,
+  );
 
   /* ---- Filter tab ---- */
   const [activeTab, setActiveTab] = useState<TabType>("1-Month");
@@ -413,20 +420,8 @@ export default function FamilySubscriptionList() {
     [allAddons, visibleAddonIds],
   );
 
-  /* ---- Handler: chọn gói — gọi API-17-02 cho purchase/renew ---- */
-  const handleSelectPlan = async (
-    plan: FamilySubscriptionPlan,
-    action: "purchase" | "renew" | "login" | "create-group",
-  ) => {
-    if (action === "login") {
-      navigate("/login", { state: { from: "/subscription/family" } });
-      return;
-    }
-    if (action === "create-group") {
-      navigate("/family/create");
-      return;
-    }
-
+  /* ---- Thực sự gọi API sau khi user xác nhận (dùng chung cho cả 2 case) ---- */
+  const proceedWithPlan = async (plan: FamilySubscriptionPlan) => {
     if (!currentGroup) return;
 
     setIsRegistering(true);
@@ -469,6 +464,37 @@ export default function FamilySubscriptionList() {
     }
   };
 
+  /* ---- Handler: chọn gói ---- */
+  const handleSelectPlan = async (
+    plan: FamilySubscriptionPlan,
+    action: "purchase" | "renew" | "login" | "create-group",
+  ) => {
+    if (action === "login") {
+      requireAuth("/subscriptions/family/plans");
+      return;
+    }
+    if (action === "create-group") {
+      navigate("/family/create");
+      return;
+    }
+
+    if (!currentGroup) return;
+
+    /* Đang có gói ACTIVE + chọn gói KHÁC → hiện modal cảnh báo trước */
+    const hasActiveSubscription =
+      currentGroup.subscription?.status === "ACTIVE";
+    const isSamePlan =
+      currentGroup.subscription?.subscriptionPlanId === plan.id;
+
+    if (hasActiveSubscription && !isSamePlan) {
+      setPendingPlan(plan);
+      return;
+    }
+
+    /* Không có gói / chọn lại gói cũ / renew → đi thẳng */
+    await proceedWithPlan(plan);
+  };
+
   const handleEdit = (plan: FamilySubscriptionPlan) => {
     navigate(`/admin/subscription-plans/${plan.id}/edit`);
   };
@@ -497,6 +523,55 @@ export default function FamilySubscriptionList() {
   /* ================================================================ */
   return (
     <div className="mx-auto max-w-page px-margin-mobile py-20 md:px-margin-desktop">
+      {/* Popup yêu cầu đăng nhập khi bấm Booking Now lúc chưa login */}
+      {authModal}
+
+      {/* ---- Modal xác nhận đổi gói khi đang có ACTIVE subscription ---- */}
+      <Modal
+        isOpen={!!pendingPlan}
+        onClose={() => setPendingPlan(null)}
+        title="Switch Family Plan?"
+      >
+        <div className="space-y-4">
+          <p className="font-body text-body-md text-on-surface-variant">
+            You currently have an active Family plan. Purchasing{" "}
+            <strong className="text-on-surface">{pendingPlan?.planName}</strong>{" "}
+            will replace your existing plan immediately.
+          </p>
+          <p className="font-body text-body-md text-error">
+            Your current plan benefits will be lost and there is no refund for
+            the remaining time.
+          </p>
+          <div className="flex items-center justify-end gap-3 pt-2">
+            <button
+              type="button"
+              onClick={() => setPendingPlan(null)}
+              disabled={isRegistering}
+              className="rounded-lg border border-outline-variant px-5 py-2.5 font-body text-sm font-semibold text-on-surface transition-colors hover:bg-surface-container disabled:opacity-50"
+            >
+              Cancel
+            </button>
+            <button
+              type="button"
+              disabled={isRegistering}
+              onClick={async () => {
+                const plan = pendingPlan;
+                setPendingPlan(null);
+                if (plan) await proceedWithPlan(plan);
+              }}
+              className={`rounded-lg px-5 py-2.5 font-body text-sm font-semibold transition-colors
+                ${
+                  isRegistering
+                    ? "cursor-not-allowed bg-surface-container-high text-on-surface-variant"
+                    : "bg-primary text-on-primary hover:bg-primary/90"
+                }`}
+            >
+              {isRegistering ? "Processing..." : "Confirm"}
+            </button>
+          </div>
+        </div>
+      </Modal>
+
       {/* ---- Header ---- */}
       <div className="text-center">
         <h1 className="font-heading text-headline-lg font-bold text-on-surface">

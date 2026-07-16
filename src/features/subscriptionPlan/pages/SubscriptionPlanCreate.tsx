@@ -32,7 +32,7 @@ export default function SubscriptionPlanCreate() {
   }
 
   return (
-    <div className="mx-auto max-w-4xl">
+    <div className="mx-auto max-w-5xl px-margin-mobile py-20 md:px-margin-desktop">
       <h1 className="font-heading text-headline-lg text-on-surface">
         {config.title}
       </h1>

@@ -187,13 +187,12 @@ export default function AppRouter() {
               path="/admin/unlimited-subscriptions"
               element={<UnlimitedSubscriptionList />}
             />
-            <Route />
             <Route
               path="/admin/subscription-plans/:type/create"
               element={<SubscriptionPlanCreate />}
             />
             <Route
-              path="/admin/subscription-plans/:id/edit"
+              path="/admin/subscription-plans/:type/:id/edit"
               element={<SubscriptionPlanEdit />}
             />
             <Route path="/admin/wash-lanes" element={<WashLaneManagement />} />

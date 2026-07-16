@@ -1,4 +1,4 @@
-import { NavLink, useNavigate } from "react-router-dom";
+import { NavLink, useLocation, useNavigate } from "react-router-dom";
 import {
   Package,
   Puzzle,
@@ -25,11 +25,15 @@ const navItems = [
     path: "/admin/unlimited-subscriptions",
     label: "Unlimited Subscription",
     icon: InfinityIcon,
+    // Highlight khi đứng ở trang Create/Edit của loại Unlimited
+    matchPaths: ["/admin/subscription-plans/unlimited"],
   },
   {
     path: "/admin/family-subscriptions",
     label: "Family Subscription",
     icon: HeartHandshake,
+    // Highlight khi đứng ở trang Create/Edit của loại Family
+    matchPaths: ["/admin/subscription-plans/family"],
   },
   { path: "/admin/wash-lanes", label: "Wash Lane", icon: Waves },
   { path: "/admin/promotions", label: "Promotions", icon: Tag },
@@ -41,7 +45,19 @@ const navItems = [
 
 export default function AdminSidebar() {
   const navigate = useNavigate();
+  const { pathname } = useLocation();
   const { user, logout } = useAuth();
+
+  // Highlight khi đứng ở Create hoặc Edit của từng loại subscription plan —
+  // URL đã chứa type nên chỉ cần check pathname prefix, không cần đọc state
+  const extraActiveMap: Record<string, boolean> = {
+    "/admin/unlimited-subscriptions": pathname.startsWith(
+      "/admin/subscription-plans/unlimited",
+    ),
+    "/admin/family-subscriptions": pathname.startsWith(
+      "/admin/subscription-plans/family",
+    ),
+  };
 
   return (
     <aside className="fixed top-0 left-0 z-20 flex h-screen w-62 flex-col bg-surface-container-lowest border-r border-outline-variant">
@@ -59,13 +75,14 @@ export default function AdminSidebar() {
       <nav className="flex flex-col gap-1 flex-1 px-4 pt-2">
         {navItems.map((item) => {
           const Icon = item.icon;
+          const isExtraActive = extraActiveMap[item.path] ?? false;
           return (
             <NavLink
               key={item.path}
               to={item.path}
               className={({ isActive }) =>
                 `flex items-center gap-3 px-4 py-3 rounded-md text-sm font-medium transition-colors ${
-                  isActive
+                  isActive || isExtraActive
                     ? "bg-primary text-on-primary"
                     : "text-on-surface-variant hover:bg-surface-container hover:text-on-surface"
                 }`

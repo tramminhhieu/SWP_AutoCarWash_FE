@@ -843,10 +843,6 @@ export default function QueuePage() {
                         </div>
                         {selectedBooking?.id === b.id && (
                           <div className="flex items-center gap-1 mt-2 text-primary">
-                            <ChevronRight className="w-3 h-3" />
-                            <span className="text-xs font-medium">
-                              Selected
-                            </span>
                           </div>
                         )}
                       </div>

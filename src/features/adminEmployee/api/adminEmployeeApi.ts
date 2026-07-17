@@ -5,6 +5,7 @@ import type { ApiSuccessResponse } from "../../../types/apiResponse";
 import type {
   AdminEmployeeRow,
   AdminEmployeeDetail,
+  CreateEmployeePayload,
   EmployeeKpiSummary,
   UpdateEmployeePayload,
 } from "../types/adminEmployee";
@@ -42,6 +43,16 @@ export async function getAdminEmployeeDetail(
 ): Promise<AdminEmployeeDetail> {
   const res = await axiosClient.get<ApiSuccessResponse<AdminEmployeeDetail>>(
     API.EMPLOYEES.DETAIL(employeeId),
+  );
+  return res.data.data;
+}
+
+export async function createAdminEmployee(
+  payload: CreateEmployeePayload,
+): Promise<AdminEmployeeDetail> {
+  const res = await axiosClient.post<ApiSuccessResponse<AdminEmployeeDetail>>(
+    API.EMPLOYEES.CREATE,
+    payload,
   );
   return res.data.data;
 }

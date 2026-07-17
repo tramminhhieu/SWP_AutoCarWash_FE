@@ -4,11 +4,14 @@ import {
   ChevronLeft,
   ChevronRight,
   Pencil,
+  Plus,
   Save,
   Search,
   Trash2,
+  User,
   UserPlus,
   Users,
+  X,
 } from "lucide-react";
 import {
   deleteAdminEmployee,
@@ -30,6 +33,7 @@ import type {
 import { formatDateOnly } from "../../booking/utils/bookingFormatters";
 import Modal from "../../../components/ui/Modal";
 import { getApiErrorInfo } from "../../../lib/axiosClient";
+import EmployeeCreateModal from "../components/EmployeeCreateModal";
 
 const PAGE_SIZE = 10;
 
@@ -38,6 +42,10 @@ const STATUS_OPTIONS = [
   { value: "true", label: "Active" },
   { value: "false", label: "Inactive" },
 ];
+
+// Ô hiển thị read-only trong popup chi tiết - trông như input bị disable.
+const READ_ONLY_BOX =
+  "w-full rounded-lg border border-outline-variant/40 bg-[#F8FAFC] px-4 py-3 text-sm font-medium text-on-surface";
 
 const PHONE_PATTERN = /^0\d{9}$/;
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -83,8 +91,9 @@ function StatusPill({ active }: { active: boolean }) {
   );
 }
 
+// Cùng metric với READ_ONLY_BOX để View và Edit không nhảy kích thước khi đổi chế độ.
 function inputClass(error?: string) {
-  return `w-full rounded-lg border bg-white px-3 py-2 text-sm text-on-surface outline-none transition-colors ${
+  return `w-full rounded-lg border bg-white px-4 py-3 text-sm text-on-surface outline-none transition-colors ${
     error ? "border-error" : "border-outline-variant focus:border-primary"
   }`;
 }
@@ -175,7 +184,13 @@ export default function AdminEmployees() {
   const [isDeleting, setIsDeleting] = useState(false);
   const [deleteError, setDeleteError] = useState<string | null>(null);
 
-  // Danh sách chi nhánh cho dropdown khi sửa.
+  // Modal tạo nhân viên mới.
+  const [isCreateOpen, setIsCreateOpen] = useState(false);
+
+  // Project không có thư viện toast - dùng Modal variant="success" tự tắt.
+  const [toast, setToast] = useState<string | null>(null);
+
+  // Danh sách chi nhánh cho dropdown khi sửa/tạo mới.
   const [stations, setStations] = useState<AdminStationOption[]>([]);
 
   // Tăng lên mỗi lần cần buộc list fetch lại (sau khi sửa/xoá) dù filter/page không đổi.
@@ -313,9 +328,12 @@ export default function AdminEmployees() {
       size: PAGE_SIZE,
       keyword: appliedKeyword || undefined,
       active: active === "" ? undefined : active === "true",
-      provinceId: branchFilter?.level === "province" ? branchFilter.id : undefined,
-      communeId: branchFilter?.level === "commune" ? branchFilter.id : undefined,
-      stationId: branchFilter?.level === "station" ? branchFilter.id : undefined,
+      provinceId:
+        branchFilter?.level === "province" ? branchFilter.id : undefined,
+      communeId:
+        branchFilter?.level === "commune" ? branchFilter.id : undefined,
+      stationId:
+        branchFilter?.level === "station" ? branchFilter.id : undefined,
     })
       .then((res) => {
         if (!isMounted) return;
@@ -336,6 +354,12 @@ export default function AdminEmployees() {
       isMounted = false;
     };
   }, [page, appliedKeyword, active, branchFilter, refreshKey]);
+
+  useEffect(() => {
+    if (!toast) return;
+    const timer = setTimeout(() => setToast(null), 1000);
+    return () => clearTimeout(timer);
+  }, [toast]);
 
   // Danh sách chi nhánh cho dropdown khi sửa - load 1 lần.
   useEffect(() => {
@@ -420,6 +444,14 @@ export default function AdminEmployees() {
         >
           <Search className="size-4" />
           Search
+        </button>
+        <button
+          type="button"
+          onClick={() => setIsCreateOpen(true)}
+          className="ml-auto flex items-center gap-2 rounded-lg bg-primary px-4 py-2.5 text-sm font-semibold text-on-primary transition-opacity hover:opacity-90"
+        >
+          <Plus className="size-4" />
+          Add New
         </button>
       </div>
 
@@ -589,34 +621,53 @@ export default function AdminEmployees() {
           ) : (
             detail && (
               <>
-                <div className="flex items-center gap-4 border-b border-outline-variant pb-4">
-                  <div className="flex size-14 shrink-0 items-center justify-center rounded-full bg-primary-fixed text-xl font-bold text-on-primary-fixed">
-                    {detail.fullName?.[0]?.toUpperCase() ?? "?"}
+                <div className="border-b border-outline-variant/30 pb-4">
+                  <h2 className="font-heading text-xl font-bold text-on-surface">
+                    Employee Details
+                  </h2>
+                  <p className="mt-1 text-sm text-on-surface-variant">
+                    View and manage this staff account.
+                  </p>
+                </div>
+
+                {isEditing && saveError && (
+                  <div className="rounded-lg border border-error/30 bg-error/5 px-4 py-3 text-sm text-error">
+                    {saveError}
                   </div>
-                  <div>
-                    <p className="text-headline-md font-semibold text-on-surface">
+                )}
+
+                <div className="flex items-start gap-6">
+                  {/* Card trái: avatar + tên + trạng thái + ngày tạo - cùng dạng với
+                      popup Add New, đồng thời lấp khoảng trống giữa popup. */}
+                  <div className="flex w-[240px] shrink-0 flex-col items-center gap-3 rounded-2xl border border-outline-variant/30 bg-[#F8FAFC] p-6">
+                    <div className="flex size-24 items-center justify-center rounded-full border-2 border-primary/20 bg-primary/5">
+                      <User className="size-14 text-primary/40" />
+                    </div>
+                    <h3 className="text-center font-heading text-xl font-bold text-on-surface">
                       {detail.fullName}
-                    </p>
+                    </h3>
+                    {/* Card trái giữ y hệt ở cả View lẫn Edit -> popup không nhảy khi
+                        đổi chế độ. Account Status nằm trong lưới bên phải, không để ở đây. */}
                     <p className="text-xs text-on-surface-variant">
                       ID: {detail.employeeCode}
                     </p>
+                    <p className="text-xs text-on-surface-variant">
+                      Created {formatDateOnly(detail.createdAt)}
+                    </p>
                   </div>
-                </div>
 
-                {isEditing && form ? (
-                  <div className="flex flex-col gap-4">
-                    {saveError && (
-                      <div className="rounded-lg border border-error/30 bg-error-container px-4 py-3 text-on-error-container">
-                        {saveError}
-                      </div>
-                    )}
-
-                    <div className="grid grid-cols-2 gap-4">
-                      <FormField label="First Name" error={fieldErrors.firstName}>
+                  {isEditing && form ? (
+                    <div className="grid flex-1 grid-cols-2 gap-5">
+                      <FormField
+                        label="First Name"
+                        error={fieldErrors.firstName}
+                      >
                         <input
                           type="text"
                           value={form.firstName}
-                          onChange={(e) => updateField("firstName", e.target.value)}
+                          onChange={(e) =>
+                            updateField("firstName", e.target.value)
+                          }
                           className={inputClass(fieldErrors.firstName)}
                         />
                       </FormField>
@@ -624,7 +675,9 @@ export default function AdminEmployees() {
                         <input
                           type="text"
                           value={form.lastName}
-                          onChange={(e) => updateField("lastName", e.target.value)}
+                          onChange={(e) =>
+                            updateField("lastName", e.target.value)
+                          }
                           className={inputClass(fieldErrors.lastName)}
                         />
                       </FormField>
@@ -651,7 +704,7 @@ export default function AdminEmployees() {
                             onChange={(e) =>
                               updateField("stationId", e.target.value)
                             }
-                            className={`${inputClass(fieldErrors.stationId)} appearance-none pr-9`}
+                            className={`${inputClass(fieldErrors.stationId)} appearance-none pr-10`}
                           >
                             {stations.map((s) => (
                               <option key={s.id} value={String(s.id)}>
@@ -659,88 +712,81 @@ export default function AdminEmployees() {
                               </option>
                             ))}
                           </select>
-                          <ChevronDown className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-outline" />
+                          <ChevronDown className="pointer-events-none absolute right-3.5 top-1/2 size-4 -translate-y-1/2 text-on-surface-variant" />
                         </div>
                       </FormField>
                       <FormField label="Account Status">
                         <div className="relative">
                           <select
                             value={form.active}
-                            onChange={(e) => updateField("active", e.target.value)}
-                            className={`${inputClass()} appearance-none pr-9`}
+                            onChange={(e) =>
+                              updateField("active", e.target.value)
+                            }
+                            className={`${inputClass()} appearance-none pr-10`}
                           >
                             <option value="true">Active</option>
                             <option value="false">Inactive</option>
                           </select>
-                          <ChevronDown className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-outline" />
+                          <ChevronDown className="pointer-events-none absolute right-3.5 top-1/2 size-4 -translate-y-1/2 text-on-surface-variant" />
                         </div>
                       </FormField>
                     </div>
+                  ) : (
+                    // Cùng 6 ô, cùng thứ tự, cùng lưới với form Edit -> đổi chế độ chỉ
+                    // đổi đọc/sửa, không đổi bố cục. Nhãn nằm trên giá trị nên không
+                    // còn dải trắng rỗng chạy dọc giữa popup.
+                    <div className="grid flex-1 grid-cols-2 gap-5">
+                      <FormField label="First Name">
+                        <div className={`${READ_ONLY_BOX} truncate`}>
+                          {detail.firstName}
+                        </div>
+                      </FormField>
+                      <FormField label="Last Name">
+                        <div className={`${READ_ONLY_BOX} truncate`}>
+                          {detail.lastName}
+                        </div>
+                      </FormField>
+                      <FormField label="Email">
+                        <div className={`${READ_ONLY_BOX} truncate`}>
+                          {detail.email}
+                        </div>
+                      </FormField>
+                      <FormField label="Phone">
+                        <div className={READ_ONLY_BOX}>{detail.phone}</div>
+                      </FormField>
+                      <FormField label="Branch">
+                        <div className={`${READ_ONLY_BOX} truncate`}>
+                          {detail.stationName}
+                        </div>
+                      </FormField>
+                      <FormField label="Account Status">
+                        <div className={READ_ONLY_BOX}>
+                          <StatusPill
+                            active={detail.accountStatus === "ACTIVE"}
+                          />
+                        </div>
+                      </FormField>
+                    </div>
+                  )}
+                </div>
 
-                    <div className="flex justify-between border-t border-outline-variant pt-4">
-                      <span className="text-on-surface-variant">
-                        Created Date
-                      </span>
-                      <span className="font-semibold text-on-surface">
-                        {formatDateOnly(detail.createdAt)}
-                      </span>
-                    </div>
-                  </div>
-                ) : (
-                  <div className="flex flex-col gap-4 rounded-lg border border-outline-variant p-4">
-                    <div className="flex justify-between">
-                      <span className="text-on-surface-variant">Email</span>
-                      <span className="font-semibold text-on-surface">
-                        {detail.email}
-                      </span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-on-surface-variant">Phone</span>
-                      <span className="font-semibold text-on-surface">
-                        {detail.phone}
-                      </span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-on-surface-variant">Branch</span>
-                      <span className="font-semibold text-on-surface">
-                        {detail.stationName}
-                      </span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-on-surface-variant">
-                        Account Status
-                      </span>
-                      <StatusPill active={detail.accountStatus === "ACTIVE"} />
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-on-surface-variant">
-                        Created Date
-                      </span>
-                      <span className="font-semibold text-on-surface">
-                        {formatDateOnly(detail.createdAt)}
-                      </span>
-                    </div>
-                  </div>
-                )}
-
-                {/* Footer bar - -mx-8 -mb-8 để triệt tiêu padding của Modal, cho
-                    thanh nút dính sát mép dưới popup. */}
-                <div className="-mx-8 -mb-8 flex items-center justify-between rounded-b-2xl border-t border-outline-variant bg-surface-container-low px-8 py-4">
+                <div className="mt-2 flex justify-end gap-3">
                   {isEditing ? (
                     <>
                       <button
                         type="button"
                         onClick={cancelEditing}
                         disabled={isSaving}
-                        className="rounded-lg border border-outline-variant px-6 py-3 text-sm font-semibold text-on-surface hover:bg-surface-container disabled:opacity-50"
+                        className="flex items-center gap-2 rounded-lg border border-outline-variant px-5 py-2.5 text-sm font-semibold text-on-surface transition-colors hover:bg-surface-ice disabled:opacity-50"
                       >
+                        <X className="size-4" />
                         Cancel
                       </button>
                       <button
                         type="button"
                         onClick={handleSave}
                         disabled={isSaving}
-                        className="flex items-center justify-center gap-2 rounded-lg bg-primary px-6 py-3 text-sm font-semibold text-on-primary hover:opacity-90 disabled:opacity-50"
+                        className="flex items-center gap-2 rounded-lg bg-primary px-5 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-primary/90 disabled:opacity-70"
                       >
                         <Save className="size-4" />
                         {isSaving ? "Saving..." : "Save Changes"}
@@ -750,22 +796,22 @@ export default function AdminEmployees() {
                     <>
                       <button
                         type="button"
-                        onClick={startEditing}
-                        className="flex items-center justify-center gap-2 rounded-lg border border-primary px-6 py-3 text-sm font-semibold text-primary hover:bg-primary/5"
-                      >
-                        <Pencil className="size-4" />
-                        Edit
-                      </button>
-                      <button
-                        type="button"
                         onClick={() => {
                           setDeleteError(null);
                           setConfirmingDelete(true);
                         }}
-                        className="flex items-center justify-center gap-2 rounded-lg bg-error px-6 py-3 text-sm font-semibold text-on-error hover:opacity-90"
+                        className="flex items-center gap-2 rounded-lg bg-error px-5 py-2.5 text-sm font-semibold text-on-error transition-opacity hover:opacity-90"
                       >
                         <Trash2 className="size-4" />
                         Delete Employee
+                      </button>
+                      <button
+                        type="button"
+                        onClick={startEditing}
+                        className="flex items-center gap-2 rounded-lg bg-primary px-5 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-primary/90"
+                      >
+                        <Pencil className="size-4" />
+                        Edit
                       </button>
                     </>
                   )}
@@ -794,6 +840,28 @@ export default function AdminEmployees() {
         confirmText="Delete"
         onConfirm={handleDeleteConfirmed}
         isConfirmLoading={isDeleting}
+      />
+
+      {isCreateOpen && (
+        <EmployeeCreateModal
+          stations={stations}
+          onClose={() => setIsCreateOpen(false)}
+          onCreated={(fullName) => {
+            setIsCreateOpen(false);
+            setToast(`Employee ${fullName} created successfully!`);
+            // Nhân viên mới nhất nằm ở trang 1 - về đầu rồi mới refetch.
+            setPage(1);
+            setRefreshKey((k) => k + 1);
+          }}
+        />
+      )}
+
+      <Modal
+        isOpen={!!toast}
+        onClose={() => setToast(null)}
+        variant="success"
+        title="Success"
+        message={toast}
       />
     </div>
   );

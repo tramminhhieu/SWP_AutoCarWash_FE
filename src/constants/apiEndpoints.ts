@@ -124,6 +124,12 @@ export const API = {
     BOOKINGS: (customerId: number | string) =>
       `/api/customers/${customerId}/bookings`,
   },
+  EMPLOYEES: {
+    // GET admin employee list + KPI summary (?page=&size=&keyword=&active=&provinceId=&communeId=&stationId=)
+    LIST: "/api/employees",
+    // GET detail / PUT update / DELETE (admin only) - dùng chung 1 URL
+    DETAIL: (employeeId: number | string) => `/api/employees/${employeeId}`,
+  },
   ADDON_SERVICE: {
     // GET /api/addon-services - public, dùng để resolve tên add-on cho ServicePackage.addons
     LIST: "/api/addon-services",

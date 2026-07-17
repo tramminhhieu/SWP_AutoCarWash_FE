@@ -54,6 +54,7 @@ import PromotionEdit from "../features/promotion/pages/PromotionEdit";
 import AdminTransactionHistory from "../features/adminTransaction/pages/AdminTransactionHistory";
 import AdminCustomers from "../features/adminCustomer/pages/AdminCustomers";
 import AdminCustomerBookingHistory from "../features/adminCustomer/pages/AdminCustomerBookingHistory";
+import AdminEmployees from "../features/adminEmployee/pages/AdminEmployees";
 import SystemSettingList from "../features/systemSetting/pages/SystemSettingList";
 import SystemSettingCreate from "../features/systemSetting/pages/SystemSettingCreate";
 import SystemSettingEdit from "../features/systemSetting/pages/SystemSettingEdit";
@@ -218,6 +219,7 @@ export default function AppRouter() {
               path="/admin/customers/:customerId/bookings"
               element={<AdminCustomerBookingHistory />}
             />
+            <Route path="/admin/employees" element={<AdminEmployees />} />
             <Route
               path="/admin/system-settings"
               element={<SystemSettingList />}

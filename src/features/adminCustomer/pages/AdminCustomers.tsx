@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "../../../hooks/useAuth";
 import {
+  ChevronDown,
   ChevronLeft,
   ChevronRight,
   History,
@@ -332,50 +333,62 @@ export default function AdminCustomers() {
 
       {/* ─── Filter bar ───────────────────────────────────────────── */}
       <div className="flex flex-wrap items-center gap-3">
-        <select
-          value={year}
-          onChange={(e) => handleFilterChange(() => setYear(e.target.value))}
-          className="rounded-lg border border-outline-variant bg-white px-3 py-2 text-sm font-medium text-on-surface"
-        >
-          {YEAR_OPTIONS.map((opt) => (
-            <option key={opt.value} value={opt.value}>
-              {opt.label}
-            </option>
-          ))}
-        </select>
-        <select
-          value={month}
-          onChange={(e) => handleFilterChange(() => setMonth(e.target.value))}
-          className="rounded-lg border border-outline-variant bg-white px-3 py-2 text-sm font-medium text-on-surface"
-        >
-          {MONTH_OPTIONS.map((opt) => (
-            <option key={opt.value} value={opt.value}>
-              {opt.label}
-            </option>
-          ))}
-        </select>
-        <select
-          value={tier}
-          onChange={(e) => handleFilterChange(() => setTier(e.target.value))}
-          className="rounded-lg border border-outline-variant bg-white px-3 py-2 text-sm font-medium text-on-surface"
-        >
-          {TIER_OPTIONS.map((opt) => (
-            <option key={opt.value} value={opt.value}>
-              {opt.label}
-            </option>
-          ))}
-        </select>
-        <select
-          value={active}
-          onChange={(e) => handleFilterChange(() => setActive(e.target.value))}
-          className="rounded-lg border border-outline-variant bg-white px-3 py-2 text-sm font-medium text-on-surface"
-        >
-          {STATUS_OPTIONS.map((opt) => (
-            <option key={opt.value} value={opt.value}>
-              {opt.label}
-            </option>
-          ))}
-        </select>
+        <div className="relative">
+          <select
+            value={year}
+            onChange={(e) => handleFilterChange(() => setYear(e.target.value))}
+            className="appearance-none rounded-lg border border-outline-variant bg-white py-2 pl-3 pr-9 text-sm font-medium text-on-surface"
+          >
+            {YEAR_OPTIONS.map((opt) => (
+              <option key={opt.value} value={opt.value}>
+                {opt.label}
+              </option>
+            ))}
+          </select>
+          <ChevronDown className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-outline" />
+        </div>
+        <div className="relative">
+          <select
+            value={month}
+            onChange={(e) => handleFilterChange(() => setMonth(e.target.value))}
+            className="appearance-none rounded-lg border border-outline-variant bg-white py-2 pl-3 pr-9 text-sm font-medium text-on-surface"
+          >
+            {MONTH_OPTIONS.map((opt) => (
+              <option key={opt.value} value={opt.value}>
+                {opt.label}
+              </option>
+            ))}
+          </select>
+          <ChevronDown className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-outline" />
+        </div>
+        <div className="relative">
+          <select
+            value={tier}
+            onChange={(e) => handleFilterChange(() => setTier(e.target.value))}
+            className="appearance-none rounded-lg border border-outline-variant bg-white py-2 pl-3 pr-9 text-sm font-medium text-on-surface"
+          >
+            {TIER_OPTIONS.map((opt) => (
+              <option key={opt.value} value={opt.value}>
+                {opt.label}
+              </option>
+            ))}
+          </select>
+          <ChevronDown className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-outline" />
+        </div>
+        <div className="relative">
+          <select
+            value={active}
+            onChange={(e) => handleFilterChange(() => setActive(e.target.value))}
+            className="appearance-none rounded-lg border border-outline-variant bg-white py-2 pl-3 pr-9 text-sm font-medium text-on-surface"
+          >
+            {STATUS_OPTIONS.map((opt) => (
+              <option key={opt.value} value={opt.value}>
+                {opt.label}
+              </option>
+            ))}
+          </select>
+          <ChevronDown className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-outline" />
+        </div>
         {isAdmin && (
           <BranchFilterDropdown
             onChange={(sel) => handleFilterChange(() => setBranchFilter(sel))}

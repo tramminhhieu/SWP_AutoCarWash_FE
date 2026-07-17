@@ -467,7 +467,7 @@ export default function LoyaltyRewards() {
               return (
                 <div
                   key={tier.tierName}
-                  className={`relative flex flex-col gap-4 self-start overflow-hidden rounded-lg bg-white p-6 ${
+                  className={`relative flex flex-col gap-4 overflow-hidden rounded-lg bg-white p-6 ${
                     active
                       ? "border-2 border-primary shadow-[0_20px_25px_-5px_rgba(0,0,0,0.1),0_8px_10px_-6px_rgba(0,0,0,0.1)]"
                       : "border border-outline-variant"

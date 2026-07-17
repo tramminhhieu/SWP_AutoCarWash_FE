@@ -45,3 +45,10 @@ export interface UpdateEmployeePayload {
   stationId: number;
   active: boolean;
 }
+
+// Mirrors backend `staff/dto/request/CreateEmployeeRequest.java`, body của
+// POST /api/employees. Giống UpdateEmployeePayload nhưng thêm password: tạo nhân
+// viên là tạo cả tài khoản đăng nhập, admin tự đặt mật khẩu rồi báo lại cho họ.
+export interface CreateEmployeePayload extends UpdateEmployeePayload {
+  password: string;
+}

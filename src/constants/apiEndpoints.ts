@@ -127,6 +127,8 @@ export const API = {
   EMPLOYEES: {
     // GET admin employee list + KPI summary (?page=&size=&keyword=&active=&provinceId=&communeId=&stationId=)
     LIST: "/api/employees",
+    // POST - admin tạo nhân viên mới (trùng path với LIST, tách key cho rõ ý)
+    CREATE: "/api/employees",
     // GET detail / PUT update / DELETE (admin only) - dùng chung 1 URL
     DETAIL: (employeeId: number | string) => `/api/employees/${employeeId}`,
   },

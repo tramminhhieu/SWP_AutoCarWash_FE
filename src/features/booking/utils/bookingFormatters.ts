@@ -56,6 +56,18 @@ export function formatRefundedAt(iso: string): string {
 }
 
 /**
+ * Formats a backend ISO datetime into `"dd/MM/yyyy"`, e.g. `"12/07/2026"`.
+ * Khác `formatAppointmentDate` ở chỗ nhận ISO datetime đầy đủ (có phần giờ),
+ * không phải chuỗi `yyyy-MM-dd` thuần.
+ */
+export function formatDateOnly(iso: string): string {
+  const date = new Date(iso);
+  const dd = String(date.getDate()).padStart(2, "0");
+  const MM = String(date.getMonth() + 1).padStart(2, "0");
+  return `${dd}/${MM}/${date.getFullYear()}`;
+}
+
+/**
  * Derives the status to actually display (badge + refund captions) from a
  * booking's refund fields, instead of trusting the raw `status` string to
  * ever literally equal "REFUND_PENDING"/"REFUNDED" — the backend's "past"

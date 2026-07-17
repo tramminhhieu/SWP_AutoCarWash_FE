@@ -40,7 +40,7 @@ const navItems = [
   { path: "/admin/promotions", label: "Promotions", icon: Tag },
   { path: "/admin/transactions", label: "Transaction History", icon: Receipt },
   { path: "/admin/customers", label: "Customer", icon: Users },
-  { path: "/admin/employees", label: "Employee", icon: UserCog },
+  { path: "/admin/employees", label: "Staff", icon: UserCog },
   { path: "/admin/refunds", label: "Refund Management", icon: Banknote },
   { path: "/admin/system-settings", label: "System Setting", icon: Settings },
 ];

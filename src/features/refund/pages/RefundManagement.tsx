@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import {
+  ChevronDown,
   ChevronLeft,
   ChevronRight,
   Receipt,
@@ -229,57 +230,69 @@ export default function RefundManagement() {
 
       {/* ─── Filter bar ───────────────────────────────────────────── */}
       <div className="flex flex-wrap items-center gap-3">
-        <select
-          value={status}
-          onChange={(e) =>
-            handleFilterChange(() =>
-              setStatus(e.target.value as RefundStatus | ""),
-            )
-          }
-          className="rounded-lg border border-outline-variant bg-white px-3 py-2 text-sm font-medium text-on-surface"
-        >
-          {STATUS_OPTIONS.map((opt) => (
-            <option key={opt.value} value={opt.value}>
-              {opt.label}
-            </option>
-          ))}
-        </select>
-        <select
-          value={year}
-          onChange={(e) => handleFilterChange(() => setYear(e.target.value))}
-          className="rounded-lg border border-outline-variant bg-white px-3 py-2 text-sm font-medium text-on-surface"
-        >
-          {YEAR_OPTIONS.map((opt) => (
-            <option key={opt.value} value={opt.value}>
-              {opt.label}
-            </option>
-          ))}
-        </select>
-        <select
-          value={month}
-          onChange={(e) => handleFilterChange(() => setMonth(e.target.value))}
-          className="rounded-lg border border-outline-variant bg-white px-3 py-2 text-sm font-medium text-on-surface"
-        >
-          {MONTH_OPTIONS.map((opt) => (
-            <option key={opt.value} value={opt.value}>
-              {opt.label}
-            </option>
-          ))}
-        </select>
-        <select
-          value={stationId}
-          onChange={(e) =>
-            handleFilterChange(() => setStationId(e.target.value))
-          }
-          className="rounded-lg border border-outline-variant bg-white px-3 py-2 text-sm font-medium text-on-surface"
-        >
-          <option value="">All branches</option>
-          {stations.map((s) => (
-            <option key={s.id} value={String(s.id)}>
-              {s.stationName}
-            </option>
-          ))}
-        </select>
+        <div className="relative">
+          <select
+            value={status}
+            onChange={(e) =>
+              handleFilterChange(() =>
+                setStatus(e.target.value as RefundStatus | ""),
+              )
+            }
+            className="appearance-none rounded-lg border border-outline-variant bg-white py-2 pl-3 pr-9 text-sm font-medium text-on-surface"
+          >
+            {STATUS_OPTIONS.map((opt) => (
+              <option key={opt.value} value={opt.value}>
+                {opt.label}
+              </option>
+            ))}
+          </select>
+          <ChevronDown className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-outline" />
+        </div>
+        <div className="relative">
+          <select
+            value={year}
+            onChange={(e) => handleFilterChange(() => setYear(e.target.value))}
+            className="appearance-none rounded-lg border border-outline-variant bg-white py-2 pl-3 pr-9 text-sm font-medium text-on-surface"
+          >
+            {YEAR_OPTIONS.map((opt) => (
+              <option key={opt.value} value={opt.value}>
+                {opt.label}
+              </option>
+            ))}
+          </select>
+          <ChevronDown className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-outline" />
+        </div>
+        <div className="relative">
+          <select
+            value={month}
+            onChange={(e) => handleFilterChange(() => setMonth(e.target.value))}
+            className="appearance-none rounded-lg border border-outline-variant bg-white py-2 pl-3 pr-9 text-sm font-medium text-on-surface"
+          >
+            {MONTH_OPTIONS.map((opt) => (
+              <option key={opt.value} value={opt.value}>
+                {opt.label}
+              </option>
+            ))}
+          </select>
+          <ChevronDown className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-outline" />
+        </div>
+        <div className="relative">
+          <select
+            value={stationId}
+            onChange={(e) =>
+              handleFilterChange(() => setStationId(e.target.value))
+            }
+            className="appearance-none rounded-lg border border-outline-variant bg-white py-2 pl-3 pr-9 text-sm font-medium text-on-surface"
+          >
+            <option value="">All branches</option>
+            {stations.map((s) => (
+              <option key={s.id} value={String(s.id)}>
+                {s.stationName}
+              </option>
+            ))}
+          </select>
+          <ChevronDown className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-outline" />
+        </div>
       </div>
 
       {/* ─── Table ────────────────────────────────────────────────── */}

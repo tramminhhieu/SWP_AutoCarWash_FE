@@ -8,6 +8,7 @@ import {
   Tag,
   Receipt,
   Users,
+  UserCog,
   Settings,
   Banknote,
   HeartHandshake,
@@ -39,6 +40,7 @@ const navItems = [
   { path: "/admin/promotions", label: "Promotions", icon: Tag },
   { path: "/admin/transactions", label: "Transaction History", icon: Receipt },
   { path: "/admin/customers", label: "Customer", icon: Users },
+  { path: "/admin/employees", label: "Employee", icon: UserCog },
   { path: "/admin/refunds", label: "Refund Management", icon: Banknote },
   { path: "/admin/system-settings", label: "System Setting", icon: Settings },
 ];
@@ -71,8 +73,10 @@ export default function AdminSidebar() {
         </p>
       </div>
 
-      {/* Nav — spacing rộng, thoáng theo mockup */}
-      <nav className="flex flex-col gap-1 flex-1 px-4 pt-2">
+      {/* Nav — spacing rộng, thoáng theo mockup. min-h-0 để flex-1 thực sự co lại
+          thay vì giãn theo nội dung, cho phép overflow-y-auto cuộn khi danh sách
+          dài hơn viewport (không thì các mục cuối bị tràn ra ngoài, không cuộn tới được). */}
+      <nav className="flex min-h-0 flex-1 flex-col gap-1 overflow-y-auto px-4 pt-2">
         {navItems.map((item) => {
           const Icon = item.icon;
           const isExtraActive = extraActiveMap[item.path] ?? false;

@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import {
+  ChevronDown,
   ChevronLeft,
   ChevronRight,
   CircleCheck,
@@ -402,54 +403,63 @@ export default function AdminTransactionHistory() {
           onChange={(e) => handleFilterChange(() => setToDate(e.target.value))}
           className="rounded-lg border border-outline-variant bg-white px-3 py-2 text-sm font-medium text-on-surface"
         />
-        <select
-          value={method}
-          onChange={(e) =>
-            handleFilterChange(() =>
-              setMethod(e.target.value as AdminPaymentMethod | ""),
-            )
-          }
-          className="rounded-lg border border-outline-variant bg-white px-3 py-2 text-sm font-medium text-on-surface"
-        >
-          {METHOD_OPTIONS.map((opt) => (
-            <option key={opt.value} value={opt.value}>
-              {opt.label}
-            </option>
-          ))}
-        </select>
-        <select
-          value={status}
-          onChange={(e) =>
-            handleFilterChange(() =>
-              setStatus(e.target.value as AdminPaymentStatus | ""),
-            )
-          }
-          className="rounded-lg border border-outline-variant bg-white px-3 py-2 text-sm font-medium text-on-surface"
-        >
-          {STATUS_OPTIONS.map((opt) => (
-            <option key={opt.value} value={opt.value}>
-              {opt.label}
-            </option>
-          ))}
-        </select>
+        <div className="relative">
+          <select
+            value={method}
+            onChange={(e) =>
+              handleFilterChange(() =>
+                setMethod(e.target.value as AdminPaymentMethod | ""),
+              )
+            }
+            className="appearance-none rounded-lg border border-outline-variant bg-white py-2 pl-3 pr-9 text-sm font-medium text-on-surface"
+          >
+            {METHOD_OPTIONS.map((opt) => (
+              <option key={opt.value} value={opt.value}>
+                {opt.label}
+              </option>
+            ))}
+          </select>
+          <ChevronDown className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-outline" />
+        </div>
+        <div className="relative">
+          <select
+            value={status}
+            onChange={(e) =>
+              handleFilterChange(() =>
+                setStatus(e.target.value as AdminPaymentStatus | ""),
+              )
+            }
+            className="appearance-none rounded-lg border border-outline-variant bg-white py-2 pl-3 pr-9 text-sm font-medium text-on-surface"
+          >
+            {STATUS_OPTIONS.map((opt) => (
+              <option key={opt.value} value={opt.value}>
+                {opt.label}
+              </option>
+            ))}
+          </select>
+          <ChevronDown className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-outline" />
+        </div>
 
         {activeTab === "singleWash" && (
           <>
-            <select
-              value={typeFilter}
-              onChange={(e) =>
-                handleFilterChange(() =>
-                  setTypeFilter(e.target.value as SingleWashTypeFilter),
-                )
-              }
-              className="rounded-lg border border-outline-variant bg-white px-3 py-2 text-sm font-medium text-on-surface"
-            >
-              {TYPE_OPTIONS.map((opt) => (
-                <option key={opt.value} value={opt.value}>
-                  {opt.label}
-                </option>
-              ))}
-            </select>
+            <div className="relative">
+              <select
+                value={typeFilter}
+                onChange={(e) =>
+                  handleFilterChange(() =>
+                    setTypeFilter(e.target.value as SingleWashTypeFilter),
+                  )
+                }
+                className="appearance-none rounded-lg border border-outline-variant bg-white py-2 pl-3 pr-9 text-sm font-medium text-on-surface"
+              >
+                {TYPE_OPTIONS.map((opt) => (
+                  <option key={opt.value} value={opt.value}>
+                    {opt.label}
+                  </option>
+                ))}
+              </select>
+              <ChevronDown className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-outline" />
+            </div>
             {isAdmin && (
               <BranchFilterDropdown
                 onChange={(sel) =>

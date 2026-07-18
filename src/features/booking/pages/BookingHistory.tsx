@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "../../../hooks/useAuth";
 import { Calendar, Car, ChevronRight, CirclePlus } from "lucide-react";
 import { getPastBookings, getUpcomingBookings } from "../api/bookingApi";
@@ -14,6 +14,7 @@ import {
   maskAccount,
 } from "../utils/bookingFormatters";
 import { formatCurrency } from "../../../utils";
+import Modal from "../../../components/ui/Modal";
 
 function BookingCardItem({
   booking,
@@ -130,10 +131,31 @@ function BookingCardItem({
 
 export default function BookingHistory() {
   const { user } = useAuth();
+  const location = useLocation();
+  const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState<"upcoming" | "past">("upcoming");
   const [bookings, setBookings] = useState<BookingCard[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [successMessage, setSuccessMessage] = useState<string | null>(
+    (location.state as { successMessage?: string } | null)?.successMessage ??
+      null,
+  );
+
+  // Xóa message khỏi history state sau khi đã hiển thị, tránh F5 hiện lại
+  useEffect(() => {
+    if (location.state) {
+      navigate(location.pathname, { replace: true, state: null });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // Tự ẩn popup thành công sau 3s
+  useEffect(() => {
+    if (!successMessage) return;
+    const timer = setTimeout(() => setSuccessMessage(null), 3000);
+    return () => clearTimeout(timer);
+  }, [successMessage]);
 
   useEffect(() => {
     if (!user?.userId) return;
@@ -168,6 +190,14 @@ export default function BookingHistory() {
 
   return (
     <div className="mx-auto flex max-w-[1440px] flex-col gap-8 px-12 py-8">
+      {/* Thông báo đặt lịch + đặt cọc thành công, từ BookingPayment.tsx */}
+      <Modal
+        isOpen={!!successMessage}
+        onClose={() => setSuccessMessage(null)}
+        variant="success"
+        title="Success"
+        message={successMessage}
+      />
       <div className="flex items-end justify-between">
         <div className="flex flex-col gap-2">
           <h1 className="font-heading text-headline-xl font-bold tracking-[-1.2px] text-on-surface">

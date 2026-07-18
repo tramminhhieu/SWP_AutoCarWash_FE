@@ -34,9 +34,7 @@ export default function BookingPayment() {
   const bookingId = Number(bookingIdParam);
   const stationId = state?.stationId ?? null;
 
-  const [depositAmount] = useState<number | null>(
-    state?.depositAmount ?? null,
-  );
+  const [depositAmount] = useState<number | null>(state?.depositAmount ?? null);
   const [transferContent] = useState<string | null>(
     state?.transferContent ?? null,
   );
@@ -118,9 +116,9 @@ export default function BookingPayment() {
   useEffect(() => {
     if (!isConfirmed) return;
     if (stationId) clearBookingDraft(stationId);
-    navigate("/", {
+    navigate("/booking/history", {
       state: {
-        bookingSuccessMessage: `Booking confirmed! Booking ID: ${bookingId}.`,
+        successMessage: `Bosoking confirmed! Booking ID: ${bookingId}.`,
       },
     });
   }, [isConfirmed, bookingId, stationId, navigate]);

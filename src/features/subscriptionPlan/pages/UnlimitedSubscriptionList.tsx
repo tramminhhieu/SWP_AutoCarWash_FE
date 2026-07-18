@@ -1,13 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
-import {
-  CalendarClock,
-  CheckCircle2,
-  Pencil,
-  Plus,
-  Trash2,
-  XCircle,
-} from "lucide-react";
+import { CheckCircle2, Pencil, Plus, Trash2, XCircle } from "lucide-react";
 import Modal from "../../../components/ui/Modal";
 import { formatCurrency } from "../../../utils";
 import { getApiErrorInfo } from "../../../lib/axiosClient";
@@ -79,8 +72,10 @@ function PlanCard({
   onEdit: (plan: SubscriptionPlan) => void;
   onDelete: (plan: SubscriptionPlan) => void;
 }) {
-  const pricePerMonth = Math.round(plan.price / (plan.durationDays / 30));
-
+  function durationLabel(days: number): string {
+    const months = Math.round(days / 30);
+    return `${months} Month${months > 1 ? "s" : ""}`;
+  }
   return (
     <div className="flex flex-col rounded-2xl border border-outline-variant bg-surface-container-lowest p-8 shadow-soft transition-shadow hover:shadow-[0_10px_25px_-5px_rgba(29,78,216,0.1)]">
       <div className="flex-1">
@@ -98,32 +93,17 @@ function PlanCard({
           </span>
         )}
 
-        {/* Giá/tháng + tổng giá */}
-        <div className="mt-5 flex items-baseline gap-1.5">
+        {/* Tổng giá */}
+        <div className="mt-6 flex items-baseline gap-1">
           <span className="font-heading text-headline-md font-bold text-on-surface">
-            {formatCurrency(pricePerMonth)}
+            {formatCurrency(plan.price)}
           </span>
-          <span className="font-body text-body-md text-on-surface-variant">
-            /month
+          <span className="text-body-md text-on-surface-variant">
+            / {durationLabel(plan.durationDays)}
           </span>
         </div>
-        <p className="mt-1 font-body text-body-sm text-on-surface-variant">
-          {formatCurrency(plan.price)} total for {plan.durationDays / 30}{" "}
-          {plan.durationDays / 30 === 1 ? "month" : "months"}
-        </p>
 
         <div className="my-5 border-t border-outline-variant" />
-
-        {/* Chip thời hạn + tên service package */}
-        <div className="mb-4 flex flex-wrap gap-2">
-          <span className="inline-flex items-center gap-1.5 rounded-full bg-surface-container px-3 py-1.5 text-label-sm font-medium text-on-surface-variant">
-            <CalendarClock size={14} />
-            {plan.durationDays} days
-          </span>
-          <span className="inline-flex items-center rounded-full bg-surface-container px-3 py-1.5 text-label-sm font-medium text-on-surface-variant">
-            {plan.servicePackageName}
-          </span>
-        </div>
 
         {/* Checklist addon ✓/✗ — hiện tên đầy đủ từ AddonService */}
         {allAddons.length > 0 && (

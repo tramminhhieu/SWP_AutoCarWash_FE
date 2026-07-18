@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { CalendarClock, CheckCircle2, XCircle } from "lucide-react";
+import { CheckCircle2, XCircle } from "lucide-react";
 import { formatCurrency } from "../../../utils";
 
 import { getPlans } from "../api/subscriptionApi";
@@ -65,15 +65,7 @@ function UnlimitedPlanCard({
           </span>
         </div>
 
-        <div className="mt-4 flex flex-wrap gap-2">
-          <span className="inline-flex items-center gap-1.5 rounded-full bg-surface-container px-3 py-1.5 text-label-sm font-medium text-on-surface-variant">
-            <CalendarClock size={14} />
-            {variant.durationDays} days
-          </span>
-          <span className="inline-flex items-center rounded-full bg-surface-container px-3 py-1.5 text-label-sm font-medium text-on-surface-variant">
-            {variant.servicePackageName}
-          </span>
-        </div>
+        <div className="my-5 border-t border-outline-variant" />
 
         {allAddons.length > 0 && (
           <ul className="mt-6 space-y-2.5">

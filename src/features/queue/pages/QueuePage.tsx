@@ -101,6 +101,8 @@ interface CustomerResult {
 //   { id: 5, bookingId: 105, licensePlate: "MSu-2299", model: "Mazda CX-5", color: "Soul Red", service: "Express Clean", tier: "Guest", finishedAt: "", totalAmount: 45 },
 // ];
 
+const LICENSE_PLATE_REGEX = /^[0-9]{2}[A-HJ-NP-Z]{1,2}-[0-9]{4,5}$/;
+
 // author: Ngọc — map customerTier từ BE ("MEMBER"/"GOLD"/"SILVER"/"PLATINUM"/null)
 // sang giá trị tier mà UI đang dùng để tô màu badge (tierBadge)
 const mapTier = (tier: string | null): Vehicle["tier"] => {
@@ -146,6 +148,9 @@ export default function QueuePage() {
   const [cancelVehicle, setCancelVehicle] = useState<Vehicle | null>(null);
   const [showCheckin, setShowCheckin] = useState(false);
   const [searchPlate, setSearchPlate] = useState("");
+  const [searchedPlate, setSearchedPlate] = useState("");
+  const [searchPlateError, setSearchPlateError] = useState<string | null>(null);
+
   const [searchResult, setSearchResult] = useState<CustomerResult | null>(null);
   const [selectedBooking, setSelectedBooking] = useState<BookingItem | null>(
     null,
@@ -325,12 +330,21 @@ export default function QueuePage() {
   //   setSearchResult(found ? found[1] : { type: "not-found" });
   // };
   const handleSearch = async () => {
-    if (!searchPlate.trim()) return;
+    const plate = searchPlate.trim();
+    if (!plate) return;
+    if (!LICENSE_PLATE_REGEX.test(plate)) {
+      setSearchPlateError(
+        "Invalid license plate format (e.g: 29A-12345 or 51AB-12345)",
+      );
+      return;
+    }
+    setSearchPlateError(null);
     setIsLoading(true);
     setIsSearched(true);
+    setSearchedPlate(plate);
     setSelectedBooking(null);
     try {
-      const result = await scanVehicle(searchPlate);
+      const result = await scanVehicle(plate);
       setScanResult(result);
       if (result.hasBooking) {
         setSearchResult({
@@ -340,8 +354,8 @@ export default function QueuePage() {
           bookings: [
             {
               id: result.bookingId!,
-              vehicleModel: result.brandName ?? searchPlate,
-              licensePlate: searchPlate,
+              vehicleModel: result.brandName ?? plate,
+              licensePlate: plate,
               washType: result.serviceName ?? "",
               scheduledTime: `${result.slotStartTime} - ${result.slotEndTime}`,
               totalAmount: result.totalAmount ?? 0,
@@ -388,10 +402,12 @@ export default function QueuePage() {
       closeCheckinModal();
       const board = await getQueueData();
       applyBoard(board);
-      setNotice({
-        ...(isPenalized ? penalizedNotice : { variant: "success" as const }),
-        message: result.message,
-      });
+      if (isPenalized) {
+        setNotice({
+          ...penalizedNotice,
+          message: result.message,
+        });
+      }
     } catch (error) {
       const { message } = getApiErrorInfo(error);
       setNotice({
@@ -792,15 +808,23 @@ export default function QueuePage() {
               </button>
             </div>
             <div className="px-6 py-4">
-              <div className="flex gap-2 mb-4">
-                <div className="flex items-center gap-2 flex-1 rounded-xl px-3 py-2 border border-outline-variant">
+              <div className="flex gap-2 mb-1">
+                <div
+                  className={`flex items-center gap-2 flex-1 rounded-xl px-3 py-2 border ${
+                    searchPlateError ? "border-error" : "border-outline-variant"
+                  }`}
+                >
                   <Search className="w-4 h-4 shrink-0 text-outline" />
                   <input
                     type="text"
                     value={searchPlate}
-                    onChange={(e) => setSearchPlate(e.target.value)}
+                    onChange={(e) => {
+                      setSearchPlate(e.target.value);
+                      setSearchPlateError(null);
+                    }}
                     onKeyDown={(e) => e.key === "Enter" && handleSearch()}
                     placeholder="Enter license plate..."
+                    maxLength={10}
                     className="flex-1 text-sm outline-none bg-transparent text-on-surface"
                     autoFocus
                   />
@@ -811,6 +835,7 @@ export default function QueuePage() {
                         setSearchResult(null);
                         setIsSearched(false);
                         setScanResult(null);
+                        setSearchPlateError(null);
                       }}
                     >
                       <X className="w-4 h-4 text-outline" />
@@ -825,6 +850,9 @@ export default function QueuePage() {
                   {isLoading ? "..." : "Search"}
                 </button>
               </div>
+              {searchPlateError && (
+                <p className="mb-3 text-xs text-error">{searchPlateError}</p>
+              )}
 
               {!isSearched && (
                 <div className="text-center py-8">
@@ -847,7 +875,7 @@ export default function QueuePage() {
                       No booking found
                     </p>
                     <p className="text-xs mt-1 text-on-error-container">
-                      No booking found for "{searchPlate}" today.
+                      No booking found for "{searchedPlate}" today.
                     </p>
                   </div>
                   <button

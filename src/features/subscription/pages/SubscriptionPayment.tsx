@@ -27,12 +27,13 @@ export default function SubscriptionPayment() {
   // isRenewal/redirectTo không có trong response BE - đọc lại từ navigation state do trang gọi
   // register()/renew() truyền qua (xem SubscriptionRegister.tsx / MySubscriptions.tsx / Family-
   // SubscriptionList.tsx). redirectTo cho phép luồng Family trỏ về /subscriptions/family/plans
-  // thay vì mặc định /subscription (MySubscriptions.tsx chỉ liệt kê gói Unlimited theo xe).
-  const navState = location.state as
-    | { isRenewal?: boolean; redirectTo?: string }
-    | null;
+  // thay vì mặc định /unlimited (MySubscriptions.tsx chỉ liệt kê gói Unlimited theo xe).
+  const navState = location.state as {
+    isRenewal?: boolean;
+    redirectTo?: string;
+  } | null;
   const isRenewal = Boolean(navState?.isRenewal);
-  const redirectTo = navState?.redirectTo ?? "/subscription";
+  const redirectTo = navState?.redirectTo ?? "/unlimited";
 
   const [payment, setPayment] = useState<SubscriptionPaymentInit | null>(null);
   const [isLoading, setIsLoading] = useState(!isInvalidId);
@@ -40,7 +41,9 @@ export default function SubscriptionPayment() {
     isInvalidId ? "Invalid invoice." : null,
   );
   const [secondsLeft, setSecondsLeft] = useState<number | null>(null);
-  const [copiedField, setCopiedField] = useState<"content" | "account" | null>(null);
+  const [copiedField, setCopiedField] = useState<"content" | "account" | null>(
+    null,
+  );
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   useEffect(() => {
@@ -154,7 +157,9 @@ export default function SubscriptionPayment() {
 
               <div className="mt-6 flex items-center justify-between text-label-md">
                 <span className="text-on-surface-variant">Customer</span>
-                <span className="text-body-md text-on-surface">{payment.customerName}</span>
+                <span className="text-body-md text-on-surface">
+                  {payment.customerName}
+                </span>
               </div>
               {payment.vehicleLicensePlate && (
                 <div className="mt-3 flex items-center justify-between text-label-md">
@@ -167,8 +172,8 @@ export default function SubscriptionPayment() {
               <div className="mt-3 flex items-center justify-between text-label-md">
                 <span className="text-on-surface-variant">Plan period</span>
                 <span className="text-body-md text-on-surface">
-                  {formatDate(payment.startDate)} - {formatDate(payment.endDate)} (
-                  {payment.durationDays} days)
+                  {formatDate(payment.startDate)} -{" "}
+                  {formatDate(payment.endDate)} ({payment.durationDays} days)
                 </span>
               </div>
 
@@ -204,7 +209,9 @@ export default function SubscriptionPayment() {
               <div className="mt-6 rounded-xl border border-outline-variant bg-surface-container p-5">
                 <div className="flex items-center justify-between text-label-md">
                   <span className="text-on-surface-variant">Bank</span>
-                  <span className="font-semibold text-on-surface">{payment.bankCode}</span>
+                  <span className="font-semibold text-on-surface">
+                    {payment.bankCode}
+                  </span>
                 </div>
 
                 <div className="mt-3 flex items-center justify-between">
@@ -213,7 +220,9 @@ export default function SubscriptionPayment() {
                   </span>
                   <button
                     type="button"
-                    onClick={() => handleCopy(payment.bankAccountNumber, "account")}
+                    onClick={() =>
+                      handleCopy(payment.bankAccountNumber, "account")
+                    }
                     className="flex items-center gap-1 text-label-md font-semibold text-primary"
                   >
                     {copiedField === "account" ? (
@@ -244,7 +253,9 @@ export default function SubscriptionPayment() {
                   </span>
                   <button
                     type="button"
-                    onClick={() => handleCopy(payment.transferContent, "content")}
+                    onClick={() =>
+                      handleCopy(payment.transferContent, "content")
+                    }
                     className="flex items-center gap-1 text-label-md font-semibold text-primary"
                   >
                     {copiedField === "content" ? (

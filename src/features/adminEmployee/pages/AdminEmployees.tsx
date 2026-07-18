@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   ChevronDown,
   ChevronLeft,
@@ -154,6 +154,11 @@ export default function AdminEmployees() {
 
   const [page, setPage] = useState(1);
 
+  // Sau khi tạo nhân viên mới: danh sách sort id tăng dần nên id lớn nhất (người
+  // vừa tạo) nằm ở trang cuối. Bật cờ này để lần fetch kế tiếp nhảy tới trang cuối.
+  // Dùng ref (không phải state) để không phải thêm vào deps của effect fetch.
+  const jumpToLastRef = useRef(false);
+
   // Search bar: gõ tự do, chỉ apply khi bấm Enter/nút search - tránh gọi API
   // mỗi lần gõ phím. appliedKeyword mới là thứ thực sự đưa vào query BE.
   const [searchInput, setSearchInput] = useState("");
@@ -273,7 +278,7 @@ export default function AdminEmployees() {
         setSaveError(
           SAVE_ERROR_MAP[errorCode ?? ""] ??
             message ??
-            "Could not save this employee. Please try again.",
+            "Could not save this staff account. Please try again.",
         );
       })
       .finally(() => {
@@ -293,7 +298,7 @@ export default function AdminEmployees() {
         setRefreshKey((k) => k + 1);
       })
       .catch(() => {
-        setDeleteError("Could not delete this employee. Please try again.");
+        setDeleteError("Could not delete this staff account. Please try again.");
       })
       .finally(() => {
         setIsDeleting(false);
@@ -340,11 +345,16 @@ export default function AdminEmployees() {
         setRows(res.content);
         setTotalEmployees(res.summary.totalEmployees);
         setNewThisMonth(res.summary.newThisMonth);
-        setTotalPages(Math.max(1, res.totalPages));
+        const pages = Math.max(1, res.totalPages);
+        setTotalPages(pages);
+        if (jumpToLastRef.current) {
+          jumpToLastRef.current = false;
+          if (page !== pages) setPage(pages);
+        }
       })
       .catch(() => {
         if (isMounted)
-          setError("Could not load the employee list. Please try again later.");
+          setError("Could not load the staff list. Please try again later.");
       })
       .finally(() => {
         if (isMounted) setIsLoading(false);
@@ -388,7 +398,7 @@ export default function AdminEmployees() {
       .catch(() => {
         if (isMounted)
           setDetailError(
-            "Could not load employee details. Please try again later.",
+            "Could not load staff details. Please try again later.",
           );
       })
       .finally(() => {
@@ -404,10 +414,10 @@ export default function AdminEmployees() {
     <div className="mx-auto flex max-w-[1440px] flex-col gap-8 px-12 py-8">
       <div className="flex flex-col gap-2">
         <h1 className="font-heading text-headline-xl font-bold tracking-[-1.2px] text-on-surface">
-          Employee Management
+          Staff Management
         </h1>
         <p className="text-sm text-on-surface-variant">
-          View your registered employee accounts.
+          View your registered staff accounts.
         </p>
       </div>
 
@@ -415,7 +425,7 @@ export default function AdminEmployees() {
       <div className="flex flex-wrap gap-4">
         <KpiCard
           icon={Users}
-          label="Total Employees"
+          label="Total Staff"
           value={totalEmployees.toLocaleString()}
         />
         <KpiCard
@@ -490,7 +500,7 @@ export default function AdminEmployees() {
           </div>
         ) : rows.length === 0 ? (
           <div className="flex h-48 items-center justify-center text-base text-outline">
-            No employees found
+            No staff found
           </div>
         ) : (
           <>
@@ -530,7 +540,7 @@ export default function AdminEmployees() {
                     }`}
                   >
                     <td className="whitespace-nowrap px-3 py-4 text-sm text-on-surface">
-                      {row.employeeCode}
+                      {row.employeeId}
                     </td>
                     <td className="whitespace-nowrap px-3 py-4 text-sm font-medium text-on-surface">
                       {row.fullName}
@@ -623,10 +633,10 @@ export default function AdminEmployees() {
               <>
                 <div className="border-b border-outline-variant/30 pb-4">
                   <h2 className="font-heading text-xl font-bold text-on-surface">
-                    Employee Details
+                    Staff Details
                   </h2>
                   <p className="mt-1 text-sm text-on-surface-variant">
-                    View and manage this staff account.
+                    View and manage this account.
                   </p>
                 </div>
 
@@ -649,7 +659,7 @@ export default function AdminEmployees() {
                     {/* Card trái giữ y hệt ở cả View lẫn Edit -> popup không nhảy khi
                         đổi chế độ. Account Status nằm trong lưới bên phải, không để ở đây. */}
                     <p className="text-xs text-on-surface-variant">
-                      ID: {detail.employeeCode}
+                      ID: {detail.employeeId}
                     </p>
                     <p className="text-xs text-on-surface-variant">
                       Created {formatDateOnly(detail.createdAt)}
@@ -803,7 +813,7 @@ export default function AdminEmployees() {
                         className="flex items-center gap-2 rounded-lg bg-error px-5 py-2.5 text-sm font-semibold text-on-error transition-opacity hover:opacity-90"
                       >
                         <Trash2 className="size-4" />
-                        Delete Employee
+                        Delete Staff
                       </button>
                       <button
                         type="button"
@@ -828,7 +838,7 @@ export default function AdminEmployees() {
         isOpen={confirmingDelete}
         onClose={() => setConfirmingDelete(false)}
         variant="danger"
-        title="Delete this employee?"
+        title="Delete this staff account?"
         message={
           <>
             This action cannot be undone.
@@ -848,9 +858,10 @@ export default function AdminEmployees() {
           onClose={() => setIsCreateOpen(false)}
           onCreated={(fullName) => {
             setIsCreateOpen(false);
-            setToast(`Employee ${fullName} created successfully!`);
-            // Nhân viên mới nhất nằm ở trang 1 - về đầu rồi mới refetch.
-            setPage(1);
+            setToast(`Staff ${fullName} created successfully!`);
+            // id tăng dần -> người mới (id lớn nhất) ở trang cuối; refetch rồi
+            // để effect nhảy tới trang cuối cho thấy người vừa thêm.
+            jumpToLastRef.current = true;
             setRefreshKey((k) => k + 1);
           }}
         />

@@ -6,7 +6,8 @@ import {
   Search,
   X,
   XCircle,
-  ChevronRight,
+  ChevronUp,
+  ChevronDown,
   Droplets,
   Check,
   CreditCard,
@@ -41,6 +42,10 @@ interface Vehicle {
   totalAmount: number;
   voucherDiscount?: number;
   pointDiscount?: number;
+  // author: Ngọc — bookingType (ADVANCE/WALK_IN/SUBSCRIPTION) từ BE, dùng để
+  // phân biệt khách dùng gói Unlimited/Family (SUBSCRIPTION) khi Cancel,
+  // KHÔNG dùng tier (loyalty BRONZE/SILVER/GOLD) cho việc này vì 2 khái niệm độc lập
+  bookingType?: string | null;
 }
 
 interface Lane {
@@ -333,13 +338,6 @@ export default function QueuePage() {
     }
   };
 
-  // author: Ngọc — đổi từ mock sang gọi API confirm check-in thật
-  // const handleConfirmCheckIn = () => {
-  //   if (!selectedBooking || !searchResult) return;
-  //   const newVehicle: Vehicle = { ... };
-  //   setWaitingPool((prev) => [...prev, newVehicle]);
-  //   closeCheckinModal();
-  // };
   const handleConfirmCheckIn = async () => {
     if (!selectedBooking || !scanResult?.bookingId) return;
     setIsLoading(true);
@@ -380,6 +378,16 @@ export default function QueuePage() {
     } finally {
       setIsLoading(false);
     }
+  };
+
+  const moveVehicle = (index: number, dir: -1 | 1) => {
+    setWaitingPool((prev) => {
+      const target = index + dir;
+      if (target < 0 || target >= prev.length) return prev;
+      const next = [...prev];
+      [next[index], next[target]] = [next[target], next[index]];
+      return next;
+    });
   };
 
   // "+" button — auto-assign xe đầu tiên trong waiting pool vào làn trống đầu tiên.
@@ -427,12 +435,8 @@ export default function QueuePage() {
     try {
       const board = await completeService(lane.bookingId, lane.laneDbId);
       applyBoard(board);
-    } catch (error) {
-      const { message } = getApiErrorInfo(error);
-      setNotice({
-        variant: "danger",
-        message: message ?? QUEUE_MESSAGES.COMPLETE_SERVICE_FAILED,
-      });
+    } catch {
+      // show nothing — isLoading will reset and button re-enables
     } finally {
       setIsLoading(false);
     }
@@ -476,7 +480,7 @@ export default function QueuePage() {
   };
 
   return (
-    <div className="mx-auto flex max-w-[1200px] flex-col gap-6 px-6 py-8">
+    <div className="min-h-screen bg-background">
       {/* Header */}
       <div className="flex items-center justify-between mb-6">
         <div>
@@ -590,12 +594,28 @@ export default function QueuePage() {
                 No vehicles waiting
               </p>
             )}
-            {waitingPool.map((v) => (
+            {waitingPool.map((v, idx) => (
               <div
                 key={v.id}
                 onClick={() => hasEmptyLane && setAssignCar(v)}
                 className={`rounded-xl px-3 py-2.5 flex items-center gap-2 bg-white border border-outline-variant/20 ${hasEmptyLane ? "cursor-pointer hover:bg-surface-container-low transition" : ""}`}
               >
+                <div className="flex flex-col justify-center gap-0.5 shrink-0">
+                  <button
+                    onClick={() => moveVehicle(idx, -1)}
+                    disabled={idx === 0}
+                    className="text-outline transition hover:text-primary disabled:opacity-30"
+                  >
+                    <ChevronUp className="w-3 h-3" />
+                  </button>
+                  <button
+                    onClick={() => moveVehicle(idx, 1)}
+                    disabled={idx === waitingPool.length - 1}
+                    className="text-outline transition hover:text-primary disabled:opacity-30"
+                  >
+                    <ChevronDown className="w-3 h-3" />
+                  </button>
+                </div>
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-1.5 mb-0.5">
                     <span className="text-xs font-bold text-on-surface">
@@ -967,7 +987,7 @@ export default function QueuePage() {
                 </span>
               </div>
             </div>
-            {cancelVehicle.tier === "Guest" && (
+            {cancelVehicle.tier === "Guest" ? (
               <div className="rounded-xl px-4 py-3 mb-4 bg-error-container border border-error">
                 <div className="flex items-center gap-1.5 mb-0.5">
                   <XCircle className="w-3.5 h-3.5 text-error shrink-0" />
@@ -978,6 +998,27 @@ export default function QueuePage() {
                 <p className="text-xs text-on-error-container">
                   1 violation point will be added to{" "}
                   <strong>{cancelVehicle.licensePlate}</strong>.
+                </p>
+              </div>
+            ) : cancelVehicle.bookingType === "SUBSCRIPTION" ? (
+              <div className="rounded-xl px-4 py-3 mb-4 bg-secondary-fixed border border-secondary">
+                <div className="flex items-center gap-1.5 mb-0.5">
+                  <XCircle className="w-3.5 h-3.5 text-error shrink-0" />
+                  <p className="text-xs font-semibold text-on-secondary-fixed">
+                    Unlimited / Family Package
+                  </p>
+                </div>
+                <p className="text-xs text-on-secondary-fixed-variant">
+                  No deposit collected. 1 violation point added.
+                </p>
+              </div>
+            ) : (
+              <div className="rounded-xl px-4 py-3 mb-4 bg-error-container border border-error">
+                <p className="text-xs font-semibold mb-0.5 text-on-error-container">
+                  Single Package — Deposit Required
+                </p>
+                <p className="text-xs text-on-error-container">
+                  100% of the deposit amount will be collected.
                 </p>
               </div>
             )}

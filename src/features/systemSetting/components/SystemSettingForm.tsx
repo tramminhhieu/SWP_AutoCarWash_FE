@@ -34,13 +34,6 @@ function ReadOnlyField({
   );
 }
 
-const DATA_TYPE_BADGE: Record<string, string> = {
-  NUMBER: "text-secondary border-secondary/20 bg-secondary-container/20",
-  STRING:
-    "text-on-surface-variant border-outline-variant/50 bg-surface-container",
-  BOOLEAN: "text-primary border-primary/20 bg-primary-container/20",
-};
-
 export default function SystemSettingForm({
   mode,
   setting,
@@ -364,9 +357,7 @@ export default function SystemSettingForm({
               </span>
             </ReadOnlyField>
             <ReadOnlyField label="Data Type">
-              <span
-                className={`rounded-full border px-2.5 py-0.5 text-xs font-semibold ${DATA_TYPE_BADGE[setting.data_type] ?? DATA_TYPE_BADGE.STRING}`}
-              >
+              <span className="text-sm text-on-surface">
                 {setting.data_type}
               </span>
             </ReadOnlyField>
@@ -427,7 +418,7 @@ export default function SystemSettingForm({
           type="button"
           onClick={onCancel}
           disabled={isSubmitting}
-          className="text-body-md font-semibold text-on-surface-variant transition-colors hover:text-on-surface disabled:opacity-50"
+          className="rounded-lg border border-outline-variant px-4 py-2 text-body-md font-semibold text-on-surface-variant transition-colors hover:text-on-surface disabled:opacity-50"
         >
           Cancel
         </button>

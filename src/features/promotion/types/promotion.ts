@@ -1,105 +1,123 @@
-import type { PromotionType, PromotionStatus } from "./enums";
+// ====== Enums ======
 
-// ====== API-02-01: GET BRANCH PROMOTION SUMMARY ======
+export type PromotionStatus = "ACTIVE" | "UPCOMING" | "EXPIRED";
 
-export interface BranchPromotionSummary {
+// ====== Sub-types (khớp với response API-PR-01) ======
+
+export interface PromotionStation {
   stationId: number;
   stationName: string;
-  totalActivePromotions: number;
 }
 
-export interface GetBranchSummaryParams {
-  status: PromotionStatus;
+export interface PromotionTarget {
+  targetId: number;
+  targetName: string;
+  targetCode: string;
 }
 
-// ====== API-02-02: GET PAGINATED PROMOTION DASHBOARD LIST ======
-
-export interface PromotionDashboardItem {
+export interface PromotionVoucher {
   id: number;
-  type: PromotionType;
-  name: string;
-  appliedStations: string[];
-  targetSegments: string[];
-  startDate: string;
-  endDate: string;
-  status: PromotionStatus;
-  // BE cần bổ sung 2 field này để FE biết mode và voucherId khi navigate sang Edit
-  configMode: 1 | 2 | 3;
-  voucherId: number | null; // null nếu mode 1 (campaign thuần, không có voucher)
-  voucherCode: string | null; // null nếu mode 1
-}
-
-export interface GetPromotionListParams {
-  stationId: number;
-  status: PromotionStatus;
-  page?: number;
-  size?: number;
-}
-
-// ====== API-01-01: CREATE PROMOTION OR VOUCHER ======
-
-export type ConfigMode = 1 | 2 | 3;
-export type DiscountType = "PERCENTAGE" | "FIXED";
-
-export interface CreatePromotionRequest {
-  configMode: ConfigMode;
-  campaignName: string | null;
-  campaignStartDate: string | null;
-  campaignEndDate: string | null;
-  stationIds: number[] | null;
-  voucherCode: string | null;
-  usageLimit: number | null;
-  reusable: boolean | null;
-  voucherStartDate: string | null;
-  voucherEndDate: string | null;
-  discountType: DiscountType;
-  discountValue: number;
-  maxDiscountAmount: number;
-  minOrderValue: number;
-  targetCustomerTierIds: number[] | null;
-}
-
-export interface CreatePromotionResponse {
-  promotionId: number | null;
-  voucherId: number;
   voucherCode: string;
-}
-
-// ====== API-03-01: UPDATE CAMPAIGN METADATA ======
-
-export interface UpdateCampaignRequest {
-  title: string;
-  description: string;
-  startDate: string;
-  endDate: string;
-  stationIds: number[];
-  targetCustomerTierIds: number[];
-}
-
-// ====== API-03-02: UPDATE VOUCHER FINANCIAL RULES ======
-
-export interface UpdateVoucherRequest {
-  voucherCode: string;
-  discountType: DiscountType;
   discountPercentage: number;
   maxDiscountAmount: number;
   minOrderValue: number;
   usageLimit: number;
-  startDate: string; // "2026-07-20T00:00:00"
-  expiryDate: string; // "2026-08-25T23:59:59"
+  usedCount: number;
+  startDate: string; // "2026-09-01T00:00:00"
+  expiryDate: string; // "2026-09-30T23:59:59"
+  reusable: boolean;
+  status: PromotionStatus;
+}
+
+// ====== API-PR-01: GET ALL PROMOTIONS LIST ======
+
+/** 1 item trong danh sách promotion — đủ field để pre-fill form update sau này */
+export interface PromotionItem {
+  id: number;
+  title: string;
+  description: string | null;
+  startDate: string; // "2026-09-01"
+  endDate: string;
+  status: PromotionStatus;
+  createdAt: string;
+  stations: PromotionStation[];
+  targets: PromotionTarget[];
+  vouchers: PromotionVoucher[];
+}
+
+/** Params lọc theo chi nhánh — chỉ truyền 1 trong 2, không truyền cả hai */
+export interface GetAdminPromotionsParams {
+  provinceId?: number;
+  stationId?: number;
+}
+
+// ====== API-PR-02: CREATE PROMOTION ======
+
+export interface CreateVoucherPayload {
+  voucherCode: string;
+  discountPercentage: number;
+  maxDiscountAmount: number;
+  minOrderValue: number;
+  usageLimit: number;
   reusable: boolean;
 }
 
-// Navigation state truyền từ PromotionDetail → PromotionEdit
-export interface PromotionEditNavState {
-  configMode: ConfigMode;
-  promotionId: number | null;
-  voucherId: number | null;
-  voucherCode: string | null;
-  stationName: string;
-  stationId: number;
-  // Pre-fill giá trị hiện tại
-  currentName: string;
-  currentStartDate: string;
-  currentEndDate: string;
+export interface CreatePromotionRequest {
+  configMode: 2; // luôn là 2 (Campaign + Voucher)
+  campaignName: string;
+  campaignStartDate: string;
+  campaignEndDate: string;
+  stationIds: number[];
+  targetIds: number[] | null;
+  vouchers: CreateVoucherPayload[];
+  voucherStartDate: null; // luôn null — voucher theo ngày của campaign
+  voucherEndDate: null;
+}
+
+export interface CreatePromotionResponse {
+  promotionId: number;
+  voucherCodes: string[];
+}
+
+// ====== API-PR-03: UPDATE PROMOTION ======
+
+export interface UpdateVoucherPayload {
+  id: number | null; // có id = update voucher cũ, null = tạo voucher mới
+  voucherCode: string;
+  discountPercentage: number;
+  maxDiscountAmount: number;
+  minOrderValue: number;
+  usageLimit: number;
+  reusable: boolean;
+}
+
+export interface UpdatePromotionRequest {
+  title: string;
+  startDate: string;
+  endDate: string;
+  stationIds: number[];
+  targetIds: number[] | null;
+  vouchers: UpdateVoucherPayload[]; // voucher không có trong list => BE tự soft delete
+}
+
+// ====== PromotionForm — dùng chung cho Create & Edit ======
+
+export interface VoucherFormItem {
+  key: string; // local key cho React list
+  id: number | null; // null = voucher mới, có id = voucher cũ (dùng cho update)
+  voucherCode: string;
+  discountPercentage: string;
+  maxDiscountAmount: string;
+  minOrderValue: string;
+  usageLimit: number | string;
+  reusable: boolean;
+}
+
+export interface PromotionFormValues {
+  campaignName: string;
+  startDate: string;
+  endDate: string;
+  selectedStations: { id: number; name: string }[];
+  targetIds: number[];
+  vouchers: VoucherFormItem[];
 }

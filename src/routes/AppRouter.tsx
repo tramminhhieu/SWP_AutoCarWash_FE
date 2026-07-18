@@ -198,10 +198,7 @@ export default function AppRouter() {
             />
             <Route path="/admin/wash-lanes" element={<WashLaneManagement />} />
             <Route path="/admin/promotions" element={<PromotionOverview />} />
-            <Route
-              path="/admin/promotions/station/:stationId"
-              element={<PromotionDetail />}
-            />
+            <Route path="/admin/promotions/:id" element={<PromotionDetail />} />
             <Route
               path="/admin/promotions/create"
               element={<PromotionCreate />}

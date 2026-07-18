@@ -181,6 +181,17 @@ export const completeService = async (
   return mapBoard(res.data.data);
 };
 
+// Staff bật/gỡ bảo trì cho 1 lane của station mình — PATCH /api/queue/lanes/{laneId}/maintenance
+export const setLaneMaintenance = async (
+  laneId: number,
+  maintenance: boolean,
+): Promise<QueuePageData> => {
+  const res = await axiosClient.patch<ApiSuccessResponse<QueueResponseData>>(
+    `/api/queue/lanes/${laneId}/maintenance?maintenance=${maintenance}`,
+  );
+  return mapBoard(res.data.data);
+};
+
 export const collectPenaltyDeposit = async (
   bookingId: number
 ): Promise<CheckInResultResponse> => {

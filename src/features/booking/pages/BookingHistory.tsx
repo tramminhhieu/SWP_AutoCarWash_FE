@@ -5,7 +5,7 @@ import { Calendar, Car, ChevronRight, CirclePlus } from "lucide-react";
 import { getPastBookings, getUpcomingBookings } from "../api/bookingApi";
 import type { BookingCard } from "../types/booking";
 import BookingStatusBadge from "../../../components/ui/BookingStatusBadge";
-import RefundModal from "../components/RefundModal";
+import CancelBookingModal from "../components/CancelBookingModal";
 import {
   formatAppointmentDate,
   formatRefundedAt,
@@ -118,7 +118,7 @@ function BookingCardItem({
       )}
 
       {showCancelModal && (
-        <RefundModal
+        <CancelBookingModal
           booking={booking}
           onClose={() => setShowCancelModal(false)}
           onRefunded={onCancelled}

@@ -38,7 +38,7 @@ const navItems = [
   },
   { path: "/admin/wash-lanes", label: "Wash Lane", icon: Waves },
   { path: "/admin/promotions", label: "Promotions", icon: Tag },
-  { path: "/admin/transactions", label: "Transaction History", icon: Receipt },
+  { path: "/admin/transactions", label: "Total Revenue", icon: Receipt },
   { path: "/admin/customers", label: "Customer", icon: Users },
   { path: "/admin/employees", label: "Staff", icon: UserCog },
   { path: "/admin/refunds", label: "Refund Management", icon: Banknote },

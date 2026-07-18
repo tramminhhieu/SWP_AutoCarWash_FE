@@ -123,6 +123,7 @@ const RefundModal = ({ booking, onClose, onRefunded }: RefundModalProps) => {
     try {
       await createRefund({
         bookingId: booking.bookingId,
+        refundMethod: "BANK_TRANSFER",
         bankBin: selectedBin,
         accountNumber: accountNumber.trim(),
         accountHolder: accountHolder.trim(),

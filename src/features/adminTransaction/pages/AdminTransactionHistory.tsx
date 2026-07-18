@@ -304,7 +304,7 @@ export default function AdminTransactionHistory() {
     <div className="mx-auto flex max-w-[1440px] flex-col gap-8 px-12 py-8">
       <div className="flex flex-col gap-2">
         <h1 className="font-heading text-headline-xl font-bold tracking-[-1.2px] text-on-surface">
-          Transaction History
+          Total Revenue
         </h1>
         <p className="text-sm text-on-surface-variant">
           Reconciliation view of all payment transactions across customers.

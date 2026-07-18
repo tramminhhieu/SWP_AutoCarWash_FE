@@ -18,14 +18,10 @@ const decodeUserFromToken = (token: string): AuthUser | null => {
   try {
     const payload = jwtDecode<JwtPayload>(token);
 
-    // Kiểm tra token hết hạn (exp tính bằng giây, Date.now() tính bằng ms)
     if (payload.exp * 1000 < Date.now()) {
       return null;
     }
 
-    // BE trả JWT "roles" claim có tiền tố "ROLE_" (vd "ROLE_CUSTOMER") để khớp với
-    // Spring Security hasRole() - chuẩn hoá về dạng không tiền tố ở đây vì RoleType và
-    // mọi so sánh role trong FE (RoleRoute, v.v.) đều dùng dạng "CUSTOMER"/"STAFF"/"ADMIN".
     const rawRole = payload.roles ?? "CUSTOMER";
     const role = (
       rawRole.startsWith("ROLE_") ? rawRole.slice(5) : rawRole
@@ -36,6 +32,7 @@ const decodeUserFromToken = (token: string): AuthUser | null => {
       email: payload.email,
       name: payload.name,
       role,
+      stationId: payload.stationId,
     };
   } catch {
     return null;

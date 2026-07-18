@@ -36,6 +36,10 @@ const Register = () => {
   const [email, setEmail] = useState("");
   const [phone, setPhone] = useState("");
   const [birthday, setBirthday] = useState("");
+  const [maxBirthday] = useState(
+    () =>
+      new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString().split("T")[0],
+  );
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
@@ -371,7 +375,7 @@ const Register = () => {
               autoComplete="bday"
               value={birthday}
               onChange={(e) => setBirthday(e.target.value)}
-              max={new Date().toISOString().split("T")[0]}
+              max={maxBirthday}
               className={`w-full rounded-lg border px-4 py-2.5 text-body-md text-on-surface outline-none transition-colors
     ${birthdayError ? "border-error" : "border-outline-variant focus:border-primary"}`}
             />

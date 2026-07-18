@@ -528,7 +528,7 @@ const BookingCreate = () => {
             <button
               type="button"
               onClick={() =>
-                navigate("/vehicles/add", { state: { stationId } })
+                navigate("/vehicles/create", { state: { stationId } })
               }
               className="mt-5 rounded-lg bg-primary px-6 py-3 text-body-md font-semibold text-on-primary hover:opacity-90"
             >

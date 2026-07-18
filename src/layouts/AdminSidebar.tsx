@@ -76,7 +76,7 @@ export default function AdminSidebar() {
       {/* Nav — spacing rộng, thoáng theo mockup. min-h-0 để flex-1 thực sự co lại
           thay vì giãn theo nội dung, cho phép overflow-y-auto cuộn khi danh sách
           dài hơn viewport (không thì các mục cuối bị tràn ra ngoài, không cuộn tới được). */}
-      <nav className="flex min-h-0 flex-1 flex-col gap-1 overflow-y-auto px-4 pt-2">
+      <nav className="flex min-h-0 flex-1 flex-col gap-0.5 overflow-y-auto px-4 pt-1">
         {navItems.map((item) => {
           const Icon = item.icon;
           const isExtraActive = extraActiveMap[item.path] ?? false;
@@ -85,14 +85,14 @@ export default function AdminSidebar() {
               key={item.path}
               to={item.path}
               className={({ isActive }) =>
-                `flex items-center gap-3 px-4 py-3 rounded-md text-sm font-medium transition-colors ${
+                `flex items-center gap-3 px-3 py-3 rounded-md text-sm font-medium transition-colors ${
                   isActive || isExtraActive
                     ? "bg-primary text-on-primary"
                     : "text-on-surface-variant hover:bg-surface-container hover:text-on-surface"
                 }`
               }
             >
-              <Icon className="w-5 h-5 shrink-0" strokeWidth={1.5} />
+              <Icon className="w-4 h-4 shrink-0" strokeWidth={1.5} />
               {item.label}
             </NavLink>
           );
@@ -100,7 +100,7 @@ export default function AdminSidebar() {
       </nav>
 
       {/* Bottom — user info + logout giữ nguyên */}
-      <div className="flex flex-col gap-3 px-4 py-4 border-t border-outline-variant">
+      <div className="flex shrink-0 flex-col gap-2 px-4 py-3 border-t border-outline-variant">
         {user && (
           <div className="flex items-center gap-3 px-2">
             <div className="flex h-8 w-8 items-center justify-center rounded-full bg-surface-container-high text-primary">

@@ -172,7 +172,7 @@ export default function EmployeeCreateModal({
         setSaveError(
           SAVE_ERROR_MAP[errorCode ?? ""] ??
             message ??
-            "Could not create this employee. Please try again.",
+            "Could not create this staff account. Please try again.",
         );
       })
       .finally(() => {
@@ -180,7 +180,7 @@ export default function EmployeeCreateModal({
       });
   }
 
-  // Preview cập nhật theo lúc gõ. Nhân viên chưa tồn tại nên chưa có employeeCode,
+  // Preview cập nhật theo lúc gõ. Nhân viên chưa tồn tại nên chưa có ID,
   // và ngày tạo chính là hôm nay.
   const previewName = [form.firstName.trim(), form.lastName.trim()]
     .filter(Boolean)
@@ -192,10 +192,10 @@ export default function EmployeeCreateModal({
       <div className="flex w-full flex-col gap-6 text-left text-sm">
         <div className="border-b border-outline-variant/30 pb-4">
           <h2 className="font-heading text-xl font-bold text-on-surface">
-            Add New Employee
+            Add New Staff
           </h2>
           <p className="mt-1 text-sm text-on-surface-variant">
-            Create a staff account and assign it to a branch.
+            Create an account and assign it to a branch.
           </p>
         </div>
 
@@ -212,7 +212,7 @@ export default function EmployeeCreateModal({
               <User className="size-14 text-primary/40" />
             </div>
             <h3 className="text-center font-heading text-xl font-bold text-on-surface">
-              {previewName || "New Employee"}
+              {previewName || "New Staff"}
             </h3>
             <p className="text-xs text-on-surface-variant">
               Created {todayLabel}
@@ -329,7 +329,7 @@ export default function EmployeeCreateModal({
             {isSubmitting && (
               <span className="size-4 animate-spin rounded-full border-2 border-white/30 border-t-white" />
             )}
-            {isSubmitting ? "Creating..." : "Create Employee"}
+            {isSubmitting ? "Creating..." : "Create Staff"}
           </button>
         </div>
       </div>

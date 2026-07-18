@@ -92,8 +92,9 @@ function VehicleItem({
         <p className="truncate text-sm font-semibold text-on-surface">
           {vehicle.licensePlate}
         </p>
-        <p className="text-xs text-on-surface-variant">{vehicle.brandName}</p>
-        <p className="text-xs text-on-surface-variant">{vehicle.color}</p>
+        <p className="text-xs text-on-surface-variant">
+          {vehicle.brandName} • {vehicle.color}
+        </p>
         {sub && subStyle && (
           <div
             className={`mt-1 inline-flex items-center gap-1 rounded-full border px-2 py-0.5 ${subStyle.badge} ${subStyle.border}`}
@@ -241,21 +242,21 @@ function TransferPlanModal({
             <Car className="size-6 text-primary/50" />
           </div>
           <div className="min-w-0 flex-1">
-            <p className="text-sm font-semibold text-on-surface">
-              {sourceVehicle.brandName}
+            <p className="truncate text-sm font-semibold text-on-surface">
+              {sourceVehicle.licensePlate}
             </p>
-            <div className="flex items-center gap-2">
-              <span className="text-xs text-on-surface-variant">
-                {sourceVehicle.color}
-              </span>
-              {sub && subStyle && (
-                <span
-                  className={`rounded-full border px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider ${subStyle.badge} ${subStyle.border}`}
-                >
+            <p className="text-xs text-on-surface-variant">
+              {sourceVehicle.brandName} • {sourceVehicle.color}
+            </p>
+            {sub && subStyle && (
+              <div
+                className={`mt-1 inline-flex items-center gap-1 rounded-full border px-2 py-0.5 ${subStyle.badge} ${subStyle.border}`}
+              >
+                <span className="text-[10px] font-bold uppercase tracking-wider">
                   {sub.type}
                 </span>
-              )}
-            </div>
+              </div>
+            )}
           </div>
         </div>
 
@@ -293,11 +294,14 @@ function TransferPlanModal({
                     <Car className="size-6 text-primary/50" />
                   </div>
                   <div className="min-w-0 flex-1">
-                    <p className="text-sm font-semibold text-on-surface">
-                      {v.brandName}
+                    <p className="truncate text-sm font-semibold text-on-surface">
+                      {v.licensePlate}
                     </p>
-                    <p className="text-xs text-on-surface-variant">{v.color}</p>
+                    <p className="text-xs text-on-surface-variant">
+                      {v.color} • {v.brandName}
+                    </p>
                   </div>
+
                   {/* Checkmark khi đã chọn */}
                   {isSelected && (
                     <div className="flex size-6 shrink-0 items-center justify-center rounded-full bg-primary">

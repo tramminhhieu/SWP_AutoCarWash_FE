@@ -42,8 +42,8 @@ export interface JwtPayload {
   email: string;
   name?: string;
   roles?: RoleType;
+  stationId?: number; // chỉ có với STAFF, không có với CUSTOMER/ADMIN
 }
-
 
 // Thông tin user rút ra từ token sau khi decode, dùng trong AuthContext
 export interface AuthUser {

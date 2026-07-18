@@ -1,12 +1,6 @@
 import { useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
-import {
-  Calendar,
-  Car,
-  Clock,
-  MapPin,
-  User,
-} from "lucide-react";
+import { Calendar, Car, Clock, MapPin, User } from "lucide-react";
 import { getBookingDetail } from "../api/bookingApi";
 import type { BookingDetail as BookingDetailData } from "../types/booking";
 import BookingStatusBadge from "../../../components/ui/BookingStatusBadge";
@@ -91,7 +85,9 @@ export default function BookingDetail() {
                     </div>
                   </div>
                 </div>
-                <BookingStatusBadge status={getEffectiveBookingStatus(booking)} />
+                <BookingStatusBadge
+                  status={getEffectiveBookingStatus(booking)}
+                />
               </div>
 
               <div className="grid grid-cols-2 gap-8 border-t border-outline-variant/20 pt-[33px]">
@@ -181,10 +177,10 @@ export default function BookingDetail() {
 
               <div className="flex flex-col gap-2 border-t border-outline-variant/20 pt-4">
                 <div className="flex items-center justify-between text-sm">
-                  <span className="text-on-surface-variant">
+                  <span className="text-on-surface font-bold">
                     {booking.serviceName}
                   </span>
-                  <span className="font-semibold text-on-surface">
+                  <span className="font-bold text-on-surface">
                     {formatCurrency(booking.servicePrice)}
                   </span>
                 </div>
@@ -202,10 +198,21 @@ export default function BookingDetail() {
                     </span>
                   </div>
                 ))}
+                <div className="flex items-center justify-between text-sm">
+                  <span className="text-on-surface-variant">
+                    Deposit {booking.isDepositPaid ? "(paid)" : "(unpaid)"}
+                  </span>
+                  <span className="font-semibold text-error">
+                    -{formatCurrency(booking.depositAmount ?? 0)}
+                  </span>
+                </div>
 
                 <div className="flex items-center justify-between text-sm">
                   <span className="text-on-surface-variant">
-                    Voucher{booking.voucherCode ? ` (${booking.voucherCode}${booking.voucherDiscountPercent ? ` -${booking.voucherDiscountPercent}%` : ""})` : ""}
+                    Voucher
+                    {booking.voucherCode
+                      ? ` (${booking.voucherCode}${booking.voucherDiscountPercent ? ` -${booking.voucherDiscountPercent}%` : ""})`
+                      : ""}
                   </span>
                   <span className="font-semibold text-error">
                     -{formatCurrency(booking.voucherDiscountAmount)}
@@ -213,66 +220,46 @@ export default function BookingDetail() {
                 </div>
 
                 <div className="flex items-center justify-between text-sm">
-                  <span className="text-on-surface-variant">Point Discount</span>
-                  <span className="font-semibold text-error">-{formatCurrency(booking.pointDiscountAmount)}</span>
+                  <span className="text-on-surface-variant">
+                    Point Discount
+                  </span>
+                  <span className="font-semibold text-error">
+                    -{formatCurrency(booking.pointDiscountAmount)}
+                  </span>
                 </div>
 
-                <div className="flex items-center justify-between text-sm">
-                  <span className="text-on-surface-variant">Discount</span>
-                  <span className="font-semibold text-error">-{formatCurrency(booking.discountAmount)}</span>
-                </div>
+                {booking.pointsRedeemed != null && (
+                  <div className="flex items-center justify-between text-sm">
+                    <span className="text-on-surface-variant">
+                      Points Redeemed
+                    </span>
+                    <span className="font-semibold text-error">
+                      -{booking.pointsRedeemed.toLocaleString()} pts
+                    </span>
+                  </div>
+                )}
               </div>
 
               <div className="flex flex-col gap-2 border-t border-outline-variant/20 pt-4">
-                <div className="flex items-center justify-between text-base">
-                  <span className="font-semibold text-on-surface">Total</span>
-                  <span className="font-bold text-on-surface">
-                    {formatCurrency(booking.totalAmount)}
-                  </span>
-                </div>
-
-                <div className="flex items-center justify-between text-sm">
-                  <span className="text-on-surface-variant">
-                    Deposit {booking.isDepositPaid ? "(paid)" : "(unpaid)"}
-                  </span>
-                  <span className="font-semibold text-on-surface">
-                    {formatCurrency(booking.depositAmount ?? 0)}
-                  </span>
-                </div>
-
                 <div className="flex items-center justify-between pt-2">
-                  <span className="text-base font-bold text-on-surface">Remaining</span>
+                  <span className="text-base font-bold text-on-surface">
+                    Total
+                  </span>
                   <span className="text-xl font-bold text-primary">
                     {formatCurrency(booking.remainingAmount)}
                   </span>
                 </div>
+                {booking.pointsEarned != null && (
+                  <div className="flex items-center justify-between text-sm">
+                    <span className="text-on-surface-variant">
+                      Points Earned
+                    </span>
+                    <span className="font-semibold text-green-600">
+                      +{booking.pointsEarned} pts
+                    </span>
+                  </div>
+                )}
               </div>
-
-              {(booking.pointsEarned != null ||
-                booking.pointsRedeemed != null ||
-                booking.loyaltyPoint != null) && (
-                <div className="flex items-center justify-between rounded-[8px] bg-primary/5 p-4">
-                  <span className="text-sm text-on-surface-variant">
-                    {booking.pointsEarned != null &&
-                      `+${booking.pointsEarned.toLocaleString()} earned`}
-                    {booking.pointsEarned != null &&
-                      booking.pointsRedeemed != null &&
-                      " · "}
-                    {booking.pointsRedeemed != null &&
-                      `-${booking.pointsRedeemed.toLocaleString()} redeemed`}
-                  </span>
-                  {booking.loyaltyPoint != null && (
-                    <div className="text-right">
-                      <p className="text-xs text-on-surface-variant">
-                        Loyalty Points
-                      </p>
-                      <p className="text-lg font-bold text-on-surface">
-                        {booking.loyaltyPoint.toLocaleString()}
-                      </p>
-                    </div>
-                  )}
-                </div>
-              )}
             </div>
           </div>
 
@@ -292,7 +279,9 @@ export default function BookingDetail() {
                     </span>
                   </div>
                   <div className="flex items-center justify-between text-sm">
-                    <span className="text-on-surface-variant">Account Number</span>
+                    <span className="text-on-surface-variant">
+                      Account Number
+                    </span>
                     <span className="font-semibold text-on-surface">
                       {booking.refundAccountNumber
                         ? maskAccount(booking.refundAccountNumber)
@@ -300,7 +289,9 @@ export default function BookingDetail() {
                     </span>
                   </div>
                   <div className="flex items-center justify-between text-sm">
-                    <span className="text-on-surface-variant">Refund Amount</span>
+                    <span className="text-on-surface-variant">
+                      Refund Amount
+                    </span>
                     <span className="font-semibold text-on-surface">
                       {booking.refundAmount != null
                         ? formatCurrency(booking.refundAmount)
@@ -331,7 +322,6 @@ export default function BookingDetail() {
               </div>
             </div>
           )}
-
         </div>
       )}
     </div>

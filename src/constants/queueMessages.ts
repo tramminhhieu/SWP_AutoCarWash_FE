@@ -9,4 +9,7 @@ export const QUEUE_MESSAGES = {
   CANCEL_SUCCESS: "Canceled successfully",
   CANCEL_FAILED: "Cancel failed, try again",
   COMPLETE_SERVICE_FAILED: "Complete service failed, try again",
+  LANE_MAINTENANCE_ON: "Lane set to maintenance",
+  LANE_MAINTENANCE_OFF: "Lane is now available",
+  LANE_MAINTENANCE_FAILED: "Failed to update lane status, try again",
 } as const;

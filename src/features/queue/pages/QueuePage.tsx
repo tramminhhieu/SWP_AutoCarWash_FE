@@ -10,6 +10,7 @@ import {
   Droplets,
   Check,
   CreditCard,
+  Wrench,
 } from "lucide-react";
 // author: Ngọc — import API thật
 import {
@@ -20,6 +21,7 @@ import {
   completeService,
   getQueueData,
   collectPenaltyDeposit,
+  setLaneMaintenance,
   type ScanVehicleResponse,
   type QueuePageData,
 } from "../services/queueApi";
@@ -50,7 +52,7 @@ interface Lane {
   model: string;
   color: string;
   service: string;
-  status: "Washing" | "Completed" | "Empty";
+  status: "Washing" | "Completed" | "Empty" | "Maintenance";
   est: string;
   bookingId: number;
   totalAmount: number;
@@ -115,6 +117,13 @@ const makeEmptyLane = (index: number, laneDbId = 0): Lane => ({
   totalAmount: 0,
 });
 
+// Map errorCode từ BE → thông báo lỗi tiếng Anh (BE trả tiếng Việt cho 2 mã này)
+const LANE_MAINTENANCE_ERROR_MAP: Record<string, string> = {
+  WASH_LANE_002: "This lane could not be found.",
+  WASH_LANE_004: "Cannot set this lane to maintenance while a car is being washed.",
+  WASH_LANE_005: "This lane is not currently under maintenance.",
+};
+
 const tierBadge: Record<string, string> = {
   PLATINUM: "bg-primary-fixed text-on-primary-fixed",
   GOLD: "bg-secondary-fixed text-on-secondary-fixed",
@@ -150,6 +159,13 @@ export default function QueuePage() {
     onDismiss?: () => void;
     icon?: ReactNode;
   } | null>(null);
+  // lane đang mở popup chọn trạng thái (click vào lane Empty/Maintenance)
+  const [laneStatusPicker, setLaneStatusPicker] = useState<Lane | null>(null);
+  // thay đổi trạng thái đang chờ xác nhận ở popup confirm
+  const [pendingLaneChange, setPendingLaneChange] = useState<{
+    lane: Lane;
+    maintenance: boolean;
+  } | null>(null);
   // author: Ngọc — thu cọc phạt cho xe WALK_IN đang bị hạn chế trước khi cho Confirm Check-in
   // (mirror luồng đã có ở WalkInPage.tsx, nhưng bên Check-in phải gọi API thu cọc thật trước,
   // không chỉ truyền cờ boolean trong cùng 1 request như bên Create Walk-in)
@@ -184,6 +200,13 @@ export default function QueuePage() {
     const builtLanes: Lane[] = data.lanes.map((l, idx) => {
       const label =
         l.laneName.replace(/\D/g, "") || String(idx + 1).padStart(2, "0");
+      if (l.status === "MAINTENANCE") {
+        return {
+          ...makeEmptyLane(idx, l.id),
+          lane: label,
+          status: "Maintenance" as const,
+        };
+      }
       if (l.status !== "WASHING" || l.currentBookingId == null) {
         return { ...makeEmptyLane(idx, l.id), lane: label };
       }
@@ -460,6 +483,34 @@ export default function QueuePage() {
     }
   };
 
+  const handleToggleMaintenance = async (
+    laneDbId: number,
+    maintenance: boolean,
+  ) => {
+    setIsLoading(true);
+    try {
+      const board = await setLaneMaintenance(laneDbId, maintenance);
+      applyBoard(board);
+      setNotice({
+        variant: "success",
+        message: maintenance
+          ? QUEUE_MESSAGES.LANE_MAINTENANCE_ON
+          : QUEUE_MESSAGES.LANE_MAINTENANCE_OFF,
+      });
+    } catch (error) {
+      const { errorCode, message } = getApiErrorInfo(error);
+      setNotice({
+        variant: "danger",
+        message:
+          LANE_MAINTENANCE_ERROR_MAP[errorCode ?? ""] ??
+          message ??
+          QUEUE_MESSAGES.LANE_MAINTENANCE_FAILED,
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   const handleSelectCompleted = (v: Vehicle) => {
     navigate(`/staff/payment/${v.bookingId}`, {
       state: {
@@ -510,60 +561,83 @@ export default function QueuePage() {
             </p>
           </div>
           <div className="flex flex-col gap-3">
-            {lanes.map((lane, index) => (
-              <div
-                key={lane.lane}
-                className="rounded-2xl p-3 flex items-center gap-3 bg-white shadow-sm border border-outline-variant/30"
-              >
-                <div className="w-12 h-12 rounded-xl flex flex-col items-center justify-center shrink-0 bg-primary text-on-primary">
-                  <span className="text-[10px] font-medium leading-none">
-                    LANE
-                  </span>
-                  <span className="text-base font-bold leading-tight">
-                    {lane.lane}
-                  </span>
-                </div>
-                {lane.status === "Empty" ? (
-                  <div className="flex-1">
-                    <p className="text-xs italic text-outline">
-                      No vehicle assigned
-                    </p>
+            {lanes.map((lane, index) => {
+              const isStatusClickable =
+                lane.status === "Empty" || lane.status === "Maintenance";
+              return (
+                <div
+                  key={lane.lane}
+                  onClick={
+                    isStatusClickable
+                      ? () => setLaneStatusPicker(lane)
+                      : undefined
+                  }
+                  className={`rounded-2xl p-3 flex items-center gap-3 bg-white shadow-sm border border-outline-variant/30 ${
+                    isStatusClickable
+                      ? "cursor-pointer hover:bg-surface-container-low"
+                      : ""
+                  }`}
+                >
+                  <div className="w-12 h-12 rounded-xl flex flex-col items-center justify-center shrink-0 bg-primary text-on-primary">
+                    <span className="text-[10px] font-medium leading-none">
+                      LANE
+                    </span>
+                    <span className="text-base font-bold leading-tight">
+                      {lane.lane}
+                    </span>
                   </div>
-                ) : (
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-1.5 mb-0.5">
-                      <span
-                        className={`text-[11px] px-1.5 py-0.5 rounded-full font-medium flex items-center gap-0.5 ${lane.status === "Washing" ? "bg-amber-100 text-amber-700" : "bg-green-100 text-green-700"}`}
-                      >
-                        {lane.status === "Washing" ? (
-                          <Droplets className="w-2.5 h-2.5" />
-                        ) : (
-                          <Check className="w-2.5 h-2.5" />
-                        )}
-                        {lane.status}
-                      </span>
-                      <span className="text-[11px] text-outline truncate">
-                        {lane.model.split(" ")[0]} • {lane.color}
+                  {lane.status === "Empty" ? (
+                    <div className="flex-1">
+                      <p className="text-xs italic text-outline">
+                        No vehicle assigned
+                      </p>
+                    </div>
+                  ) : lane.status === "Maintenance" ? (
+                    <div className="flex-1">
+                      <span className="text-[11px] px-1.5 py-0.5 rounded-full font-medium flex items-center gap-0.5 w-fit bg-surface-container-high text-on-surface-variant">
+                        <Wrench className="w-2.5 h-2.5" />
+                        Maintenance
                       </span>
                     </div>
-                    <p className="text-base font-bold text-on-surface tracking-wide">
-                      {lane.plate}
-                    </p>
-                    <p className="text-[11px] font-medium text-primary truncate">
-                      {lane.service}
-                    </p>
-                  </div>
-                )}
-                {lane.status !== "Empty" && (
-                  <button
-                    onClick={() => handleCompleted(index)}
-                    className="px-3 py-1.5 rounded-xl text-xs font-semibold transition shrink-0 bg-primary text-on-primary hover:opacity-90"
-                  >
-                    Completed
-                  </button>
-                )}
-              </div>
-            ))}
+                  ) : (
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-1.5 mb-0.5">
+                        <span
+                          className={`text-[11px] px-1.5 py-0.5 rounded-full font-medium flex items-center gap-0.5 ${lane.status === "Washing" ? "bg-amber-100 text-amber-700" : "bg-green-100 text-green-700"}`}
+                        >
+                          {lane.status === "Washing" ? (
+                            <Droplets className="w-2.5 h-2.5" />
+                          ) : (
+                            <Check className="w-2.5 h-2.5" />
+                          )}
+                          {lane.status}
+                        </span>
+                        <span className="text-[11px] text-outline truncate">
+                          {lane.model.split(" ")[0]} • {lane.color}
+                        </span>
+                      </div>
+                      <p className="text-base font-bold text-on-surface tracking-wide">
+                        {lane.plate}
+                      </p>
+                      <p className="text-[11px] font-medium text-primary truncate">
+                        {lane.service}
+                      </p>
+                    </div>
+                  )}
+                  {lane.status === "Washing" && (
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleCompleted(index);
+                      }}
+                      className="px-3 py-1.5 rounded-xl text-xs font-semibold transition shrink-0 bg-primary text-on-primary hover:opacity-90"
+                    >
+                      Completed
+                    </button>
+                  )}
+                </div>
+              );
+            })}
           </div>
         </div>
 
@@ -1035,6 +1109,99 @@ export default function QueuePage() {
             </div>
           </div>
         }
+      />
+
+      {/* Lane status picker — click vào lane Empty/Maintenance mở popup chọn trạng thái */}
+      {laneStatusPicker && (
+        <Modal
+          isOpen
+          onClose={() => setLaneStatusPicker(null)}
+          variant="custom"
+        >
+          <div className="flex w-full flex-col gap-4 text-left">
+            <div>
+              <h2 className="text-headline-md font-semibold text-on-surface">
+                Lane {laneStatusPicker.lane} — change status
+              </h2>
+              <p className="mt-1 text-body-sm text-on-surface-variant">
+                Choose the new status for this lane.
+              </p>
+            </div>
+
+            <button
+              type="button"
+              disabled={laneStatusPicker.status === "Empty"}
+              onClick={() => {
+                setPendingLaneChange({
+                  lane: laneStatusPicker,
+                  maintenance: false,
+                });
+                setLaneStatusPicker(null);
+              }}
+              className={`rounded-lg border px-4 py-3 text-left text-body-md font-semibold transition-colors ${
+                laneStatusPicker.status === "Empty"
+                  ? "cursor-not-allowed border-outline-variant bg-surface-container-low text-on-surface-variant"
+                  : "border-outline-variant text-on-surface hover:bg-surface-container-high"
+              }`}
+            >
+              Available
+              {laneStatusPicker.status === "Empty" && " (current)"}
+            </button>
+
+            <button
+              type="button"
+              disabled={laneStatusPicker.status === "Maintenance"}
+              onClick={() => {
+                setPendingLaneChange({
+                  lane: laneStatusPicker,
+                  maintenance: true,
+                });
+                setLaneStatusPicker(null);
+              }}
+              className={`rounded-lg border px-4 py-3 text-left text-body-md font-semibold transition-colors ${
+                laneStatusPicker.status === "Maintenance"
+                  ? "cursor-not-allowed border-outline-variant bg-surface-container-low text-on-surface-variant"
+                  : "border-outline-variant text-on-surface hover:bg-surface-container-high"
+              }`}
+            >
+              Maintenance
+              {laneStatusPicker.status === "Maintenance" && " (current)"}
+            </button>
+
+            <button
+              type="button"
+              onClick={() => setLaneStatusPicker(null)}
+              className="text-body-sm font-semibold text-on-surface-variant hover:underline"
+            >
+              Cancel
+            </button>
+          </div>
+        </Modal>
+      )}
+
+      {/* Confirm popup — xác nhận trước khi thực sự gọi API đổi trạng thái */}
+      <Modal
+        isOpen={!!pendingLaneChange}
+        onClose={() => setPendingLaneChange(null)}
+        variant="confirm"
+        title="Change lane status?"
+        message={
+          pendingLaneChange
+            ? `Set Lane ${pendingLaneChange.lane.lane} to ${
+                pendingLaneChange.maintenance ? "Maintenance" : "Available"
+              }?`
+            : ""
+        }
+        confirmText="Confirm"
+        isConfirmLoading={isLoading}
+        onConfirm={async () => {
+          if (!pendingLaneChange) return;
+          await handleToggleMaintenance(
+            pendingLaneChange.lane.laneDbId,
+            pendingLaneChange.maintenance,
+          );
+          setPendingLaneChange(null);
+        }}
       />
 
       <Modal

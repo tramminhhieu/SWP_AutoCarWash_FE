@@ -37,6 +37,15 @@ const TIER_ICONS: Record<string, typeof Shield> = {
   PLATINUM: Gem,
 };
 
+// Diễn giải enum "description" từ BE (lịch sử giao dịch điểm) sang tiếng Anh dễ hiểu
+const LOYALTY_TRANSACTION_LABELS: Record<string, string> = {
+  BOOKING: "Booking Service",
+  SUBSCRIPTION: "Subscription Purchase",
+  MANUAL: "Manual Adjustment",
+  ADJUSTMENT: "System Adjustment",
+  DEPOSIT_REFUND: "Deposit Refund",
+};
+
 const PAGE_SIZE = 5;
 
 export default function LoyaltyRewards() {
@@ -621,7 +630,8 @@ export default function LoyaltyRewards() {
                           {formatAppointmentDate(row.createdAt.slice(0, 10))}
                         </td>
                         <td className="px-6 py-6 text-base text-on-surface">
-                          {row.servicePackageName}
+                          {LOYALTY_TRANSACTION_LABELS[row.description] ??
+                            row.description}
                         </td>
                         <td
                           className={`px-6 py-6 text-right text-base font-bold ${
@@ -788,7 +798,9 @@ export default function LoyaltyRewards() {
                             className={`rounded px-2 py-1 text-xs font-semibold ${
                               row.changeType === "DOWNGRADE"
                                 ? "border border-error/30 bg-error-container text-on-error-container"
-                                : "bg-surface-container-low text-on-surface-variant"
+                                : row.changeType === "UPGRADE"
+                                  ? "border border-tertiary-container/30 bg-tertiary-container/10 text-tertiary-container"
+                                  : "bg-surface-container-low text-on-surface-variant"
                             }`}
                           >
                             {row.changeType}

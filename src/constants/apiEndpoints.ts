@@ -194,11 +194,7 @@ export const API = {
     CONFIRM: (id: number | string) => `/api/refunds/${id}/confirm`,
   },
   PROMOTION: {
-    // API-02-01: Tổng hợp số lượng promotion theo từng chi nhánh
-    BRANCHES_SUMMARY: "/api/admin/promotions/branches-summary",
-
-    // API-02-02: Danh sách promotion/voucher phân trang (hỗn hợp CAMPAIGN + STANDALONE_VOUCHER)
-    DASHBOARD_LIST: "/api/admin/promotions",
+    LIST: "/api/admin/promotions",
 
     CREATE: "/api/admin/promotions/config",
 
@@ -212,5 +208,10 @@ export const API = {
     LIST: "/api/admin/system-settings",
     CREATE: "/api/admin/system-settings",
     UPDATE: (id: number) => `/api/admin/system-settings/${id}`,
+  },
+  DASHBOARD: {
+    SUMMARY: "/api/dashboard/summary",
+    REVENUE_CHART: "/api/dashboard/revenue-chart",
+    TABLES: "/api/dashboard/tables",
   },
 };

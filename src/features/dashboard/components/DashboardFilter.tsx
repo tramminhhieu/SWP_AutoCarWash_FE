@@ -1,26 +1,20 @@
 import { Calendar } from "lucide-react";
-import type {
-  DashboardTab,
-  ProvinceOption,
-  StationOption,
-} from "../types/dashboard";
+import type { DashboardTab } from "../types/dashboard";
+import BranchFilterDropdown, {
+  type BranchFilterSelection,
+} from "../../station/components/BranchFilterDropdown";
 
 interface Props {
   role: "ADMIN" | "STAFF";
   activeTab: DashboardTab;
   fromDate: string;
   toDate: string;
-  provinceId?: number;
-  stationId?: number;
-  provinces: ProvinceOption[];
-  stations: StationOption[];
   dateError: string | null;
   isLoading: boolean;
   onTabChange: (tab: DashboardTab) => void;
   onFromDateChange: (v: string) => void;
   onToDateChange: (v: string) => void;
-  onProvinceChange: (id?: number) => void;
-  onStationChange: (id?: number) => void;
+  onBranchChange: (selection: BranchFilterSelection) => void;
   onApply: () => void;
 }
 
@@ -37,21 +31,14 @@ export default function DashboardFilter({
   activeTab,
   fromDate,
   toDate,
-  provinceId,
-  stationId,
-  provinces,
-  stations,
   dateError,
   isLoading,
   onTabChange,
   onFromDateChange,
   onToDateChange,
-  onProvinceChange,
-  onStationChange,
+  onBranchChange,
   onApply,
 }: Props) {
-  const selectedProvince = provinces.find((p) => p.provinceId === provinceId);
-
   return (
     <div className="flex flex-col gap-3">
       {/* ─── Hàng 1: Tab shortcuts + Date range + Apply button ────────────── */}
@@ -111,46 +98,10 @@ export default function DashboardFilter({
         <p className="text-xs font-medium text-error">{dateError}</p>
       )}
 
-      {/* ─── Hàng 2: Station dropdown 2 tầng (chỉ ADMIN) ─────────────────── */}
+      {/* ─── Hàng 2: Branch filter, drill-in Province → Commune → Station (chỉ ADMIN) ─── */}
       {role === "ADMIN" && (
         <div className="flex flex-wrap items-center gap-3">
-          {/* Tầng 1: chọn Province */}
-          <select
-            value={provinceId ?? ""}
-            onChange={(e) => {
-              const val = e.target.value;
-              onProvinceChange(val ? Number(val) : undefined);
-            }}
-            className="rounded-lg border border-outline-variant/40 bg-white px-3 py-2 text-sm text-on-surface shadow-[0_10px_25px_-5px_rgba(29,78,216,0.05)] outline-none focus:border-primary-container"
-          >
-            <option value="">All branches</option>
-            {provinces.map((p) => (
-              <option key={p.provinceId} value={p.provinceId}>
-                {p.provinceName}
-              </option>
-            ))}
-          </select>
-
-          {/* Tầng 2: chọn Station (chỉ hiện khi đã chọn province) */}
-          {provinceId !== undefined && (
-            <select
-              value={stationId ?? ""}
-              onChange={(e) => {
-                const val = e.target.value;
-                onStationChange(val ? Number(val) : undefined);
-              }}
-              className="rounded-lg border border-outline-variant/40 bg-white px-3 py-2 text-sm text-on-surface shadow-[0_10px_25px_-5px_rgba(29,78,216,0.05)] outline-none focus:border-primary-container"
-            >
-              <option value="">
-                All branches in {selectedProvince?.provinceName}
-              </option>
-              {stations.map((s) => (
-                <option key={s.stationId} value={s.stationId}>
-                  {s.stationName}
-                </option>
-              ))}
-            </select>
-          )}
+          <BranchFilterDropdown onChange={onBranchChange} />
         </div>
       )}
     </div>

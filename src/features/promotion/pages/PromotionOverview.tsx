@@ -1,58 +1,93 @@
-import { useEffect, useState } from "react";
-import { useNavigate, useLocation } from "react-router-dom";
-import { Tag, Plus, Building2, TrendingUp } from "lucide-react";
-import { getBranchPromotionSummary } from "../api/promotionApi";
-import type { BranchPromotionSummary } from "../types/promotion";
-import type { PromotionStatus } from "../types/enums";
-import Modal from "../../../components/ui/Modal";
+import { useEffect, useMemo, useState } from "react";
+import { useNavigate } from "react-router-dom";
+import {
+  ChevronLeft,
+  ChevronRight,
+  Plus,
+  Search,
+  Tag,
+  Ticket,
+  ChevronDown,
+} from "lucide-react";
+import { getAdminPromotions } from "../api/promotionApi";
+import type {
+  PromotionItem,
+  PromotionStatus,
+  PromotionStation,
+  PromotionTarget,
+} from "../types/promotion";
+import BranchFilterDropdown, {
+  type BranchFilterSelection,
+} from "../../station/components/BranchFilterDropdown";
+import { formatCheckInTime } from "../../booking/utils/bookingFormatters";
 
 // ─── Constants ───────────────────────────────────────────────────────────────
 
-const STATUS_OPTIONS: { label: string; value: PromotionStatus }[] = [
-  { label: "Active", value: "ACTIVE" },
-  { label: "Upcoming", value: "UPCOMING" },
-  { label: "Expired", value: "EXPIRED" },
+const PAGE_SIZE = 8;
+
+const STATUS_OPTIONS: { value: PromotionStatus | ""; label: string }[] = [
+  { value: "", label: "All statuses" },
+  { value: "ACTIVE", label: "Active" },
+  { value: "UPCOMING", label: "Upcoming" },
+  { value: "EXPIRED", label: "Expired" },
 ];
+
+const STATUS_BADGE: Record<
+  PromotionStatus,
+  { bg: string; text: string; border: string }
+> = {
+  ACTIVE: {
+    bg: "bg-tertiary-container/10",
+    text: "text-tertiary-container",
+    border: "border-tertiary-container/30",
+  },
+  UPCOMING: {
+    bg: "bg-secondary/10",
+    text: "text-secondary",
+    border: "border-secondary/30",
+  },
+  EXPIRED: {
+    bg: "bg-surface-container-high",
+    text: "text-outline",
+    border: "border-outline/20",
+  },
+};
 
 // ─── Sub-components ──────────────────────────────────────────────────────────
 
-function SummaryCard({
-  icon,
-  title,
-  value,
-  accent,
-}: {
-  icon: React.ReactNode;
-  title: string;
-  value: number | string;
-  accent: string;
-}) {
+function StatusPill({ status }: { status: PromotionStatus }) {
+  const s = STATUS_BADGE[status];
   return (
-    <div className="flex flex-1 flex-col gap-4 rounded-[16px] border border-outline-variant/30 bg-white p-6 shadow-[0px_10px_25px_-5px_rgba(29,78,216,0.05)]">
-      <div
-        className={`flex size-10 items-center justify-center rounded-md ${accent}`}
-      >
-        {icon}
-      </div>
-      <div className="flex flex-col gap-1">
-        <span className="text-xs font-semibold uppercase tracking-[1.2px] text-outline">
-          {title}
-        </span>
-        <span className="font-heading text-3xl font-bold text-on-surface">
-          {value}
-        </span>
-      </div>
-    </div>
+    <span
+      className={`inline-flex items-center rounded-md border px-3 py-1 text-xs font-bold uppercase tracking-[0.6px] ${s.bg} ${s.text} ${s.border}`}
+    >
+      {status}
+    </span>
   );
 }
 
-// Skeleton card khi đang load
-function StationCardSkeleton() {
+function KpiCard({
+  icon: Icon,
+  label,
+  value,
+}: {
+  icon: typeof Tag;
+  label: string;
+  value: string;
+}) {
   return (
-    <div className="flex flex-col gap-3 rounded-[16px] border border-outline-variant/20 bg-white p-6">
-      <div className="h-4 w-2/3 animate-pulse rounded bg-surface-container-high" />
-      <div className="h-8 w-1/3 animate-pulse rounded bg-surface-container-high" />
-      <div className="h-3 w-1/2 animate-pulse rounded bg-surface-container-high" />
+    <div className="flex shrink-0 items-center gap-4 rounded-lg border border-outline-variant bg-surface-container-high p-6 shadow-[0_1px_1px_rgba(0,0,0,0.05)]">
+      <div className="flex size-9 items-center justify-center rounded-full bg-primary/10">
+        <Icon className="size-5 text-primary" />
+      </div>
+      <div>
+        <p className="text-xs font-semibold uppercase tracking-wider text-on-surface-variant">
+          {label}
+        </p>
+        <p className="font-heading text-2xl font-semibold text-on-surface">
+          {value}
+        </p>
+      </div>
     </div>
   );
 }
@@ -61,35 +96,38 @@ function StationCardSkeleton() {
 
 export default function PromotionOverview() {
   const navigate = useNavigate();
-  const location = useLocation();
 
-  const [statusFilter, setStatusFilter] = useState<PromotionStatus>("ACTIVE");
-  const [summary, setSummary] = useState<BranchPromotionSummary[]>([]);
+  const [promotions, setPromotions] = useState<PromotionItem[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  const [toast, setToast] = useState<string | null>(
-    () =>
-      (location.state as { successMessage?: string })?.successMessage ?? null,
-  );
+  // Search + status: filter client-side trên state
+  const [searchInput, setSearchInput] = useState("");
+  const [appliedSearch, setAppliedSearch] = useState("");
+  const [statusFilter, setStatusFilter] = useState<PromotionStatus | "">("");
 
-  useEffect(() => {
-    if (!toast) return;
-    window.history.replaceState({}, "");
-    const timer = setTimeout(() => setToast(null), 1000);
-    return () => clearTimeout(timer);
-  }, [toast]);
+  // Branch filter: gọi lại API khi đổi
+  const [branchFilter, setBranchFilter] = useState<BranchFilterSelection>(null);
 
+  const [page, setPage] = useState(1);
+
+  // Gọi API khi mount hoặc khi đổi branch filter
   useEffect(() => {
     let isMounted = true;
 
-    getBranchPromotionSummary({ status: statusFilter })
-      .then((data) => {
-        if (isMounted) setSummary(data);
+    const params = {
+      provinceId:
+        branchFilter?.level === "province" ? branchFilter.id : undefined,
+      stationId:
+        branchFilter?.level === "station" ? branchFilter.id : undefined,
+    };
+
+    getAdminPromotions(params)
+      .then((data: PromotionItem[]) => {
+        if (isMounted) setPromotions(data);
       })
       .catch(() => {
-        if (isMounted)
-          setError("Unable to load branch summary. Please try again.");
+        if (isMounted) setError("Unable to load promotions. Please try again.");
       })
       .finally(() => {
         if (isMounted) setIsLoading(false);
@@ -98,157 +136,335 @@ export default function PromotionOverview() {
     return () => {
       isMounted = false;
     };
-  }, [statusFilter]);
+  }, [branchFilter]);
 
-  // Đổi status → reset state rồi mới đổi filter để trigger effect
-  function handleStatusChange(val: PromotionStatus) {
-    if (val === statusFilter) return;
-    setIsLoading(true);
-    setError(null);
-    setStatusFilter(val);
+  function handleSearchSubmit() {
+    setAppliedSearch(searchInput.trim());
+    setPage(1);
   }
 
-  // Tổng số promotion toàn hệ thống
-  const totalPromotions = summary.reduce(
-    (sum, s) => sum + s.totalActivePromotions,
+  function handleFilterChange(update: () => void) {
+    update();
+    setPage(1);
+  }
+
+  // Filter client-side theo title và status — không gọi lại API
+  const filtered = useMemo(() => {
+    return promotions.filter((p) => {
+      const matchSearch =
+        !appliedSearch ||
+        p.title.toLowerCase().includes(appliedSearch.toLowerCase());
+      const matchStatus = !statusFilter || p.status === statusFilter;
+      return matchSearch && matchStatus;
+    });
+  }, [promotions, appliedSearch, statusFilter]);
+
+  // KPI đếm từ toàn bộ data — không bị ảnh hưởng bởi search/status filter
+  const totalPromotions = promotions.length;
+  const totalVouchers = promotions.reduce(
+    (sum, p) => sum + (p.vouchers?.length ?? 0),
     0,
   );
-  // Số chi nhánh đang có ít nhất 1 promotion
-  const activeBranchCount = summary.filter(
-    (s) => s.totalActivePromotions > 0,
-  ).length;
+
+  const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
+  const paginatedRows = filtered.slice(
+    (page - 1) * PAGE_SIZE,
+    page * PAGE_SIZE,
+  );
 
   return (
     <div className="mx-auto flex max-w-[1440px] flex-col gap-8 px-12 py-8">
-      <Modal
-        isOpen={!!toast}
-        onClose={() => setToast(null)}
-        variant="success"
-        title="Success"
-        message={toast}
-      />
-
       {/* ── Header ── */}
-
-      <div className="flex items-end justify-between">
+      <div className="flex items-start justify-between">
         <div className="flex flex-col gap-2">
           <h1 className="font-heading text-headline-xl font-bold tracking-[-1.2px] text-on-surface">
-            Promotion Overview
+            Promotions
           </h1>
           <p className="text-sm text-on-surface-variant">
-            System-wide promotion summary. Click a branch to view details.
+            Manage all campaigns and vouchers across the system.
           </p>
         </div>
-
         <button
           onClick={() => navigate("/admin/promotions/create")}
-          className="flex shrink-0 items-center gap-2 rounded-md bg-primary px-5 py-2.5 text-body-md font-semibold text-on-primary shadow-[0_10px_25px_-5px_rgba(29,78,216,0.05)] transition-colors hover:bg-primary/90"
+          className="flex items-center gap-2 rounded-lg bg-primary px-4 py-2.5 text-sm font-semibold text-white hover:opacity-90"
         >
-          <Plus size={16} strokeWidth={2.5} className="text-white" />
-          <span className="text-sm font-bold tracking-[0.14px] text-white">
-            Add New
-          </span>
+          <Plus className="size-4" />
+          New Promotion
         </button>
       </div>
 
-      {/* ── Summary Cards ── */}
-      <div className="flex gap-6">
-        <SummaryCard
-          icon={<Tag className="size-5 text-primary" />}
-          title={`${statusFilter.charAt(0) + statusFilter.slice(1).toLowerCase()} Promotions`}
-          value={isLoading ? "—" : totalPromotions}
-          accent="bg-primary/10"
+      {/* ── KPI Cards ── */}
+      <div className="flex flex-wrap gap-4">
+        <KpiCard
+          icon={Tag}
+          label="Total Promotions"
+          value={totalPromotions.toLocaleString()}
         />
-        <SummaryCard
-          icon={<Building2 className="size-5 text-secondary" />}
-          title="Branches with Promotions"
-          value={isLoading ? "—" : activeBranchCount}
-          accent="bg-secondary/10"
-        />
-        <SummaryCard
-          icon={<TrendingUp className="size-5 text-tertiary" />}
-          title="Total Branches"
-          value={isLoading ? "—" : summary.length}
-          accent="bg-tertiary-container/20"
+        <KpiCard
+          icon={Ticket}
+          label="Total Vouchers"
+          value={totalVouchers.toLocaleString()}
         />
       </div>
 
-      {/* ── Status Filter ── */}
-      <div className="flex items-center gap-3">
-        <span className="text-sm font-semibold text-on-surface-variant">
-          Status:
-        </span>
-        {STATUS_OPTIONS.map((opt) => (
-          <button
-            key={opt.value}
-            onClick={() => handleStatusChange(opt.value)}
-            className={`rounded-md px-4 py-2 text-sm font-semibold transition-colors ${
-              statusFilter === opt.value
-                ? "bg-primary text-white shadow-[0px_4px_12px_rgba(29,78,216,0.2)]"
-                : "border border-outline-variant/40 bg-white text-on-surface-variant hover:bg-surface-container-low"
-            }`}
+      {/* ── Search Bar ── */}
+      <div className="flex items-center gap-2">
+        <input
+          type="text"
+          value={searchInput}
+          onChange={(e) => setSearchInput(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === "Enter") handleSearchSubmit();
+          }}
+          placeholder="Search by campaign name"
+          className="w-72 rounded-lg border border-outline-variant bg-white px-3 py-2 text-sm font-medium text-on-surface"
+        />
+        <button
+          type="button"
+          onClick={handleSearchSubmit}
+          className="flex items-center gap-2 rounded-lg border border-outline-variant bg-surface-container-high px-3 py-2 text-sm font-semibold text-on-surface"
+        >
+          <Search className="size-4" />
+          Search
+        </button>
+      </div>
+
+      {/* ── Filter Bar ── */}
+      <div className="flex flex-wrap items-center gap-3">
+        {/* Status filter — client-side */}
+        <div className="relative">
+          <select
+            value={statusFilter}
+            onChange={(e) =>
+              handleFilterChange(() =>
+                setStatusFilter(e.target.value as PromotionStatus | ""),
+              )
+            }
+            className="appearance-none rounded-lg border border-outline-variant bg-white py-2 pl-3 pr-9 text-sm font-medium text-on-surface"
           >
-            {opt.label}
-          </button>
-        ))}
-      </div>
-
-      {/* ── Branch Grid ── */}
-      <div className="rounded-[16px] border border-outline-variant/30 bg-white shadow-[0px_10px_25px_-5px_rgba(29,78,216,0.05)]">
-        <div className="flex items-center justify-between border-b border-outline-variant/20 px-6 py-4">
-          <h2 className="font-heading text-base font-semibold text-on-surface">
-            Branch Distribution
-          </h2>
-          {!isLoading && (
-            <span className="text-xs font-medium text-outline">
-              {summary.length} branches
-            </span>
-          )}
+            {STATUS_OPTIONS.map((opt) => (
+              <option key={opt.value} value={opt.value}>
+                {opt.label}
+              </option>
+            ))}
+          </select>
+          <ChevronDown className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-outline" />
         </div>
 
+        {/* Branch filter — gọi lại API khi đổi */}
+        <BranchFilterDropdown
+          onChange={(sel: BranchFilterSelection) =>
+            handleFilterChange(() => {
+              setBranchFilter(sel);
+              setIsLoading(true);
+              setError(null);
+            })
+          }
+        />
+      </div>
+
+      {/* ── Table ── */}
+      <div className="overflow-x-auto rounded-lg border border-outline-variant bg-white shadow-[0_1px_2px_rgba(0,0,0,0.05)]">
         {error ? (
-          <div className="flex h-48 items-center justify-center text-sm text-error">
+          <div className="flex h-48 items-center justify-center text-base text-error">
             {error}
           </div>
         ) : isLoading ? (
-          <div className="grid grid-cols-2 gap-4 p-6 sm:grid-cols-3 lg:grid-cols-4">
-            {Array.from({ length: 8 }).map((_, i) => (
-              <StationCardSkeleton key={i} />
-            ))}
+          <div className="flex h-48 items-center justify-center text-base text-outline">
+            Loading...
           </div>
-        ) : summary.length === 0 ? (
-          <div className="flex h-48 items-center justify-center text-sm text-outline">
-            No branches found.
+        ) : filtered.length === 0 ? (
+          <div className="flex h-48 items-center justify-center text-base text-outline">
+            No promotions found
           </div>
         ) : (
-          <div className="grid grid-cols-2 gap-4 p-6 sm:grid-cols-3 lg:grid-cols-4">
-            {summary.map((s) => (
-              <button
-                key={s.stationId}
-                onClick={() =>
-                  // Navigate sang trang Detail, truyền stationId + stationName qua state
-                  navigate(`/admin/promotions/station/${s.stationId}`, {
-                    state: {
-                      stationName: s.stationName,
-                      defaultStatus: statusFilter,
-                      from: "/admin/promotions",
-                    },
-                  })
-                }
-                className="group flex flex-col gap-2 rounded-[16px] border border-outline-variant/20 bg-white p-6 text-left transition-all hover:border-primary/30 hover:shadow-[0px_10px_25px_-5px_rgba(29,78,216,0.1)]"
-              >
-                <span className="text-xs font-semibold text-on-surface-variant group-hover:text-primary">
-                  {s.stationName}
-                </span>
-                <span className="font-heading text-3xl font-bold text-primary">
-                  {s.totalActivePromotions}
-                </span>
-                <div className="flex items-center gap-1 text-xs text-outline">
-                  <span>promotions</span>
+          <>
+            <table className="w-full">
+              <thead>
+                <tr className="border-b border-outline-variant bg-surface-container-low">
+                  {[
+                    "ID",
+                    "Campaign Name",
+                    "Voucher",
+                    "Stations",
+                    "Target Segments",
+                    "Status",
+                    "Start Date",
+                    "End Date",
+                    "Created Date",
+                  ].map((h) => (
+                    <th
+                      key={h}
+                      className="px-6 py-4 text-left text-sm font-medium uppercase tracking-wider text-on-surface-variant"
+                    >
+                      {h}
+                    </th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {paginatedRows.map((row, i) => (
+                  <tr
+                    key={row.id}
+                    onClick={() =>
+                      navigate(`/admin/promotions/${row.id}`, {
+                        state: { promotion: row },
+                      })
+                    }
+                    className={`cursor-pointer hover:bg-surface-container-low ${
+                      i > 0 ? "border-t border-outline-variant" : ""
+                    }`}
+                  >
+                    {/* ID */}
+                    <td className="px-6 py-5 text-base font-medium text-on-surface">
+                      #{row.id}
+                    </td>
+
+                    {/* Campaign Name */}
+                    <td className="px-6 py-5 text-base text-on-surface">
+                      {row.title}
+                    </td>
+
+                    {/* Voucher */}
+                    <td className="px-6 py-5">
+                      <div className="flex flex-wrap gap-1">
+                        {(row.vouchers ?? []).length > 0 ? (
+                          <>
+                            {(row.vouchers ?? []).slice(0, 2).map((v) => (
+                              <span
+                                key={v.id}
+                                className="rounded-md bg-secondary/10 px-2 py-0.5 text-xs font-medium text-secondary"
+                              >
+                                {v.voucherCode}
+                              </span>
+                            ))}
+                            {(row.vouchers ?? []).length > 2 && (
+                              <span className="rounded-md bg-primary/10 px-2 py-0.5 text-xs font-medium text-primary">
+                                +{(row.vouchers ?? []).length - 2} more
+                              </span>
+                            )}
+                          </>
+                        ) : (
+                          <span className="text-sm text-outline">—</span>
+                        )}
+                      </div>
+                    </td>
+
+                    {/* Stations — hiện tối đa 2, dư thì +N more */}
+                    <td className="px-6 py-5">
+                      <div className="flex flex-wrap gap-1">
+                        {(row.stations ?? []).length > 0 ? (
+                          <>
+                            {(row.stations ?? [])
+                              .slice(0, 2)
+                              .map((s: PromotionStation) => (
+                                <span
+                                  key={s.stationId}
+                                  className="rounded-md bg-surface-container-high px-2 py-0.5 text-xs font-medium text-on-surface-variant"
+                                >
+                                  {s.stationName}
+                                </span>
+                              ))}
+                            {(row.stations ?? []).length > 2 && (
+                              <span className="rounded-md bg-primary/10 px-2 py-0.5 text-xs font-medium text-primary">
+                                +{(row.stations ?? []).length - 2} more
+                              </span>
+                            )}
+                          </>
+                        ) : (
+                          <span className="text-sm text-outline">—</span>
+                        )}
+                      </div>
+                    </td>
+
+                    {/* Target Segments */}
+                    <td className="px-6 py-5">
+                      <div className="flex flex-wrap gap-1">
+                        {(row.targets ?? []).length > 0 ? (
+                          (row.targets ?? []).map((t: PromotionTarget) => (
+                            <span
+                              key={t.targetId}
+                              className="rounded-md bg-secondary/10 px-2 py-0.5 text-xs font-medium text-secondary"
+                            >
+                              {t.targetName}
+                            </span>
+                          ))
+                        ) : (
+                          <span className="text-xs text-outline">
+                            All customers
+                          </span>
+                        )}
+                      </div>
+                    </td>
+
+                    {/* Status */}
+                    <td className="px-6 py-5">
+                      <StatusPill status={row.status} />
+                    </td>
+
+                    {/* Start Date */}
+                    <td className="px-6 py-5 text-base text-on-surface">
+                      {row.startDate}
+                    </td>
+
+                    {/* End Date */}
+                    <td className="px-6 py-5 text-base text-on-surface">
+                      {row.endDate}
+                    </td>
+
+                    {/* Created Date */}
+                    <td className="px-6 py-5 text-base text-on-surface">
+                      {formatCheckInTime(row.createdAt)}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+
+            {/* Pagination — client-side */}
+            {totalPages > 1 && (
+              <div className="flex items-center justify-between border-t border-outline-variant px-6 py-4">
+                <button
+                  type="button"
+                  onClick={() => setPage((p) => Math.max(1, p - 1))}
+                  disabled={page === 1}
+                  className="flex items-center gap-1 rounded-lg px-3 py-2 text-sm font-medium text-on-surface-variant transition-colors hover:bg-surface-container-low disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:bg-transparent"
+                >
+                  <ChevronLeft className="size-4" />
+                  Previous
+                </button>
+
+                <div className="flex items-center gap-1">
+                  {Array.from({ length: totalPages }, (_, i) => i + 1).map(
+                    (p) => (
+                      <button
+                        key={p}
+                        type="button"
+                        onClick={() => setPage(p)}
+                        className={`flex size-9 items-center justify-center rounded-lg text-sm font-medium transition-colors ${
+                          p === page
+                            ? "bg-primary text-white"
+                            : "text-on-surface-variant hover:bg-surface-container-low"
+                        }`}
+                      >
+                        {p}
+                      </button>
+                    ),
+                  )}
                 </div>
-              </button>
-            ))}
-          </div>
+
+                <button
+                  type="button"
+                  onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+                  disabled={page === totalPages}
+                  className="flex items-center gap-1 rounded-lg px-3 py-2 text-sm font-medium text-on-surface-variant transition-colors hover:bg-surface-container-low disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:bg-transparent"
+                >
+                  Next
+                  <ChevronRight className="size-4" />
+                </button>
+              </div>
+            )}
+          </>
         )}
       </div>
     </div>

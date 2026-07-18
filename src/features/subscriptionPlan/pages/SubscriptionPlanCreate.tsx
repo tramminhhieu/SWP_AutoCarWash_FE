@@ -10,12 +10,12 @@ const TYPE_CONFIG: Record<
 > = {
   unlimited: {
     planType: "UNLIMIT",
-    title: "Create Unlimited Membership",
+    title: "Create Unlimited Subscription Plan",
     subtitle: "Unlimited wash package for a single vehicle.",
   },
   family: {
     planType: "FAMILY",
-    title: "Create Family Membership",
+    title: "Create Family Subscription Plan",
     subtitle: "Shared membership package for multiple vehicles.",
   },
 };

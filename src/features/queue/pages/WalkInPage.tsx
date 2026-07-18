@@ -297,7 +297,7 @@ export default function WalkInPage() {
       }
       if (!LICENSE_PLATE_REGEX.test(plate)) {
         setLicensePlateError(
-          "Invalid license plate format (e.g., 29A-12345 or 51AB-12345)",
+          "Invalid license plate format (e.g: 29A-12345 or 51AB-12345)",
         );
         return;
       }

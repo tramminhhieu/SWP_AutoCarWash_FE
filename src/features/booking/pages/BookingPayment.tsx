@@ -118,7 +118,7 @@ export default function BookingPayment() {
     if (stationId) clearBookingDraft(stationId);
     navigate("/booking/history", {
       state: {
-        bookingSuccessMessage: `Booking confirmed! Booking ID: ${bookingId}.`,
+        successMessage: `Bosoking confirmed! Booking ID: ${bookingId}.`,
       },
     });
   }, [isConfirmed, bookingId, stationId, navigate]);

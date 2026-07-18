@@ -94,9 +94,6 @@ export default function PaymentPage() {
   // Tiền mặt staff đã nhận — tách state text riêng để có thể hiển thị đúng khi nhập "0"
   const received = Number(receivedInput) || 0;
 
-  // ── Điểm tích được sau đơn (trên subtotal, trước giảm giá) ─────────────────
-  const earnedPoints = calcEarnedPoints(subtotal, detail?.customerTier ?? null);
-
   const tierLabel = detail?.customerTier
     ? detail.customerTier.charAt(0) + detail.customerTier.slice(1).toLowerCase()
     : "Walk-in";
@@ -110,7 +107,16 @@ export default function PaymentPage() {
           : null;
 
   const total = Math.max(baseTotal - redeemDiscount, 0);
+
+  // ── Điểm tích được sau đơn (trên Total Due, sau khi trừ mọi giảm giá) ──────
+  const pointsBase = total + (detail?.depositAmount ?? 0);
+  const earnedPoints = calcEarnedPoints(
+    pointsBase,
+    detail?.customerTier ?? null,
+  );
+
   const change = received - total;
+
   const isInsufficient = received > 0 && received < total;
   const canConfirm =
     !isRedeemInvalid && (total === 0 || (received >= total && total > 0));
@@ -161,7 +167,7 @@ export default function PaymentPage() {
   }
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="mx-auto flex max-w-[1200px] flex-col gap-6 px-6 py-8">
       {/* Header */}
       <div className="flex items-center gap-3 mb-6">
         <button
@@ -232,7 +238,7 @@ export default function PaymentPage() {
                   <span className="text-on-surface-variant">
                     Voucher Discount
                   </span>
-                  <span className="text-green-600">
+                  <span className="text-error">
                     - {formatVND(invoice.voucherDiscount)}
                   </span>
                 </div>
@@ -242,17 +248,40 @@ export default function PaymentPage() {
                   <span className="text-on-surface-variant">
                     Point Discount
                   </span>
-                  <span className="text-green-600">
+                  <span className="text-error">
                     - {formatVND(invoice.pointDiscount)}
+                  </span>
+                </div>
+              )}
+              {(detail?.depositAmount ?? 0) > 0 && (
+                <div className="flex justify-between">
+                  <span className="text-on-surface-variant">Deposit Paid</span>
+                  <span className="text-error">
+                    - {formatVND(detail?.depositAmount ?? 0)}
                   </span>
                 </div>
               )}
               <div className="border-t border-outline-variant pt-2 flex justify-between font-bold">
                 <span className="text-on-surface">Final Amount</span>
-                <span className="text-primary">
-                  {formatVND(invoice.finalAmount)}
-                </span>
+                <span className="text-primary">{formatVND(total)}</span>
               </div>
+
+              {redeemPoints > 0 && (
+                <div className="flex justify-between">
+                  <span className="text-on-surface-variant">
+                    Points Redeemed
+                  </span>
+                  <span className="text-error">- {redeemPoints} pts</span>
+                </div>
+              )}
+              {detail?.customerTier != null && (
+                <div className="flex justify-between">
+                  <span className="text-on-surface-variant">Points Earned</span>
+                  <span className="text-green-600 font-semibold">
+                    +{earnedPoints} pts
+                  </span>
+                </div>
+              )}
             </div>
 
             <div className="space-y-1 text-xs text-on-surface-variant border-t border-outline-variant pt-3">
@@ -445,7 +474,7 @@ export default function PaymentPage() {
                   <span className="text-on-surface-variant">
                     Voucher Discount
                   </span>
-                  <span className="text-green-600">
+                  <span className="text-error">
                     - {formatVND(voucherDiscount)}
                   </span>
                 </div>
@@ -455,7 +484,7 @@ export default function PaymentPage() {
                   <span className="text-on-surface-variant">
                     Point Discount
                   </span>
-                  <span className="text-green-600">
+                  <span className="text-error">
                     - {formatVND(pointDiscount)}
                   </span>
                 </div>
@@ -484,35 +513,18 @@ export default function PaymentPage() {
                 <span className="text-primary">{formatVND(total)}</span>
               </div>
 
-              {/* Điểm tích được sau khi hoàn tất — dưới Total Due */}
-              {/*<div className="flex justify-between">*/}
-              {/*  <span className="text-on-surface-variant">Points Earned</span>*/}
-              {/*  <span className="text-green-600 font-semibold">*/}
-              {/*    +{earnedPoints} pts*/}
-              {/*  </span>*/}
-              {/*</div>*/}
-
-                {detail.customerTier != null && (
-                    <div className="flex justify-between">
-                        <span className="text-on-surface-variant">Points Earned</span>
-                        <span className="text-green-600 font-semibold">
-      +{earnedPoints} pts
-    </span>
-                    </div>
-                )}
+              {detail.customerTier != null && (
+                <div className="flex justify-between">
+                  <span className="text-on-surface-variant">Points Earned</span>
+                  <span className="text-green-600 font-semibold">
+                    +{earnedPoints} pts
+                  </span>
+                </div>
+              )}
             </div>
           </div>
 
           <div className="rounded-2xl p-5 bg-surface-container-lowest border border-outline-variant/30">
-            <p className="text-sm font-bold text-on-surface mb-3">
-              Payment Method
-            </p>
-            <div className="mb-4">
-              <span className="inline-block py-2 px-4 rounded-xl text-sm font-semibold border-2 border-primary bg-primary-fixed/10 text-primary">
-                Cash
-              </span>
-            </div>
-
             <div className="space-y-2">
               <label className="text-xs font-semibold uppercase text-outline block">
                 Received Amount
@@ -520,11 +532,18 @@ export default function PaymentPage() {
               <input
                 type="number"
                 value={receivedInput}
-                onChange={(e) => setReceivedInput(e.target.value)}
+                onChange={(e) => {
+                  const value = e.target.value;
+                  if (value === "" || Number(value) <= 1_000_000_000) {
+                    setReceivedInput(value);
+                  }
+                }}
                 placeholder="0"
                 disabled={total <= 0}
+                max={1_000_000_000}
                 className="w-full rounded-xl px-3 py-2.5 text-sm border border-outline-variant outline-none focus:border-primary bg-surface-container-lowest text-on-surface disabled:opacity-50 disabled:cursor-not-allowed"
               />
+
               {isInsufficient && (
                 <p className="text-xs text-error">
                   Received amount is insufficient.

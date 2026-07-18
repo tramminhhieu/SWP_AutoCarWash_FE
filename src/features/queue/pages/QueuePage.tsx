@@ -127,7 +127,8 @@ const makeEmptyLane = (index: number, laneDbId = 0): Lane => ({
 // Map errorCode từ BE → thông báo lỗi tiếng Anh (BE trả tiếng Việt cho 2 mã này)
 const LANE_MAINTENANCE_ERROR_MAP: Record<string, string> = {
   WASH_LANE_002: "This lane could not be found.",
-  WASH_LANE_004: "Cannot set this lane to maintenance while a car is being washed.",
+  WASH_LANE_004:
+    "Cannot set this lane to maintenance while a car is being washed.",
   WASH_LANE_005: "This lane is not currently under maintenance.",
 };
 
@@ -547,7 +548,7 @@ export default function QueuePage() {
   };
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="mx-auto flex max-w-[1200px] flex-col gap-6 px-6 py-4">
       {/* Header */}
       <div className="flex items-center justify-between mb-6">
         <div>
@@ -964,8 +965,7 @@ export default function QueuePage() {
                           </p>
                         </div>
                         {selectedBooking?.id === b.id && (
-                          <div className="flex items-center gap-1 mt-2 text-primary">
-                          </div>
+                          <div className="flex items-center gap-1 mt-2 text-primary"></div>
                         )}
                       </div>
                     ))}

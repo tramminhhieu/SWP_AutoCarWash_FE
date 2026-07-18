@@ -9,6 +9,7 @@ export interface DashboardFilterParams {
   toDate: string;
   groupBy: GroupBy;
   provinceId?: number;
+  communeId?: number;
   stationId?: number;
 }
 
@@ -47,16 +48,4 @@ export interface TierStat {
 export interface DashboardTables {
   packageStats: PackageStat[];
   tierStats: TierStat[];
-}
-
-// ─── Filter dropdown: Province / Station (dùng cho ADMIN) ────────────────────
-export interface ProvinceOption {
-  provinceId: number;
-  provinceName: string;
-}
-
-export interface StationOption {
-  stationId: number;
-  stationName: string;
-  provinceId: number;
 }

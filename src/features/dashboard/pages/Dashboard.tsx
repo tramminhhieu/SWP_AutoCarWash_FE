@@ -6,20 +6,17 @@ import type {
   DashboardSummary,
   DashboardRevenueChart,
   DashboardTables,
-  ProvinceOption,
-  StationOption,
 } from "../types/dashboard";
 import {
   getDashboardSummary,
   getDashboardRevenueChart,
   getDashboardTables,
-  getProvinces,
-  getStationsByProvince,
 } from "../api/dashboardApi";
 import DashboardFilter from "../components/DashboardFilter";
 import SummaryCard from "../components/SummaryCard";
 import RevenueChart from "../components/RevenueChart";
 import DashboardTable from "../components/DashboardTable";
+import type { BranchFilterSelection } from "../../station/components/BranchFilterDropdown";
 
 // ─── Helper: tính fromDate / toDate / groupBy từ tab active ──────────────────
 function pad(n: number) {
@@ -71,8 +68,7 @@ interface FilterState {
   activeTab: DashboardTab;
   fromDate: string;
   toDate: string;
-  provinceId?: number;
-  stationId?: number;
+  branchFilter: BranchFilterSelection;
 }
 
 // ─── Dashboard Page ───────────────────────────────────────────────────────────
@@ -86,6 +82,7 @@ export default function Dashboard() {
     activeTab: "today",
     fromDate: initTabParams.fromDate,
     toDate: initTabParams.toDate,
+    branchFilter: null,
   };
 
   // filter: state đang chỉnh trên UI
@@ -101,10 +98,6 @@ export default function Dashboard() {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // Dropdown data cho Admin
-  const [provinces, setProvinces] = useState<ProvinceOption[]>([]);
-  const [stations, setStations] = useState<StationOption[]>([]);
-
   // Tránh setState sau khi unmount
   const isMountedRef = useRef(true);
   useEffect(() => {
@@ -113,36 +106,25 @@ export default function Dashboard() {
     };
   }, []);
 
-  // Load province list khi là ADMIN
-  useEffect(() => {
-    if (role !== "ADMIN") return;
-    getProvinces().then((data) => {
-      if (isMountedRef.current) setProvinces(data);
-    });
-  }, [role]);
-
-  // Load stations khi chọn province
-  useEffect(() => {
-    const fetchStations =
-      role === "ADMIN" && appliedFilter.provinceId
-        ? getStationsByProvince(appliedFilter.provinceId)
-        : Promise.resolve([]);
-
-    fetchStations.then((data) => {
-      if (isMountedRef.current) setStations(data);
-    });
-  }, [role, appliedFilter.provinceId]);
-
   // Fetch cả 3 API khi appliedFilter thay đổi
   useEffect(() => {
-    const { activeTab, fromDate, toDate, provinceId, stationId } =
-      appliedFilter;
+    const { activeTab, fromDate, toDate, branchFilter } = appliedFilter;
     const { groupBy } = getTabParams(activeTab);
 
     if (fromDate > toDate) return; // validate trước khi gọi API
 
     // Staff không gửi location params — BE tự lấy stationId từ JWT
-    const locationParams = role === "ADMIN" ? { provinceId, stationId } : {};
+    const locationParams =
+      role === "ADMIN"
+        ? {
+            provinceId:
+              branchFilter?.level === "province" ? branchFilter.id : undefined,
+            communeId:
+              branchFilter?.level === "commune" ? branchFilter.id : undefined,
+            stationId:
+              branchFilter?.level === "station" ? branchFilter.id : undefined,
+          }
+        : {};
 
     let cancelled = false;
     queueMicrotask(() => {
@@ -190,26 +172,26 @@ export default function Dashboard() {
       activeTab: tab,
       fromDate: tabParams.fromDate,
       toDate: tabParams.toDate,
-      provinceId: filter.provinceId,
-      stationId: filter.stationId,
+      branchFilter: filter.branchFilter,
     };
     setFilter(newFilter);
     setAppliedFilter(newFilter);
   }
 
-  // Date/station thay đổi → chỉ update UI, chờ bấm Apply
+  // Date thay đổi → chỉ update UI, chờ bấm Apply
   const handleFromDateChange = (fromDate: string) =>
     setFilter((prev) => ({ ...prev, fromDate }));
 
   const handleToDateChange = (toDate: string) =>
     setFilter((prev) => ({ ...prev, toDate }));
 
-  // Đổi province → reset stationId
-  const handleProvinceChange = (provinceId?: number) =>
-    setFilter((prev) => ({ ...prev, provinceId, stationId: undefined }));
-
-  const handleStationChange = (stationId?: number) =>
-    setFilter((prev) => ({ ...prev, stationId }));
+  // Đổi branch (Province/Commune/Station) → apply luôn, giống pattern ở
+  // AdminCustomers — không cần chờ bấm Apply
+  function handleBranchChange(branchFilter: BranchFilterSelection) {
+    const newFilter: FilterState = { ...filter, branchFilter };
+    setFilter(newFilter);
+    setAppliedFilter(newFilter);
+  }
 
   // Bấm nút refresh → apply filter hiện tại
   const handleApply = () => setAppliedFilter({ ...filter });
@@ -239,17 +221,12 @@ export default function Dashboard() {
         activeTab={filter.activeTab}
         fromDate={filter.fromDate}
         toDate={filter.toDate}
-        provinceId={filter.provinceId}
-        stationId={filter.stationId}
-        provinces={provinces}
-        stations={stations}
         dateError={dateError}
         isLoading={isLoading}
         onTabChange={handleTabChange}
         onFromDateChange={handleFromDateChange}
         onToDateChange={handleToDateChange}
-        onProvinceChange={handleProvinceChange}
-        onStationChange={handleStationChange}
+        onBranchChange={handleBranchChange}
         onApply={handleApply}
       />
 

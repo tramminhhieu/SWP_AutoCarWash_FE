@@ -15,6 +15,7 @@ import {
   getFamilySubscriptionPlans,
   registerFamilySubscription,
   renewFamilySubscription,
+  cancelFamilySubscription,
 } from "../api/subscriptionPlanApi";
 import { remove } from "../api/subscriptionPlanApi";
 import { getApiErrorInfo } from "../../../lib/axiosClient";
@@ -503,6 +504,40 @@ export default function FamilySubscriptionList() {
     navigate(`/admin/subscription-plans/family/${plan.id}/edit`);
   };
 
+  /* ---- Confirm switch plan: cancel gói cũ → register gói mới → navigate payment ---- */
+  const handleConfirmSwitch = async () => {
+    const plan = pendingPlan;
+    setPendingPlan(null);
+    if (!plan || !currentGroup) return;
+
+    setIsRegistering(true);
+    try {
+      /* Bước 1: hủy gói đang ACTIVE */
+      await cancelFamilySubscription();
+
+      /* Bước 2: đăng ký gói mới (subscription đã CANCELED) */
+      const result = await registerFamilySubscription({
+        familyGroupId: currentGroup.familyGroupId,
+        subscriptionPlanId: plan.id,
+      });
+
+      /* Bước 3: chuyển sang trang thanh toán */
+      navigate(`/subscription-plans/payment/${result.invoiceId}`, {
+        state: { isRenewal: false, redirectTo: "/subscriptions/family/plans" },
+      });
+    } catch (err) {
+      const { errorCode, message } = getApiErrorInfo(err);
+      if (errorCode === "AUTH_001") {
+        navigate("/login", { state: { from: "/subscription/family" } });
+        return;
+      }
+      setErrorToast(message ?? "Không thể chuyển gói. Vui lòng thử lại.");
+      setTimeout(() => setErrorToast(null), 4000);
+    } finally {
+      setIsRegistering(false);
+    }
+  };
+
   /* ---- Xác nhận xóa: gọi API soft delete rồi refetch list ---- */
   const handleConfirmDelete = async () => {
     if (!planToDelete) return;
@@ -534,47 +569,20 @@ export default function FamilySubscriptionList() {
       <Modal
         isOpen={!!pendingPlan}
         onClose={() => setPendingPlan(null)}
+        variant="danger"
         title="Switch Family Plan?"
-      >
-        <div className="space-y-4">
-          <p className="font-body text-body-md text-on-surface-variant">
+        message={
+          <>
             You currently have an active Family plan. Purchasing{" "}
             <strong className="text-on-surface">{pendingPlan?.planName}</strong>{" "}
-            will replace your existing plan immediately.
-          </p>
-          <p className="font-body text-body-md text-error">
-            Your current plan benefits will be lost and there is no refund for
-            the remaining time.
-          </p>
-          <div className="flex items-center justify-end gap-3 pt-2">
-            <button
-              type="button"
-              onClick={() => setPendingPlan(null)}
-              disabled={isRegistering}
-              className="rounded-lg border border-outline-variant px-5 py-2.5 font-body text-sm font-semibold text-on-surface transition-colors hover:bg-surface-container disabled:opacity-50"
-            >
-              Cancel
-            </button>
-            <button
-              type="button"
-              disabled={isRegistering}
-              onClick={async () => {
-                const plan = pendingPlan;
-                setPendingPlan(null);
-                if (plan) await proceedWithPlan(plan);
-              }}
-              className={`rounded-lg px-5 py-2.5 font-body text-sm font-semibold transition-colors
-                ${
-                  isRegistering
-                    ? "cursor-not-allowed bg-surface-container-high text-on-surface-variant"
-                    : "bg-primary text-on-primary hover:bg-primary/90"
-                }`}
-            >
-              {isRegistering ? "Processing..." : "Confirm"}
-            </button>
-          </div>
-        </div>
-      </Modal>
+            will replace your existing plan immediately. Your current plan
+            benefits will be lost and there is no refund for the remaining time.
+          </>
+        }
+        confirmText="Confirm"
+        onConfirm={handleConfirmSwitch}
+        isConfirmLoading={isRegistering}
+      />
 
       {/* ---- Header ---- */}
       <div className="text-center">

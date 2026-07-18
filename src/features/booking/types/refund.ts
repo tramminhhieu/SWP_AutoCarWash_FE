@@ -20,22 +20,40 @@ export interface DepositAmountResponse {
   amount: number;
 }
 
-/** Body gửi lên POST /api/refunds khi customer xác nhận hủy (AC3). */
-export interface CreateRefundRequest {
-  bookingId: number;
-  bankBin: string; // BIN ngân hàng khách chọn (map từ BankEnum)
-  accountNumber: string;
-  accountHolder: string;
+/** Phương thức hoàn tiền khi customer hủy booking. */
+export type RefundMethod = "BANK_TRANSFER" | "LOYALTY_POINTS";
+
+/** Xem trước số điểm sẽ được cộng nếu chọn hoàn tiền bằng điểm (GET /api/refunds/points-preview?bookingId=). */
+export interface RefundPointsPreview {
+  depositAmount: number;
+  tierName: string;
+  pointMultiple: number;
+  previewPoints: number;
 }
+
+/** Body gửi lên POST /api/refunds khi customer xác nhận hủy (AC3). */
+export type CreateRefundRequest =
+  | {
+      bookingId: number;
+      refundMethod: "BANK_TRANSFER";
+      bankBin: string; // BIN ngân hàng khách chọn (map từ BankEnum)
+      accountNumber: string;
+      accountHolder: string;
+    }
+  | {
+      bookingId: number;
+      refundMethod: "LOYALTY_POINTS";
+    };
 
 /** Bản ghi Refund trả về sau khi tạo. */
 export interface RefundResponse {
   id: number;
   bookingId: number;
-  bankName: string;
-  accountNumber: string;
-  accountHolder: string;
-  refundAmount: number;
+  bankName: string | null;
+  accountNumber: string | null;
+  accountHolder: string | null;
+  refundAmount: number | null;
+  pointsAwarded: number | null;
   status: string;
   bookingStatus: string;
   createdAt: string;

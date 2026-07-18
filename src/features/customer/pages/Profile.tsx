@@ -2,6 +2,7 @@ import { Coins } from "lucide-react";
 import { isAxiosError } from "axios";
 import { useEffect, useRef, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
+import { formatDate } from "../../../utils";
 import {
   ArrowLeftRight,
   Car,
@@ -103,6 +104,11 @@ function VehicleItem({
               {sub.type}
             </span>
           </div>
+        )}
+        {sub?.transferUnlockDate && (
+          <p className="mt-1 text-xs font-medium text-error">
+            Transfer unlocks on {formatDate(sub.transferUnlockDate)}
+          </p>
         )}
       </div>
 

@@ -184,6 +184,8 @@ export const API = {
     ACCOUNT_LOOKUP: "/api/refunds/account-lookup",
     // GET — số tiền cọc cố định toàn hệ thống để hiển thị read-only { amount }
     DEPOSIT_AMOUNT: "/api/refunds/deposit-amount",
+    // GET — xem trước số điểm sẽ được cộng nếu chọn hoàn tiền bằng điểm ?bookingId=
+    POINTS_PREVIEW: "/api/refunds/points-preview",
     // US-05 AC1,AC6-AC10: GET /api/refunds?page=&size=&status=&year=&month=&stationId=&keyword=
     LIST: "/api/refunds",
     // US-05 AC2,AC2b,AC2c: GET /api/refunds/{id}

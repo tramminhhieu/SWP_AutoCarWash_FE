@@ -6,6 +6,7 @@ import type {
   BankOption,
   CreateRefundRequest,
   DepositAmountResponse,
+  RefundPointsPreview,
   RefundResponse,
 } from "../types/refund";
 
@@ -36,6 +37,17 @@ export async function lookupAccount(
 export async function getDepositAmount(): Promise<DepositAmountResponse> {
   const res = await axiosClient.get<ApiSuccessResponse<DepositAmountResponse>>(
     API.REFUNDS.DEPOSIT_AMOUNT,
+  );
+  return res.data.data;
+}
+
+/** Xem trước số điểm sẽ được cộng nếu chọn hoàn tiền bằng điểm thưởng. */
+export async function getRefundPointsPreview(
+  bookingId: number,
+): Promise<RefundPointsPreview> {
+  const res = await axiosClient.get<ApiSuccessResponse<RefundPointsPreview>>(
+    API.REFUNDS.POINTS_PREVIEW,
+    { params: { bookingId } },
   );
   return res.data.data;
 }

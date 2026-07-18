@@ -27,6 +27,7 @@ export interface LoyaltyTier {
 export interface LoyaltyTransaction {
   createdAt: string;
   servicePackageName: string;
+  description: string; // enum từ BE: BOOKING | SUBSCRIPTION | MANUAL | ADJUSTMENT | DEPOSIT_REFUND
   points: number;
   bookingId: number | null;
 }

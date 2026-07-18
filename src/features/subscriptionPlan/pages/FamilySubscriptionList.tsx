@@ -39,12 +39,6 @@ const TAB_DURATION: Record<TabType, number> = {
 };
 
 /* ================================================================
-   Helper: tính pricePerMonth từ price + durationDays
-   ================================================================ */
-const calcPricePerMonth = (price: number, durationDays: number): number =>
-  Math.round(price / (durationDays / 30));
-
-/* ================================================================
    Helper: quyết định CTA cho Customer dựa vào trạng thái group
    ================================================================ */
 type CtaVariant =
@@ -100,8 +94,10 @@ function PlanCard({
   onEdit: (plan: FamilySubscriptionPlan) => void;
   onDelete: (plan: FamilySubscriptionPlan) => void;
 }) {
-  const pricePerMonth = calcPricePerMonth(plan.price, plan.durationDays);
-
+  function durationLabel(days: number): string {
+    const months = Math.round(days / 30);
+    return `${months} Month${months > 1 ? "s" : ""}`;
+  }
   return (
     <div className="relative flex flex-col">
       <div
@@ -131,10 +127,10 @@ function PlanCard({
           </span>
         )}
 
-        {/* Price per month */}
+        {/* Price per month
         <div className="mt-5 flex items-baseline gap-1.5">
           <span className="font-heading text-headline-md font-bold text-on-surface">
-            {formatCurrency(pricePerMonth)}
+            {plan.price}
           </span>
           <span className="font-body text-body-md text-on-surface-variant">
             /month
@@ -143,7 +139,15 @@ function PlanCard({
         <p className="mt-1 font-body text-body-sm text-on-surface-variant">
           {formatCurrency(plan.price)} total for {plan.durationDays / 30}{" "}
           {plan.durationDays / 30 === 1 ? "month" : "months"}
-        </p>
+        </p> */}
+        <div className="mt-6 flex items-baseline gap-1">
+          <span className="font-heading text-headline-md font-bold text-on-surface">
+            {formatCurrency(plan.price)}
+          </span>
+          <span className="text-body-md text-on-surface-variant">
+            / {durationLabel(plan.durationDays)}
+          </span>
+        </div>
 
         {/* Divider */}
         <div className="my-5 border-t border-outline-variant" />

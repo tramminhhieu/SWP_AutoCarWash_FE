@@ -1,3 +1,4 @@
+import { useEffect, useState } from "react";
 import { NavLink, useNavigate } from "react-router-dom";
 import {
   CalendarCheck,
@@ -8,6 +9,7 @@ import {
   User as UserIcon,
 } from "lucide-react";
 import { useAuth } from "../hooks/useAuth";
+import { getAllStations } from "../features/adminCustomer/api/adminCustomerBookingApi";
 
 const navItems = [
   { path: "/staff/queue", label: "Queue", icon: CalendarCheck },
@@ -19,6 +21,22 @@ const navItems = [
 export default function StaffSidebar() {
   const navigate = useNavigate();
   const { user, logout } = useAuth();
+  const [stationName, setStationName] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!user?.stationId) return;
+    let isMounted = true;
+    getAllStations()
+      .then((stations) => {
+        if (!isMounted) return;
+        const match = stations.find((s) => s.id === user.stationId);
+        setStationName(match?.stationName ?? null);
+      })
+      .catch(() => {});
+    return () => {
+      isMounted = false;
+    };
+  }, [user?.stationId]);
 
   return (
     <aside className="fixed top-0 left-0 z-20 flex h-screen w-62 flex-col bg-surface-container-lowest border-r border-outline-variant">
@@ -30,6 +48,11 @@ export default function StaffSidebar() {
         <p className="text-sm mt-1 tracking-widest text-on-surface-variant font-bold">
           Management Station
         </p>
+        {stationName && (
+          <p className="text-sm mt-1 tracking-widest text-on-surface-variant font-bold">
+            {stationName}
+          </p>
+        )}
       </div>
 
       {/* Nav — spacing, padding, icon size khớp Admin */}

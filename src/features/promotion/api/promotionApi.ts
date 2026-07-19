@@ -3,127 +3,72 @@ import { API } from "../../../constants/apiEndpoints";
 import type { ApiSuccessResponse } from "../../../types/apiResponse";
 import type {
   PromotionItem,
+  PromotionVoucher,
   GetAdminPromotionsParams,
   CreatePromotionRequest,
   CreatePromotionResponse,
   UpdatePromotionRequest,
 } from "../types/promotion";
 
-// ── Mock data — xóa khi BE sẵn sàng ──────────────────────────────────────────
-const MOCK_PROMOTIONS: PromotionItem[] = [
-  {
-    id: 15,
-    title: "Chiến dịch Chào Thu 2026",
-    description: "Mô tả chiến dịch...",
-    startDate: "2026-09-01",
-    endDate: "2026-09-30",
-    status: "ACTIVE",
-    createdAt: "2026-07-01T10:00:00",
-    stations: [
-      {
-        stationId: 1,
-        stationName: "HCM - Quận 1",
-      },
-      {
-        stationId: 2,
-        stationName: "HCM - Quận 7",
-      },
-    ],
-    targets: [
-      {
-        targetId: 1,
-        targetName: "Hạng Vàng",
-        targetCode: "GOLD",
-      },
-      {
-        targetId: 2,
-        targetName: "Khách hàng mới",
-        targetCode: "NEW_CUSTOMER",
-      },
-    ],
-    vouchers: [
-      {
-        id: 101,
-        voucherCode: "AUTUMN2026",
-        discountPercentage: 15,
-        maxDiscountAmount: 50000,
-        minOrderValue: 100000,
-        usageLimit: 200,
-        usedCount: 50,
-        startDate: "2026-09-01T00:00:00",
-        expiryDate: "2026-09-30T23:59:59",
-        reusable: true,
-        status: "ACTIVE",
-      },
-    ],
-  },
-  {
-    id: 16,
-    title: "Ưu đãi Khai trương Bình Thạnh",
-    description: "Giảm giá cho khách hàng mới.",
-    startDate: "2026-08-10",
-    endDate: "2026-08-31",
-    status: "ACTIVE",
-    createdAt: "2026-07-05T09:30:00",
-    stations: [
-      {
-        stationId: 3,
-        stationName: "HCM - Bình Thạnh",
-      },
-    ],
-    targets: [
-      {
-        targetId: 2,
-        targetName: "Khách hàng mới",
-        targetCode: "NEW_CUSTOMER",
-      },
-    ],
-    vouchers: [
-      {
-        id: 102,
-        voucherCode: "WELCOME20",
-        discountPercentage: 20,
-        maxDiscountAmount: 100000,
-        minOrderValue: 200000,
-        usageLimit: 500,
-        usedCount: 80,
-        startDate: "2026-08-10T00:00:00",
-        expiryDate: "2026-08-31T23:59:59",
-        reusable: false,
-        status: "ACTIVE",
-      },
-    ],
-  },
-];
+// ── Chuẩn hóa response từ BE ──────────────────────────────────────────────────
+// BE trả về danh sách/chi tiết promotion với field "discountPercentage" (nullable)
+// thay vì discountType/discountValue:
+//   - discountPercentage có giá trị => voucher loại PERCENTAGE, discountValue = discountPercentage
+//   - discountPercentage = null     => voucher loại FIXED, discountValue = maxDiscountAmount
+// Lưu ý: chỉ áp dụng cho chiều đọc (GET List/Detail).
+// Chiều ghi (Create/Update) vẫn gửi discountType + discountValue theo API đã chốt.
+
+/** Voucher đúng như BE thực tế trả về (chưa chuẩn hóa) */
+type RawVoucher = Omit<PromotionVoucher, "discountType" | "discountValue"> & {
+  discountPercentage: number | null;
+};
+
+/** Promotion đúng như BE thực tế trả về (chưa chuẩn hóa) */
+type RawPromotion = Omit<PromotionItem, "vouchers"> & {
+  vouchers: RawVoucher[];
+};
+
+function normalizeVoucher(raw: RawVoucher): PromotionVoucher {
+  const isPercentage = raw.discountPercentage !== null;
+  return {
+    ...raw,
+    discountType: isPercentage ? "PERCENTAGE" : "FIXED",
+    discountValue: isPercentage
+      ? raw.discountPercentage!
+      : raw.maxDiscountAmount,
+  };
+}
+
+function normalizePromotion(raw: RawPromotion): PromotionItem {
+  return {
+    ...raw,
+    vouchers: (raw.vouchers ?? []).map(normalizeVoucher),
+  };
+}
 
 // API-PR-01: Lấy toàn bộ danh sách promotion
-// TODO: xóa MOCK_PROMOTIONS và dòng return mock, bỏ comment axiosClient khi BE xong
 export const getAdminPromotions = async (
   params?: GetAdminPromotionsParams,
 ): Promise<PromotionItem[]> => {
-  void params;
-  return Promise.resolve(MOCK_PROMOTIONS);
-
-  // const res = await axiosClient.get<ApiSuccessResponse<PromotionItem[]>>(
-  //   API.PROMOTION.LIST,
-  //   { params },
-  // );
-  // return res.data.data ?? [];
+  const res = await axiosClient.get<ApiSuccessResponse<RawPromotion[]>>(
+    API.PROMOTION.LIST,
+    { params },
+  );
+  return (res.data.data ?? []).map(normalizePromotion);
 };
 
-// Tìm 1 promotion theo id từ mock — thay bằng API thật khi BE có GET /api/admin/promotions/:id
+// API-PR-01 (detail): Lấy 1 promotion theo id
 export const getPromotionById = async (
   id: number,
 ): Promise<PromotionItem | null> => {
-  return Promise.resolve(MOCK_PROMOTIONS.find((p) => p.id === id) ?? null);
-
-  // const res = await axiosClient.get<ApiSuccessResponse<PromotionItem>>(
-  //   `${API.PROMOTION.LIST}/${id}`,
-  // );
-  // return res.data.data;
+  const res = await axiosClient.get<ApiSuccessResponse<RawPromotion>>(
+    `${API.PROMOTION.LIST}/${id}`,
+  );
+  return res.data.data ? normalizePromotion(res.data.data) : null;
 };
 
 // API-PR-02: Tạo promotion mới (Campaign + Voucher, luôn configMode = 2)
+// Vẫn gửi discountType + discountValue theo API đã chốt — không đổi.
 export const createPromotion = async (
   body: CreatePromotionRequest,
 ): Promise<CreatePromotionResponse> => {
@@ -134,14 +79,12 @@ export const createPromotion = async (
 };
 
 // API-PR-03: Cập nhật promotion (campaign info + vouchers)
-// Lưu ý: apiEndpoints.ts hiện chưa có key riêng cho UPDATE — LIST và CREATE
-// đều trỏ chung "/api/admin/promotions" nên dùng tạm API.PROMOTION.LIST làm base.
-// Nếu sau này tách riêng, đổi thành API.PROMOTION.UPDATE cho rõ nghĩa.
+// Vẫn gửi discountType + discountValue theo API đã chốt — không đổi.
 export const updatePromotion = async (
   promotionId: number,
   body: UpdatePromotionRequest,
 ): Promise<void> => {
-  await axiosClient.patch(`${API.PROMOTION.LIST}/${promotionId}`, body);
+  await axiosClient.put(`${API.PROMOTION.LIST}/${promotionId}`, body);
 };
 
 // Soft delete toàn bộ campaign + voucher con

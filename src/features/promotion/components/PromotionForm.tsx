@@ -12,6 +12,7 @@ import type {
   PromotionItem,
   VoucherFormItem,
   PromotionFormValues,
+  DiscountType,
 } from "../types/promotion";
 
 // Re-export để các nơi đang import VoucherFormItem/PromotionFormValues
@@ -27,7 +28,14 @@ const CUSTOMER_TIERS = [
   { id: 4, name: "Platinum" },
 ];
 
-const today = new Date().toISOString().split("T")[0];
+function getLocalDateString(date: Date): string {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
+}
+
+const today = getLocalDateString(new Date());
 
 // ─── Validation ───────────────────────────────────────────────────────────────
 // Không export function này ra ngoài — nếu export, ESLint sẽ báo lỗi
@@ -43,6 +51,9 @@ function validatePromotionForm(
   else if (values.campaignName.length > 100)
     errors.campaignName = "Campaign name must not exceed 100 characters.";
 
+  if (values.description.length > 500)
+    errors.description = "Description must not exceed 500 characters.";
+
   if (!values.startDate) errors.startDate = "This field is required.";
   else if (values.startDate < today)
     errors.startDate = "Start date cannot be in the past.";
@@ -55,6 +66,9 @@ function validatePromotionForm(
 
   if (values.selectedStations.length === 0)
     errors.stationIds = "Please select at least one branch.";
+
+  if (values.targetIds.length === 0)
+    errors.targetIds = "Please select at least one customer tier.";
 
   if (values.vouchers.length === 0)
     errors.vouchers = "Please add at least one voucher code.";
@@ -73,11 +87,10 @@ function validatePromotionForm(
     else if (codes.filter((c) => c === v.voucherCode.toUpperCase()).length > 1)
       errors[`${p}_code`] = "Duplicate voucher code detected.";
 
-    if (!v.discountPercentage)
-      errors[`${p}_discount`] = "This field is required.";
-    else if (Number(v.discountPercentage) <= 0)
+    if (!v.discountValue) errors[`${p}_discount`] = "This field is required.";
+    else if (Number(v.discountValue) <= 0)
       errors[`${p}_discount`] = "Value must be a positive number.";
-    else if (Number(v.discountPercentage) > 100)
+    else if (v.discountType === "PERCENTAGE" && Number(v.discountValue) > 100)
       errors[`${p}_discount`] = "Cannot exceed 100%.";
 
     if (!v.maxDiscountAmount)
@@ -369,31 +382,82 @@ function VoucherRow({
         </FormField>
       </div>
 
-      <div className="grid grid-cols-3 gap-3">
-        <FormField label="Discount (%)" error={errors[`${p}_discount`]}>
-          <input
-            type="number"
-            min={1}
-            max={100}
-            value={voucher.discountPercentage}
-            onChange={(e) => onChange("discountPercentage", e.target.value)}
-            placeholder="15"
-            className={`${inputClass} ${errors[`${p}_discount`] ? errorClass : ""}`}
-          />
-        </FormField>
+      {/* Discount Type toggle — FIXED (VNĐ) hoặc PERCENTAGE (%) */}
+      <FormField label="Discount Type">
+        <div className="flex gap-2">
+          <button
+            type="button"
+            onClick={() => onChange("discountType", "PERCENTAGE")}
+            className={`flex-1 rounded-[8px] border-2 py-2 text-sm font-semibold transition-colors ${
+              voucher.discountType === "PERCENTAGE"
+                ? "border-primary bg-primary/5 text-primary"
+                : "border-outline-variant/30 text-on-surface-variant hover:border-primary/30"
+            }`}
+          >
+            Percentage (%)
+          </button>
+          <button
+            type="button"
+            onClick={() => {
+              onChange("discountType", "FIXED");
+              // Chuyển sang FIXED → maxDiscountAmount sync ngay theo discountValue hiện có
+              onChange("maxDiscountAmount", voucher.discountValue);
+            }}
+            className={`flex-1 rounded-[8px] border-2 py-2 text-sm font-semibold transition-colors ${
+              voucher.discountType === "FIXED"
+                ? "border-primary bg-primary/5 text-primary"
+                : "border-outline-variant/30 text-on-surface-variant hover:border-primary/30"
+            }`}
+          >
+            Fixed Amount (VNĐ)
+          </button>
+        </div>
+      </FormField>
+
+      <div
+        className={`grid gap-3 ${voucher.discountType === "FIXED" ? "grid-cols-2" : "grid-cols-3"}`}
+      >
         <FormField
-          label="Max Discount (VNĐ)"
-          error={errors[`${p}_maxDiscount`]}
+          label={
+            voucher.discountType === "PERCENTAGE"
+              ? "Discount (%)"
+              : "Discount Amount (VNĐ)"
+          }
+          error={errors[`${p}_discount`]}
         >
           <input
             type="number"
-            min={0}
-            value={voucher.maxDiscountAmount}
-            onChange={(e) => onChange("maxDiscountAmount", e.target.value)}
-            placeholder="50000"
-            className={`${inputClass} ${errors[`${p}_maxDiscount`] ? errorClass : ""}`}
+            min={1}
+            max={voucher.discountType === "PERCENTAGE" ? 100 : undefined}
+            value={voucher.discountValue}
+            onChange={(e) => {
+              const val = e.target.value;
+              onChange("discountValue", val);
+              // FIXED: discount amount == max discount amount, chỉ cần nhập 1 lần
+              if (voucher.discountType === "FIXED") {
+                onChange("maxDiscountAmount", val);
+              }
+            }}
+            placeholder={voucher.discountType === "PERCENTAGE" ? "15" : "30000"}
+            className={`${inputClass} ${errors[`${p}_discount`] ? errorClass : ""}`}
           />
         </FormField>
+        {/* Max Discount chỉ hiện ở PERCENTAGE — FIXED thì bằng chính discountValue */}
+        {voucher.discountType === "PERCENTAGE" && (
+          <FormField
+            label="Max Discount (VNĐ)"
+            error={errors[`${p}_maxDiscount`]}
+          >
+            <input
+              type="number"
+              min={0}
+              value={voucher.maxDiscountAmount}
+              onChange={(e) => onChange("maxDiscountAmount", e.target.value)}
+              placeholder="50000"
+              className={`${inputClass} ${errors[`${p}_maxDiscount`] ? errorClass : ""}`}
+            />
+          </FormField>
+        )}
         <FormField label="Min Order (VNĐ)" error={errors[`${p}_minOrder`]}>
           <input
             type="number"
@@ -414,7 +478,7 @@ function VoucherRow({
           className={`relative h-6 w-11 rounded-full transition-colors ${voucher.reusable ? "bg-primary" : "bg-outline-variant"}`}
         >
           <span
-            className={`absolute top-0.5 size-5 rounded-full bg-white shadow transition-transform ${voucher.reusable ? "translate-x-5" : "translate-x-0.5"}`}
+            className={`absolute left-0.5 top-0.5 size-5 rounded-full bg-white shadow transition-transform ${voucher.reusable ? "translate-x-5" : "translate-x-0.5"}`}
           />
         </button>
         <span className="text-sm font-medium text-on-surface">
@@ -441,6 +505,9 @@ export default function PromotionForm({
 
   // Pre-fill từ initialData khi edit, rỗng khi create
   const [campaignName, setCampaignName] = useState(initialData?.title ?? "");
+  const [description, setDescription] = useState(
+    initialData?.description ?? "",
+  );
   const [startDate, setStartDate] = useState(initialData?.startDate ?? "");
   const [endDate, setEndDate] = useState(initialData?.endDate ?? "");
   const [selectedStations, setSelectedStations] = useState<
@@ -459,7 +526,8 @@ export default function PromotionForm({
       key: String(v.id),
       id: v.id,
       voucherCode: v.voucherCode,
-      discountPercentage: String(v.discountPercentage),
+      discountType: v.discountType,
+      discountValue: String(v.discountValue),
       maxDiscountAmount: String(v.maxDiscountAmount),
       minOrderValue: String(v.minOrderValue),
       usageLimit: v.usageLimit,
@@ -469,7 +537,8 @@ export default function PromotionForm({
         key: crypto.randomUUID(),
         id: null,
         voucherCode: "",
-        discountPercentage: "",
+        discountType: "PERCENTAGE" as DiscountType,
+        discountValue: "",
         maxDiscountAmount: "",
         minOrderValue: "",
         usageLimit: "",
@@ -486,7 +555,8 @@ export default function PromotionForm({
         key: crypto.randomUUID(),
         id: null,
         voucherCode: "",
-        discountPercentage: "",
+        discountType: "PERCENTAGE" as DiscountType,
+        discountValue: "",
         maxDiscountAmount: "",
         minOrderValue: "",
         usageLimit: "",
@@ -518,6 +588,7 @@ export default function PromotionForm({
   function handleSubmit() {
     const values: PromotionFormValues = {
       campaignName,
+      description,
       startDate,
       endDate,
       selectedStations,
@@ -550,6 +621,16 @@ export default function PromotionForm({
               onChange={(e) => setCampaignName(e.target.value)}
               placeholder="Summer Promo 2026"
               className={`${inputClass} ${errors.campaignName ? errorClass : ""}`}
+            />
+          </FormField>
+
+          <FormField label="Description" error={errors.description}>
+            <textarea
+              value={description}
+              onChange={(e) => setDescription(e.target.value)}
+              placeholder="Short description of this campaign (optional)"
+              rows={3}
+              className={`${inputClass} resize-none ${errors.description ? errorClass : ""}`}
             />
           </FormField>
 
@@ -634,9 +715,6 @@ export default function PromotionForm({
       <div className="rounded-[16px] border border-outline-variant/30 bg-white p-6 shadow-[0_1px_2px_rgba(0,0,0,0.05)]">
         <h2 className="mb-1 font-heading text-base font-semibold text-on-surface">
           3. Target Customer Tiers
-          <span className="ml-2 text-xs font-normal text-outline">
-            (Optional — leave empty for all customers)
-          </span>
         </h2>
         <div className="mt-4 flex gap-3">
           {CUSTOMER_TIERS.map((tier) => (
@@ -654,6 +732,12 @@ export default function PromotionForm({
             </button>
           ))}
         </div>
+        {errors.targetIds && (
+          <span className="mt-3 flex items-center gap-1 text-xs text-error">
+            <AlertCircle className="size-3" />
+            {errors.targetIds}
+          </span>
+        )}
       </div>
 
       {/* ── Submit ── */}

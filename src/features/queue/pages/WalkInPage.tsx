@@ -106,7 +106,6 @@ export default function WalkInPage() {
   // bắt buộc trước khi được phép đưa xe vào hàng đợi, theo đúng 2 nhánh xử lý bên BE.
   const [depositCollected, setDepositCollected] = useState(false);
   const [showDepositModal, setShowDepositModal] = useState(false);
-  const [depositReceivedInput, setDepositReceivedInput] = useState("");
   const [depositModalError, setDepositModalError] = useState("");
   const [isCollectingDeposit, setIsCollectingDeposit] = useState(false);
 
@@ -152,7 +151,6 @@ export default function WalkInPage() {
     setPeriod("AM");
     setDepositCollected(false);
     setShowDepositModal(false);
-    setDepositReceivedInput("");
     setDepositModalError("");
     setIsCollectingDeposit(false);
   };
@@ -256,14 +254,6 @@ export default function WalkInPage() {
   };
 
   const handleConfirmDeposit = async () => {
-    const requiredDeposit = summary?.penaltyDeposit ?? 0;
-    const receivedAmount = Number(depositReceivedInput);
-    if (!receivedAmount || receivedAmount < requiredDeposit) {
-      setDepositModalError(
-        `Please enter at least ${formatVND(requiredDeposit)}.`,
-      );
-      return;
-    }
     setIsCollectingDeposit(true);
     setDepositModalError("");
     try {
@@ -1120,26 +1110,9 @@ export default function WalkInPage() {
               collect a {formatVND(summary?.penaltyDeposit ?? 0)} cash deposit
               at the counter before the vehicle can be checked into the queue.
             </p>
-            <div>
-              <label className="text-label-md font-semibold text-on-surface-variant mb-1.5 block">
-                Amount Received
-              </label>
-              <input
-                type="number"
-                value={depositReceivedInput}
-                onChange={(e) => {
-                  setDepositReceivedInput(e.target.value);
-                  setDepositModalError("");
-                }}
-                placeholder="0"
-                className="w-full rounded-xl px-3 py-2.5 text-body-md border border-outline-variant outline-none focus:border-primary bg-surface-container-lowest text-on-surface"
-              />
-              {depositModalError && (
-                <p className="text-body-md text-error mt-1.5">
-                  {depositModalError}
-                </p>
-              )}
-            </div>
+            {depositModalError && (
+              <p className="text-sm text-red-600">{depositModalError}</p>
+            )}
           </div>
         }
       />

@@ -5,17 +5,17 @@ import type {
   GroupBy,
   DashboardSummary,
   DashboardRevenueChart,
-  DashboardTables,
+  // DashboardTables,
 } from "../types/dashboard";
 import {
   getDashboardSummary,
   getDashboardRevenueChart,
-  getDashboardTables,
+  // getDashboardTables,
 } from "../api/dashboardApi";
 import DashboardFilter from "../components/DashboardFilter";
 import SummaryCard from "../components/SummaryCard";
 import RevenueChart from "../components/RevenueChart";
-import DashboardTable from "../components/DashboardTable";
+// import DashboardTable from "../components/DashboardTable";
 import type { BranchFilterSelection } from "../../station/components/BranchFilterDropdown";
 
 // ─── Helper: tính fromDate / toDate / groupBy từ tab active ──────────────────
@@ -94,7 +94,7 @@ export default function Dashboard() {
   const [summary, setSummary] = useState<DashboardSummary | null>(null);
   const [revenueChart, setRevenueChart] =
     useState<DashboardRevenueChart | null>(null);
-  const [tables, setTables] = useState<DashboardTables | null>(null);
+  // const [tables, setTables] = useState<DashboardTables | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -142,13 +142,13 @@ export default function Dashboard() {
         groupBy,
         ...locationParams,
       }),
-      getDashboardTables({ fromDate, toDate, ...locationParams }),
+      // getDashboardTables({ fromDate, toDate, ...locationParams }),
     ])
-      .then(([sum, chart, tabs]) => {
+      .then(([sum, chart /*, tabs*/]) => {
         if (cancelled) return;
         setSummary(sum);
         setRevenueChart(chart);
-        setTables(tabs);
+        // setTables(tabs);
       })
       .catch(() => {
         if (cancelled) return;
@@ -244,7 +244,7 @@ export default function Dashboard() {
       <RevenueChart data={revenueChart} isLoading={isLoading} />
 
       {/* 2 bảng: Service Packages + Tier Distribution */}
-      <DashboardTable tables={tables} isLoading={isLoading} />
+      {/* <DashboardTable tables={tables} isLoading={isLoading} /> */}
     </div>
   );
 }

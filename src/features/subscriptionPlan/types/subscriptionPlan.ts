@@ -1,0 +1,161 @@
+// Khớp bảng subscription_plan (data.sql thật) + AC FE-53 (Note.md).
+// plan_type thật là "UNLIMIT" - đã confirm trực tiếp với BE ngày 2026-07-08 (kết luận cũ ở
+// đây nói "UNLIMITED" mới đúng theo data.sql seed là SAI, BE xác nhận lại giá trị thật là
+// "UNLIMIT" khớp spec Sprint 3). UI vẫn hiển thị chữ "UNLIMITED" cho người dùng - xem
+// getSubscriptionTypeLabel() trong src/constants/subscriptionStyles.ts.
+export type PlanType = "FAMILY" | "UNLIMIT";
+export type PlanStatus = "ACTIVE" | "INACTIVE";
+export type PlanStatusFilter = "ALL" | PlanStatus;
+export type PlanTypeFilter = "ALL" | PlanType;
+
+// GET /api/admin/subscription-plans - 1 dòng trong danh sách (id không hiển thị trên UI
+// nhưng BE cần trả về để FE điều hướng Edit/Delete - xem note "Contradiction #4" đã báo Nora)
+export interface SubscriptionPlan {
+  id: number;
+  planName: string;
+  price: number;
+  durationDays: number;
+  planType: PlanType;
+  description: string;
+  maxVehicleCount: number | null; // 1 khi planType = UNLIMITED (data.sql thật cũng luôn để 1, không null)
+  servicePackageName: string;
+  status: PlanStatus;
+}
+
+// GET /api/admin/subscription-plans/{id} - chi tiết để pre-fill form Edit
+export interface SubscriptionPlanDetail {
+  id: number;
+  planName: string;
+  price: number;
+  durationDays: number;
+  description: string;
+  servicePackageId: number;
+  planType: PlanType;
+  maxVehicleCount: number | null;
+  status: PlanStatus;
+}
+
+// POST /api/admin/subscription-plans
+export interface CreateSubscriptionPlanRequest {
+  planName: string;
+  price: number;
+  durationDays: number;
+  description: string;
+  servicePackageId: number;
+  planType: PlanType;
+  // UNLIMITED: FE tự gán 1 (ẩn field, không cho sửa) theo comment trong Note.md + data.sql thật
+  // FAMILY: bắt buộc > 1, do người dùng nhập
+  maxVehicleCount: number;
+}
+
+// PUT /api/admin/subscription-plans/{id}
+export interface UpdateSubscriptionPlanRequest extends CreateSubscriptionPlanRequest {
+  status: PlanStatus;
+}
+
+// Service package để chọn trong dropdown form Create/Update - chỉ lấy status = ACTIVE
+export interface ServicePackageOption {
+  id: number;
+  name: string;
+}
+
+// Các errorCode nghiệp vụ BE trả về (theo Note.md) - dùng để map lỗi vào đúng field trên form
+export const SUBSCRIPTION_PLAN_ERROR_CODES = {
+  PLAN_NAME_REQUIRED: "PLAN_NAME_REQUIRED",
+  SERVICE_PACKAGE_REQUIRED: "SERVICE_PACKAGE_REQUIRED",
+  INVALID_PRICE: "INVALID_PRICE",
+  INVALID_DURATION_DAYS: "INVALID_DURATION_DAYS",
+  INVALID_MAX_VEHICLE_COUNT: "INVALID_MAX_VEHICLE_COUNT",
+  INVALID_PLAN_TYPE: "INVALID_PLAN_TYPE",
+  INVALID_STATUS: "INVALID_STATUS",
+  INVALID_SERVICE_PACKAGE: "INVALID_SERVICE_PACKAGE",
+  SUBSCRIPTION_PLAN_NOT_FOUND: "SUBSCRIPTION_PLAN_NOT_FOUND",
+  SUBSCRIPTION_PLAN_ALREADY_INACTIVE: "SUBSCRIPTION_PLAN_ALREADY_INACTIVE",
+} as const;
+
+// Route về trang list tương ứng theo planType — dùng chung cho Create (onSuccess/onCancel)
+// và Edit (onSuccess/onCancel/error fallback). Sửa route ở đây là đủ, không cần đụng 2 page.
+export const PLAN_TYPE_LIST_ROUTE: Record<PlanType, string> = {
+  UNLIMIT: "/admin/unlimited-subscriptions",
+  FAMILY: "/admin/family-subscriptions",
+};
+
+/** Status subscription đang có của group */
+export type SubscriptionStatus = "ACTIVE" | "EXPIRED" | "CANCELED";
+
+/** 1 gói subscription gia đình — response từ API-16-01 */
+export interface FamilySubscriptionPlan {
+  id: number;
+  planName: string;
+  description: string | null;
+  price: number; // tổng giá cả kỳ — FE tự tính pricePerMonth
+  durationDays: number; // 30 = 1-Month, 90 = 3-Month, 180 = 6-Month
+  maxVehicleCount: number;
+  servicePackageId: number | null;
+  addonIds: number[]; // FE mapping sang tên qua GET /api/addon-services
+}
+
+export interface CurrentSubscription {
+  familySubscriptionId: number;
+  subscriptionPlanId: number;
+  planName: string;
+  status: SubscriptionStatus;
+  startDate: string;
+  endDate: string;
+}
+
+export interface CurrentGroup {
+  familyGroupId: number;
+  groupName: string;
+  slotsUsed: number;
+  subscription: CurrentSubscription | null;
+}
+
+/**
+ * Response của GET /api/subscriptions/family/plans (API-16-01).
+ * currentGroup + familyPlans đều nằm trong data (không phải root).
+ */
+export interface FamilyPlansData {
+  currentGroup: CurrentGroup | null;
+  familyPlans: FamilySubscriptionPlan[];
+}
+
+export interface FamilyPlansApiResponse {
+  success: boolean;
+  message: string;
+  data: FamilyPlansData;
+}
+
+/* ---- Request / Response type cho API-17-02 ---- */
+export interface RegisterFamilySubscriptionRequest {
+  familyGroupId: number;
+  subscriptionPlanId: number;
+}
+
+export interface RegisterFamilySubscriptionResponse {
+  familySubscriptionId: number;
+  invoiceId: number;
+  planName: string;
+  planPrice: number;
+  startDate: string;
+  endDate: string;
+  status: string;
+}
+
+/* ---- Request / Response type cho API-17-04 ---- */
+export interface RenewFamilySubscriptionRequest {
+  subscriptionPlanId: number;
+}
+
+export interface RenewFamilySubscriptionResponse {
+  familySubscriptionId: number;
+  invoiceId: number;
+  planName: string;
+  planDuration: number;
+  status: string;
+  startDate: string;
+  endDate: string;
+  slotsUsed: number;
+  maxSlots: number;
+  inheritedTierName: string;
+}

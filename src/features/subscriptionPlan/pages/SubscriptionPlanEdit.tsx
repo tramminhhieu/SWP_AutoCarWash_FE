@@ -1,0 +1,105 @@
+import { useEffect, useState } from "react";
+import { useNavigate, useParams } from "react-router-dom";
+import Loading from "../../../components/ui/Loading";
+import { getApiErrorInfo } from "../../../lib/axiosClient";
+import { getById } from "../api/subscriptionPlanApi";
+import SubscriptionPlanForm from "../components/SubscriptionPlanForm";
+import {
+  PLAN_TYPE_LIST_ROUTE,
+  type SubscriptionPlanDetail,
+} from "../types/subscriptionPlan";
+
+// FE-53-US-03
+export default function SubscriptionPlanEdit() {
+  const { id } = useParams<{ type: string; id: string }>();
+  const navigate = useNavigate();
+  const planId = Number(id);
+  const isInvalidId = !planId || Number.isNaN(planId);
+
+  const [plan, setPlan] = useState<SubscriptionPlanDetail | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (isInvalidId) return;
+
+    // AC01: pre-fill toàn bộ dữ liệu hiện tại
+    getById(planId)
+      .then((data) => setPlan(data))
+      .catch((err) => {
+        const { message } = getApiErrorInfo(err);
+        setError(message ?? "Subscription plan not found.");
+      })
+      .finally(() => setIsLoading(false));
+  }, [planId, isInvalidId]);
+
+  // listRoute từ PLAN_TYPE_LIST_ROUTE (subscriptionPlan.ts) — đồng bộ với Create
+  const listRoute = plan ? PLAN_TYPE_LIST_ROUTE[plan.planType] : undefined;
+
+  return (
+    <div className="mx-auto max-w-5xl px-margin-mobile py-20 md:px-margin-desktop">
+      <h1 className="font-heading text-headline-lg text-on-surface">
+        Edit Subscription Plan
+      </h1>
+      <p className="mt-1 font-body text-body-md text-on-surface-variant">
+        Update plan details.
+      </p>
+
+      <div className="mt-6">
+        {isInvalidId ? (
+          <div className="space-y-4">
+            <div className="rounded-lg border border-error/30 bg-error-container px-4 py-3 font-body text-body-md text-on-error-container">
+              Invalid subscription plan.
+            </div>
+            <button
+              type="button"
+              onClick={() => navigate(-1)}
+              className="font-body text-body-md font-semibold text-primary hover:opacity-80"
+            >
+              ← Go Back
+            </button>
+          </div>
+        ) : isLoading ? (
+          <Loading rows={5} />
+        ) : error ? (
+          <div className="space-y-4">
+            <div className="rounded-lg border border-error/30 bg-error-container px-4 py-3 font-body text-body-md text-on-error-container">
+              {error}
+            </div>
+            {/* Không biết planType khi fetch thất bại → navigate(-1) về list trước đó */}
+            <button
+              type="button"
+              onClick={() => navigate(-1)}
+              className="font-body text-body-md font-semibold text-primary hover:opacity-80"
+            >
+              ← Go Back
+            </button>
+          </div>
+        ) : plan ? (
+          <SubscriptionPlanForm
+            planId={plan.id}
+            initialData={{
+              planName: plan.planName,
+              price: plan.price,
+              durationDays: plan.durationDays,
+              description: plan.description,
+              servicePackageId: plan.servicePackageId,
+              planType: plan.planType,
+              maxVehicleCount: plan.maxVehicleCount,
+              status: plan.status,
+            }}
+            // AC05: cập nhật thành công -> về đúng list (UNLIMIT/FAMILY)
+            onSuccess={() =>
+              navigate(listRoute!, {
+                state: {
+                  successMessage: "Subscription plan updated successfully.",
+                },
+              })
+            }
+            onCancel={() => navigate(listRoute!)}
+          />
+        ) : null}
+      </div>
+    </div>
+  );
+}

@@ -1,0 +1,1438 @@
+{
+  "info": {
+    "_postman_id": "f4f77cfa-cc5e-4541-98fd-d671e15b1baa",
+    "name": "AutoWash API",
+    "description": "baseUrl: http://localhost:8080",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+    "_exporter_id": "55969840",
+    "_collection_link": "https://go.postman.co/collection/55969840-f4f77cfa-cc5e-4541-98fd-d671e15b1baa?source=collection_link"
+  },
+  "item": [
+    {
+      "name": "Auth",
+      "item": [
+        {
+          "name": "Login",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "exec": [
+                  ""
+                ],
+                "type": "text/javascript",
+                "packages": {},
+                "requests": {}
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "const response = pm.response.json();",
+                  "",
+                  "// Đổi \"token\" cho khớp với field trong response API của bạn",
+                  "const token = response.token ",
+                  "           || response.data?.token",
+                  "           || response.data?.accessToken",
+                  "           || response.accessToken;",
+                  "",
+                  "if (token) {",
+                  "    pm.environment.set(\"token\", token);",
+                  "    console.log(\"✅ Token saved!\");",
+                  "} else {",
+                  "    console.warn(\"⚠️ Không tìm thấy token. Kiểm tra lại response.\");",
+                  "}"
+                ],
+                "type": "text/javascript",
+                "packages": {},
+                "requests": {}
+              }
+            }
+          ],
+          "protocolProfileBehavior": {
+            "disableBodyPruning": true
+          },
+          "request": {
+            "method": "GET",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "  {\n    \"identity\": \"customer1@gmail.com\",\n    \"password\": \"123456\"\n  }\n",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/auth/login",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "auth",
+                "login"
+              ]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "BookingHistory",
+      "item": [
+        {
+          "name": "Booking Upcoming History",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/bookings/upcoming",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "bookings",
+                "upcoming"
+              ]
+            }
+          },
+          "response": [
+            {
+              "name": "Success 200 - Has Data",
+              "originalRequest": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/api/bookings/upcoming?customerId=1",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "bookings",
+                    "upcoming"
+                  ],
+                  "query": [
+                    {
+                      "key": "customerId",
+                      "value": "1"
+                    }
+                  ]
+                }
+              },
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Vary",
+                  "value": "Origin"
+                },
+                {
+                  "key": "Vary",
+                  "value": "Access-Control-Request-Method"
+                },
+                {
+                  "key": "Vary",
+                  "value": "Access-Control-Request-Headers"
+                },
+                {
+                  "key": "X-Content-Type-Options",
+                  "value": "nosniff"
+                },
+                {
+                  "key": "X-XSS-Protection",
+                  "value": "0"
+                },
+                {
+                  "key": "Cache-Control",
+                  "value": "no-cache, no-store, max-age=0, must-revalidate"
+                },
+                {
+                  "key": "Pragma",
+                  "value": "no-cache"
+                },
+                {
+                  "key": "Expires",
+                  "value": "0"
+                },
+                {
+                  "key": "X-Frame-Options",
+                  "value": "DENY"
+                },
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                },
+                {
+                  "key": "Transfer-Encoding",
+                  "value": "chunked"
+                },
+                {
+                  "key": "Date",
+                  "value": "Thu, 25 Jun 2026 16:15:00 GMT"
+                },
+                {
+                  "key": "Keep-Alive",
+                  "value": "timeout=60"
+                },
+                {
+                  "key": "Connection",
+                  "value": "keep-alive"
+                }
+              ],
+              "cookie": [],
+              "body": "{\n    \"data\": [\n        {\n            \"allowedActions\": [\n                \"VIEW_DETAILS\"\n            ],\n            \"appointmentDate\": \"2026-06-25\",\n            \"bookingId\": 25,\n            \"brandName\": \"Toyota\",\n            \"color\": \"White\",\n            \"endTime\": null,\n            \"licensePlate\": \"51A-11111\",\n            \"serviceName\": \"Medium\",\n            \"startTime\": null,\n            \"status\": \"CHECKED_IN\"\n        },\n        {\n            \"allowedActions\": [\n                \"CANCEL\",\n                \"VIEW_DETAILS\"\n            ],\n            \"appointmentDate\": \"2026-06-28\",\n            \"bookingId\": 1,\n            \"brandName\": \"Toyota\",\n            \"color\": \"White\",\n            \"endTime\": \"08:15:00\",\n            \"licensePlate\": \"51A-11111\",\n            \"serviceName\": \"Basic\",\n            \"startTime\": \"08:00:00\",\n            \"status\": \"CONFIRMED\"\n        }\n    ],\n    \"message\": \"Lấy danh sách lịch đặt sắp tới thành công\",\n    \"success\": true\n}"
+            },
+            {
+              "name": "Success 200 - Empty List",
+              "originalRequest": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/api/bookings/upcoming?customerId=7",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "bookings",
+                    "upcoming"
+                  ],
+                  "query": [
+                    {
+                      "key": "customerId",
+                      "value": "7"
+                    }
+                  ]
+                }
+              },
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": null,
+              "header": [
+                {
+                  "key": "Vary",
+                  "value": "Origin"
+                },
+                {
+                  "key": "Vary",
+                  "value": "Access-Control-Request-Method"
+                },
+                {
+                  "key": "Vary",
+                  "value": "Access-Control-Request-Headers"
+                },
+                {
+                  "key": "X-Content-Type-Options",
+                  "value": "nosniff"
+                },
+                {
+                  "key": "X-XSS-Protection",
+                  "value": "0"
+                },
+                {
+                  "key": "Cache-Control",
+                  "value": "no-cache, no-store, max-age=0, must-revalidate"
+                },
+                {
+                  "key": "Pragma",
+                  "value": "no-cache"
+                },
+                {
+                  "key": "Expires",
+                  "value": "0"
+                },
+                {
+                  "key": "X-Frame-Options",
+                  "value": "DENY"
+                },
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                },
+                {
+                  "key": "Transfer-Encoding",
+                  "value": "chunked"
+                },
+                {
+                  "key": "Date",
+                  "value": "Sat, 20 Jun 2026 15:19:57 GMT"
+                },
+                {
+                  "key": "Keep-Alive",
+                  "value": "timeout=60"
+                },
+                {
+                  "key": "Connection",
+                  "value": "keep-alive"
+                }
+              ],
+              "cookie": [],
+              "body": "{\n    \"data\": [],\n    \"message\": \"Không có lịch đặt sắp tới\",\n    \"success\": true\n}"
+            }
+          ]
+        },
+        {
+          "name": "Booking Past History",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/bookings/past",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "bookings",
+                "past"
+              ]
+            }
+          },
+          "response": [
+            {
+              "name": "Success 200 - Has Data",
+              "originalRequest": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/api/bookings/past",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "bookings",
+                    "past"
+                  ]
+                }
+              },
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Vary",
+                  "value": "Origin"
+                },
+                {
+                  "key": "Vary",
+                  "value": "Access-Control-Request-Method"
+                },
+                {
+                  "key": "Vary",
+                  "value": "Access-Control-Request-Headers"
+                },
+                {
+                  "key": "X-Content-Type-Options",
+                  "value": "nosniff"
+                },
+                {
+                  "key": "X-XSS-Protection",
+                  "value": "0"
+                },
+                {
+                  "key": "Cache-Control",
+                  "value": "no-cache, no-store, max-age=0, must-revalidate"
+                },
+                {
+                  "key": "Pragma",
+                  "value": "no-cache"
+                },
+                {
+                  "key": "Expires",
+                  "value": "0"
+                },
+                {
+                  "key": "X-Frame-Options",
+                  "value": "DENY"
+                },
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                },
+                {
+                  "key": "Transfer-Encoding",
+                  "value": "chunked"
+                },
+                {
+                  "key": "Date",
+                  "value": "Thu, 25 Jun 2026 16:14:50 GMT"
+                },
+                {
+                  "key": "Keep-Alive",
+                  "value": "timeout=60"
+                },
+                {
+                  "key": "Connection",
+                  "value": "keep-alive"
+                }
+              ],
+              "cookie": [],
+              "body": "{\n    \"data\": [\n        {\n            \"allowedActions\": [\n                \"WRITE_REVIEW\",\n                \"VIEW_DETAILS\"\n            ],\n            \"appointmentDate\": \"2026-06-15\",\n            \"bookingId\": 11,\n            \"brandName\": \"Toyota\",\n            \"color\": \"White\",\n            \"endTime\": \"08:15:00\",\n            \"licensePlate\": \"51A-11111\",\n            \"serviceName\": \"Basic\",\n            \"startTime\": \"08:00:00\",\n            \"status\": \"PAID\"\n        }\n    ],\n    \"message\": \"Lấy lịch sử dịch vụ thành công\",\n    \"success\": true\n}"
+            },
+            {
+              "name": "Success 200 - Emply List",
+              "originalRequest": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/api/bookings/past?customerId=10",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "bookings",
+                    "past"
+                  ],
+                  "query": [
+                    {
+                      "key": "customerId",
+                      "value": "10"
+                    }
+                  ]
+                }
+              },
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": null,
+              "header": [
+                {
+                  "key": "Vary",
+                  "value": "Origin"
+                },
+                {
+                  "key": "Vary",
+                  "value": "Access-Control-Request-Method"
+                },
+                {
+                  "key": "Vary",
+                  "value": "Access-Control-Request-Headers"
+                },
+                {
+                  "key": "X-Content-Type-Options",
+                  "value": "nosniff"
+                },
+                {
+                  "key": "X-XSS-Protection",
+                  "value": "0"
+                },
+                {
+                  "key": "Cache-Control",
+                  "value": "no-cache, no-store, max-age=0, must-revalidate"
+                },
+                {
+                  "key": "Pragma",
+                  "value": "no-cache"
+                },
+                {
+                  "key": "Expires",
+                  "value": "0"
+                },
+                {
+                  "key": "X-Frame-Options",
+                  "value": "DENY"
+                },
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                },
+                {
+                  "key": "Transfer-Encoding",
+                  "value": "chunked"
+                },
+                {
+                  "key": "Date",
+                  "value": "Sat, 20 Jun 2026 15:22:54 GMT"
+                },
+                {
+                  "key": "Keep-Alive",
+                  "value": "timeout=60"
+                },
+                {
+                  "key": "Connection",
+                  "value": "keep-alive"
+                }
+              ],
+              "cookie": [],
+              "body": "{\n    \"data\": [],\n    \"message\": \"Bạn chưa có lịch sử dịch vụ nào.\",\n    \"success\": true\n}"
+            }
+          ]
+        },
+        {
+          "name": "Booking Detail",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/bookings/1",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "bookings",
+                "1"
+              ]
+            }
+          },
+          "response": [
+            {
+              "name": "Success 200",
+              "originalRequest": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/api/bookings/1",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "bookings",
+                    "1"
+                  ]
+                }
+              },
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Vary",
+                  "value": "Origin"
+                },
+                {
+                  "key": "Vary",
+                  "value": "Access-Control-Request-Method"
+                },
+                {
+                  "key": "Vary",
+                  "value": "Access-Control-Request-Headers"
+                },
+                {
+                  "key": "X-Content-Type-Options",
+                  "value": "nosniff"
+                },
+                {
+                  "key": "X-XSS-Protection",
+                  "value": "0"
+                },
+                {
+                  "key": "Cache-Control",
+                  "value": "no-cache, no-store, max-age=0, must-revalidate"
+                },
+                {
+                  "key": "Pragma",
+                  "value": "no-cache"
+                },
+                {
+                  "key": "Expires",
+                  "value": "0"
+                },
+                {
+                  "key": "X-Frame-Options",
+                  "value": "DENY"
+                },
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                },
+                {
+                  "key": "Transfer-Encoding",
+                  "value": "chunked"
+                },
+                {
+                  "key": "Date",
+                  "value": "Thu, 25 Jun 2026 16:14:09 GMT"
+                },
+                {
+                  "key": "Keep-Alive",
+                  "value": "timeout=60"
+                },
+                {
+                  "key": "Connection",
+                  "value": "keep-alive"
+                }
+              ],
+              "cookie": [],
+              "body": "{\n    \"data\": {\n        \"addonTotal\": 70000,\n        \"addons\": [\n            {\n                \"addonName\": \"Vacuum\",\n                \"addonPrice\": 50000\n            },\n            {\n                \"addonName\": \"Air Freshener\",\n                \"addonPrice\": 20000\n            }\n        ],\n        \"appointmentDate\": \"2026-06-28\",\n        \"bookingId\": 1,\n        \"bookingType\": \"ONLINE\",\n        \"brandName\": \"Toyota\",\n        \"color\": \"White\",\n        \"customerTier\": \"MEMBER\",\n        \"depositAmount\": 20000,\n        \"endTime\": \"08:15:00\",\n        \"isDepositPaid\": true,\n        \"licensePlate\": \"51A-11111\",\n        \"remainingAmount\": 150000,\n        \"serviceName\": \"Basic\",\n        \"servicePrice\": 100000,\n        \"startTime\": \"08:00:00\",\n        \"stationAddress\": \"123 Ap Bac, My Tho\",\n        \"stationName\": \"AutoWash My Tho\",\n        \"status\": \"CONFIRMED\",\n        \"subscriptionDurationDays\": 30,\n        \"subscriptionPlanName\": \"Unlimited Basic 1 Month\",\n        \"subscriptionPlanType\": \"UNLIMITED\",\n        \"technicianName\": null,\n        \"totalAmount\": 170000,\n        \"voucherCode\": null,\n        \"voucherDiscountAmount\": 0,\n        \"voucherDiscountPercent\": null\n    },\n    \"message\": \"Lấy thông tin chi tiết booking thành công\",\n    \"success\": true\n}"
+            }
+          ]
+        },
+        {
+          "name": "PATCH Cancel Booking",
+          "request": {
+            "method": "PATCH",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/bookings/6/cancel",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "bookings",
+                "6",
+                "cancel"
+              ]
+            }
+          },
+          "response": [
+            {
+              "name": "Success 200 - Cancel Booking",
+              "originalRequest": {
+                "method": "PATCH",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/api/bookings/2/cancel",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "bookings",
+                    "2",
+                    "cancel"
+                  ]
+                }
+              },
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Vary",
+                  "value": "Origin"
+                },
+                {
+                  "key": "Vary",
+                  "value": "Access-Control-Request-Method"
+                },
+                {
+                  "key": "Vary",
+                  "value": "Access-Control-Request-Headers"
+                },
+                {
+                  "key": "X-Content-Type-Options",
+                  "value": "nosniff"
+                },
+                {
+                  "key": "X-XSS-Protection",
+                  "value": "0"
+                },
+                {
+                  "key": "Cache-Control",
+                  "value": "no-cache, no-store, max-age=0, must-revalidate"
+                },
+                {
+                  "key": "Pragma",
+                  "value": "no-cache"
+                },
+                {
+                  "key": "Expires",
+                  "value": "0"
+                },
+                {
+                  "key": "X-Frame-Options",
+                  "value": "DENY"
+                },
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                },
+                {
+                  "key": "Transfer-Encoding",
+                  "value": "chunked"
+                },
+                {
+                  "key": "Date",
+                  "value": "Thu, 25 Jun 2026 16:14:38 GMT"
+                },
+                {
+                  "key": "Keep-Alive",
+                  "value": "timeout=60"
+                },
+                {
+                  "key": "Connection",
+                  "value": "keep-alive"
+                }
+              ],
+              "cookie": [],
+              "body": "{\n    \"data\": {\n        \"addonTotal\": 330000,\n        \"addons\": [\n            {\n                \"addonName\": \"Polish\",\n                \"addonPrice\": 150000\n            },\n            {\n                \"addonName\": \"Wax Coating\",\n                \"addonPrice\": 180000\n            }\n        ],\n        \"appointmentDate\": \"2026-06-30\",\n        \"bookingId\": 2,\n        \"bookingType\": \"ONLINE\",\n        \"brandName\": \"Honda\",\n        \"color\": \"Blue\",\n        \"customerTier\": \"SILVER\",\n        \"depositAmount\": 20000,\n        \"endTime\": \"08:45:00\",\n        \"isDepositPaid\": true,\n        \"licensePlate\": \"51B-22222\",\n        \"remainingAmount\": 610000,\n        \"serviceName\": \"Premium\",\n        \"servicePrice\": 300000,\n        \"startTime\": \"08:00:00\",\n        \"stationAddress\": \"456 Vo Van Ngan, Thu Duc, HCM\",\n        \"stationName\": \"AutoWash HCM Thu Duc\",\n        \"status\": \"CANCELLED\",\n        \"subscriptionDurationDays\": 30,\n        \"subscriptionPlanName\": \"Unlimited Premium 1 Month\",\n        \"subscriptionPlanType\": \"UNLIMITED\",\n        \"technicianName\": null,\n        \"totalAmount\": 630000,\n        \"voucherCode\": null,\n        \"voucherDiscountAmount\": 30000,\n        \"voucherDiscountPercent\": null\n    },\n    \"message\": \"Hủy lịch đặt thành công\",\n    \"success\": true\n}"
+            }
+          ]
+        }
+      ],
+      "event": [
+        {
+          "listen": "prerequest",
+          "script": {
+            "type": "text/javascript",
+            "packages": {},
+            "requests": {},
+            "exec": [
+              ""
+            ]
+          }
+        },
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "packages": {},
+            "requests": {},
+            "exec": [
+              ""
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Queue",
+      "item": [
+        {
+          "name": "Show all active queue ticket",
+          "request": {
+            "method": "GET",
+            "header": []
+          },
+          "response": [
+            {
+              "name": "Success 200 - Has Data",
+              "originalRequest": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/api/queue",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "queue"
+                  ]
+                }
+              },
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": null,
+              "header": [
+                {
+                  "key": "Vary",
+                  "value": "Origin"
+                },
+                {
+                  "key": "Vary",
+                  "value": "Access-Control-Request-Method"
+                },
+                {
+                  "key": "Vary",
+                  "value": "Access-Control-Request-Headers"
+                },
+                {
+                  "key": "X-Content-Type-Options",
+                  "value": "nosniff"
+                },
+                {
+                  "key": "X-XSS-Protection",
+                  "value": "0"
+                },
+                {
+                  "key": "Cache-Control",
+                  "value": "no-cache, no-store, max-age=0, must-revalidate"
+                },
+                {
+                  "key": "Pragma",
+                  "value": "no-cache"
+                },
+                {
+                  "key": "Expires",
+                  "value": "0"
+                },
+                {
+                  "key": "X-Frame-Options",
+                  "value": "DENY"
+                },
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                },
+                {
+                  "key": "Transfer-Encoding",
+                  "value": "chunked"
+                },
+                {
+                  "key": "Date",
+                  "value": "Thu, 25 Jun 2026 05:02:37 GMT"
+                },
+                {
+                  "key": "Keep-Alive",
+                  "value": "timeout=60"
+                },
+                {
+                  "key": "Connection",
+                  "value": "keep-alive"
+                }
+              ],
+              "cookie": [],
+              "body": "{\n    \"data\": [\n        {\n            \"id\": 6,\n            \"ticketNumber\": \"A006\",\n            \"status\": \"WAITING\",\n            \"isBooking\": true,\n            \"priorityScore\": 3,\n            \"bookingId\": 21,\n            \"licensePlate\": \"51C-33333\",\n            \"customerName\": \"Linh Le\",\n            \"customerTier\": \"GOLD\",\n            \"vehicleBrand\": \"Mazda\",\n            \"vehicleColor\": \"Black\",\n            \"serviceName\": \"Premium\",\n            \"stationId\": 1,\n            \"stationName\": \"AutoWash My Tho\"\n        },\n        {\n            \"id\": 13,\n            \"ticketNumber\": \"A013\",\n            \"status\": \"WAITING\",\n            \"isBooking\": true,\n            \"priorityScore\": 3,\n            \"bookingId\": 25,\n            \"licensePlate\": \"51A-11111\",\n            \"customerName\": \"Phong Huynh\",\n            \"customerTier\": \"MEMBER\",\n            \"vehicleBrand\": \"Toyota\",\n            \"vehicleColor\": \"White\",\n            \"serviceName\": \"Medium\",\n            \"stationId\": 2,\n            \"stationName\": \"AutoWash HCM Thu Duc\"\n        }\n    ],\n    \"message\": \"Lấy danh sách hàng chờ thành công\",\n    \"success\": true\n}"
+            }
+          ]
+        },
+        {
+          "name": "Staff cancel booking",
+          "request": {
+            "method": "PATCH",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/queue/6/cancel-guest-left",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "queue",
+                "6",
+                "cancel-guest-left"
+              ]
+            }
+          },
+          "response": [
+            {
+              "name": "Success 200 - Staff cancel booking",
+              "originalRequest": {
+                "method": "PATCH",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/api/queue/6/cancel-guest-left",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "queue",
+                    "6",
+                    "cancel-guest-left"
+                  ]
+                }
+              },
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": null,
+              "header": [
+                {
+                  "key": "Vary",
+                  "value": "Origin"
+                },
+                {
+                  "key": "Vary",
+                  "value": "Access-Control-Request-Method"
+                },
+                {
+                  "key": "Vary",
+                  "value": "Access-Control-Request-Headers"
+                },
+                {
+                  "key": "X-Content-Type-Options",
+                  "value": "nosniff"
+                },
+                {
+                  "key": "X-XSS-Protection",
+                  "value": "0"
+                },
+                {
+                  "key": "Cache-Control",
+                  "value": "no-cache, no-store, max-age=0, must-revalidate"
+                },
+                {
+                  "key": "Pragma",
+                  "value": "no-cache"
+                },
+                {
+                  "key": "Expires",
+                  "value": "0"
+                },
+                {
+                  "key": "X-Frame-Options",
+                  "value": "DENY"
+                },
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                },
+                {
+                  "key": "Transfer-Encoding",
+                  "value": "chunked"
+                },
+                {
+                  "key": "Date",
+                  "value": "Thu, 25 Jun 2026 04:55:52 GMT"
+                },
+                {
+                  "key": "Keep-Alive",
+                  "value": "timeout=60"
+                },
+                {
+                  "key": "Connection",
+                  "value": "keep-alive"
+                }
+              ],
+              "cookie": [],
+              "body": "{\n    \"data\": {\n        \"addonTotal\": 120000,\n        \"addons\": [\n            {\n                \"addonName\": \"Interior Shampoo\",\n                \"addonPrice\": 120000\n            }\n        ],\n        \"appointmentDate\": \"2026-06-25\",\n        \"bookingId\": 6,\n        \"bookingType\": \"ONLINE\",\n        \"brandName\": \"VinFast\",\n        \"color\": \"White\",\n        \"customerTier\": \"GOLD\",\n        \"depositAmount\": 20000,\n        \"endTime\": \"08:45:00\",\n        \"isDepositPaid\": true,\n        \"licensePlate\": \"43B-77777\",\n        \"remainingAmount\": 400000,\n        \"serviceName\": \"Premium\",\n        \"servicePrice\": 300000,\n        \"startTime\": \"08:00:00\",\n        \"stationAddress\": \"456 Vo Van Ngan, Thu Duc, HCM\",\n        \"stationName\": \"AutoWash HCM Thu Duc\",\n        \"status\": \"CANCELLED\",\n        \"technicianName\": \"Chi Le\",\n        \"totalAmount\": 420000,\n        \"voucherCode\": null,\n        \"voucherDiscountAmount\": 15000,\n        \"voucherDiscountPercent\": null\n    },\n    \"message\": \"Đã hủy do khách bỏ về\",\n    \"success\": true\n}"
+            },
+            {
+              "name": "Bad Request - Staff cancel queue_ticket has status not WATING",
+              "originalRequest": {
+                "method": "PATCH",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/api/queue/1/cancel-guest-left",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "queue",
+                    "1",
+                    "cancel-guest-left"
+                  ]
+                }
+              },
+              "status": "Bad Request",
+              "code": 400,
+              "_postman_previewlanguage": null,
+              "header": [
+                {
+                  "key": "Vary",
+                  "value": "Origin"
+                },
+                {
+                  "key": "Vary",
+                  "value": "Access-Control-Request-Method"
+                },
+                {
+                  "key": "Vary",
+                  "value": "Access-Control-Request-Headers"
+                },
+                {
+                  "key": "X-Content-Type-Options",
+                  "value": "nosniff"
+                },
+                {
+                  "key": "X-XSS-Protection",
+                  "value": "0"
+                },
+                {
+                  "key": "Cache-Control",
+                  "value": "no-cache, no-store, max-age=0, must-revalidate"
+                },
+                {
+                  "key": "Pragma",
+                  "value": "no-cache"
+                },
+                {
+                  "key": "Expires",
+                  "value": "0"
+                },
+                {
+                  "key": "X-Frame-Options",
+                  "value": "DENY"
+                },
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                },
+                {
+                  "key": "Transfer-Encoding",
+                  "value": "chunked"
+                },
+                {
+                  "key": "Date",
+                  "value": "Thu, 25 Jun 2026 04:57:36 GMT"
+                },
+                {
+                  "key": "Connection",
+                  "value": "close"
+                }
+              ],
+              "cookie": [],
+              "body": "{\n    \"errorCode\": \"BOOKING_006\",\n    \"message\": \"Booking chưa ở trạng thái check-in, không thể hủy theo luồng này\",\n    \"success\": false\n}"
+            }
+          ]
+        },
+        {
+          "name": "Complete queue_ticket",
+          "request": {
+            "method": "PATCH",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/{tick/complete",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "{tick",
+                "complete"
+              ]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Loyalty",
+      "item": [
+        {
+          "name": "View loyalty profile",
+          "protocolProfileBehavior": {
+            "disableBodyPruning": true
+          },
+          "request": {
+            "method": "GET",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "  {\n    \"identity\": \"customer1@gmail.com\",\n    \"password\": \"123456\"\n  }\n"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/loyalty/profile",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "loyalty",
+                "profile"
+              ]
+            }
+          },
+          "response": [
+            {
+              "name": "View loyalty profile",
+              "originalRequest": {
+                "method": "GET",
+                "header": [],
+                "body": {
+                  "mode": "raw",
+                  "raw": "  {\n    \"identity\": \"customer1@gmail.com\",\n    \"password\": \"123456\"\n  }\n"
+                },
+                "url": {
+                  "raw": "{{baseUrl}}/api/loyalty/profile",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "loyalty",
+                    "profile"
+                  ]
+                }
+              },
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": null,
+              "header": [
+                {
+                  "key": "Vary",
+                  "value": "Origin"
+                },
+                {
+                  "key": "Vary",
+                  "value": "Access-Control-Request-Method"
+                },
+                {
+                  "key": "Vary",
+                  "value": "Access-Control-Request-Headers"
+                },
+                {
+                  "key": "X-Content-Type-Options",
+                  "value": "nosniff"
+                },
+                {
+                  "key": "X-XSS-Protection",
+                  "value": "0"
+                },
+                {
+                  "key": "Cache-Control",
+                  "value": "no-cache, no-store, max-age=0, must-revalidate"
+                },
+                {
+                  "key": "Pragma",
+                  "value": "no-cache"
+                },
+                {
+                  "key": "Expires",
+                  "value": "0"
+                },
+                {
+                  "key": "X-Frame-Options",
+                  "value": "DENY"
+                },
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                },
+                {
+                  "key": "Transfer-Encoding",
+                  "value": "chunked"
+                },
+                {
+                  "key": "Date",
+                  "value": "Sat, 04 Jul 2026 12:45:33 GMT"
+                },
+                {
+                  "key": "Keep-Alive",
+                  "value": "timeout=60"
+                },
+                {
+                  "key": "Connection",
+                  "value": "keep-alive"
+                }
+              ],
+              "cookie": [],
+              "body": "{\n    \"data\": {\n        \"totalPoints\": 610,\n        \"accumulatedPoints\": 1310,\n        \"upcomingResetDate\": \"2027-01-01\",\n        \"daysUntilReset\": 181,\n        \"tierName\": \"GOLD\",\n        \"nextTierName\": \"PLATINUM\",\n        \"pointsToNextTier\": 690,\n        \"currentTotalSpending\": 4670000,\n        \"retentionTargetAmount\": 3000000,\n        \"retentionCurrentAmount\": 4670000,\n        \"retentionEndDate\": \"2027-01-01\",\n        \"retentionStatus\": \"IN_PROGRESS\"\n    },\n    \"message\": \"Lay thong tin loyalty thanh cong\",\n    \"success\": true\n}"
+            }
+          ]
+        },
+        {
+          "name": "View loyalty history theo năm",
+          "request": {
+            "method": "GET",
+            "header": []
+          },
+          "response": [
+            {
+              "name": "View loyalty history theo năm",
+              "originalRequest": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/api/loyalty/history?year=2025",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "loyalty",
+                    "history"
+                  ],
+                  "query": [
+                    {
+                      "key": "year",
+                      "value": "2025"
+                    }
+                  ]
+                }
+              },
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": null,
+              "header": [
+                {
+                  "key": "Vary",
+                  "value": "Origin"
+                },
+                {
+                  "key": "Vary",
+                  "value": "Access-Control-Request-Method"
+                },
+                {
+                  "key": "Vary",
+                  "value": "Access-Control-Request-Headers"
+                },
+                {
+                  "key": "X-Content-Type-Options",
+                  "value": "nosniff"
+                },
+                {
+                  "key": "X-XSS-Protection",
+                  "value": "0"
+                },
+                {
+                  "key": "Cache-Control",
+                  "value": "no-cache, no-store, max-age=0, must-revalidate"
+                },
+                {
+                  "key": "Pragma",
+                  "value": "no-cache"
+                },
+                {
+                  "key": "Expires",
+                  "value": "0"
+                },
+                {
+                  "key": "X-Frame-Options",
+                  "value": "DENY"
+                },
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                },
+                {
+                  "key": "Transfer-Encoding",
+                  "value": "chunked"
+                },
+                {
+                  "key": "Date",
+                  "value": "Sat, 04 Jul 2026 12:45:40 GMT"
+                },
+                {
+                  "key": "Keep-Alive",
+                  "value": "timeout=60"
+                },
+                {
+                  "key": "Connection",
+                  "value": "keep-alive"
+                }
+              ],
+              "cookie": [],
+              "body": "{\n    \"data\": {\n        \"year\": 2025,\n        \"month\": null,\n        \"totalSpending\": 0,\n        \"transactions\": []\n    },\n    \"message\": \"Lay lich su diem thanh cong\",\n    \"success\": true\n}"
+            }
+          ]
+        },
+        {
+          "name": "View history theo tháng",
+          "request": {
+            "method": "GET",
+            "header": []
+          },
+          "response": [
+            {
+              "name": "View history theo tháng",
+              "originalRequest": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/api/loyalty/history?year=2026&month=7",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "loyalty",
+                    "history"
+                  ],
+                  "query": [
+                    {
+                      "key": "year",
+                      "value": "2026"
+                    },
+                    {
+                      "key": "month",
+                      "value": "7"
+                    }
+                  ]
+                }
+              },
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": null,
+              "header": [
+                {
+                  "key": "Vary",
+                  "value": "Origin"
+                },
+                {
+                  "key": "Vary",
+                  "value": "Access-Control-Request-Method"
+                },
+                {
+                  "key": "Vary",
+                  "value": "Access-Control-Request-Headers"
+                },
+                {
+                  "key": "X-Content-Type-Options",
+                  "value": "nosniff"
+                },
+                {
+                  "key": "X-XSS-Protection",
+                  "value": "0"
+                },
+                {
+                  "key": "Cache-Control",
+                  "value": "no-cache, no-store, max-age=0, must-revalidate"
+                },
+                {
+                  "key": "Pragma",
+                  "value": "no-cache"
+                },
+                {
+                  "key": "Expires",
+                  "value": "0"
+                },
+                {
+                  "key": "X-Frame-Options",
+                  "value": "DENY"
+                },
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                },
+                {
+                  "key": "Transfer-Encoding",
+                  "value": "chunked"
+                },
+                {
+                  "key": "Date",
+                  "value": "Sat, 04 Jul 2026 12:45:47 GMT"
+                },
+                {
+                  "key": "Keep-Alive",
+                  "value": "timeout=60"
+                },
+                {
+                  "key": "Connection",
+                  "value": "keep-alive"
+                }
+              ],
+              "cookie": [],
+              "body": "{\n    \"data\": {\n        \"year\": 2026,\n        \"month\": 7,\n        \"totalSpending\": 4670000,\n        \"transactions\": []\n    },\n    \"message\": \"Lay lich su diem thanh cong\",\n    \"success\": true\n}"
+            }
+          ]
+        },
+        {
+          "name": "View tiers list",
+          "request": {
+            "method": "GET",
+            "header": []
+          },
+          "response": [
+            {
+              "name": "View tiers list",
+              "originalRequest": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/api/loyalty/tiers",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "loyalty",
+                    "tiers"
+                  ]
+                }
+              },
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": null,
+              "header": [
+                {
+                  "key": "Vary",
+                  "value": "Origin"
+                },
+                {
+                  "key": "Vary",
+                  "value": "Access-Control-Request-Method"
+                },
+                {
+                  "key": "Vary",
+                  "value": "Access-Control-Request-Headers"
+                },
+                {
+                  "key": "X-Content-Type-Options",
+                  "value": "nosniff"
+                },
+                {
+                  "key": "X-XSS-Protection",
+                  "value": "0"
+                },
+                {
+                  "key": "Cache-Control",
+                  "value": "no-cache, no-store, max-age=0, must-revalidate"
+                },
+                {
+                  "key": "Pragma",
+                  "value": "no-cache"
+                },
+                {
+                  "key": "Expires",
+                  "value": "0"
+                },
+                {
+                  "key": "X-Frame-Options",
+                  "value": "DENY"
+                },
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                },
+                {
+                  "key": "Transfer-Encoding",
+                  "value": "chunked"
+                },
+                {
+                  "key": "Date",
+                  "value": "Sat, 04 Jul 2026 12:45:53 GMT"
+                },
+                {
+                  "key": "Keep-Alive",
+                  "value": "timeout=60"
+                },
+                {
+                  "key": "Connection",
+                  "value": "keep-alive"
+                }
+              ],
+              "cookie": [],
+              "body": "{\n    \"data\": [\n        {\n            \"tierName\": \"MEMBER\",\n            \"minPoints\": 0,\n            \"bookingWindowDays\": 7,\n            \"pointMultiple\": 1,\n            \"retentionTargetAmount\": 0,\n            \"benefits\": [\n                \"Tich diem co ban x1 moi luot rua xe\"\n            ]\n        },\n        {\n            \"tierName\": \"SILVER\",\n            \"minPoints\": 500,\n            \"bookingWindowDays\": 10,\n            \"pointMultiple\": 1.2,\n            \"retentionTargetAmount\": 1500000,\n            \"benefits\": [\n                \"Uu tien dat lich truoc 10 ngay\",\n                \"Email thong bao khuyen mai som\"\n            ]\n        },\n        {\n            \"tierName\": \"GOLD\",\n            \"minPoints\": 1000,\n            \"bookingWindowDays\": 12,\n            \"pointMultiple\": 1.5,\n            \"retentionTargetAmount\": 3000000,\n            \"benefits\": [\n                \"Giam 5% phi dich vu addon\",\n                \"Tich diem x1.5 moi luot\"\n            ]\n        },\n        {\n            \"tierName\": \"PLATINUM\",\n            \"minPoints\": 2000,\n            \"bookingWindowDays\": 14,\n            \"pointMultiple\": 1.8,\n            \"retentionTargetAmount\": 5000000,\n            \"benefits\": [\n                \"Mien phi 1 luot danh bong moi quy\"\n            ]\n        }\n    ],\n    \"message\": \"Lay danh sach hang thanh vien thanh cong\",\n    \"success\": true\n}"
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "auth": {
+    "type": "bearer",
+    "bearer": [
+      {
+        "key": "token",
+        "value": "{{token}}",
+        "type": "string"
+      }
+    ]
+  },
+  "event": [
+    {
+      "listen": "prerequest",
+      "script": {
+        "type": "text/javascript",
+        "packages": {},
+        "requests": {},
+        "exec": [
+          ""
+        ]
+      }
+    },
+    {
+      "listen": "test",
+      "script": {
+        "type": "text/javascript",
+        "packages": {},
+        "requests": {},
+        "exec": [
+          ""
+        ]
+      }
+    }
+  ],
+  "variable": [
+    {
+      "key": "supabase_service_role_api_key_17q5",
+      "secret": true
+    }
+  ]
+}

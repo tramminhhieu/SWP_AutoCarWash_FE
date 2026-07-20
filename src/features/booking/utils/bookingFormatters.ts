@@ -1,0 +1,85 @@
+import type { BookingStatus } from "../types/booking";
+
+/**
+ * Formats a backend `yyyy-MM-dd` date string into the long display form
+ * used on the card, e.g. `"2023-10-18"` -> `"October 18, 2023"`.
+ */
+export function formatAppointmentDate(isoDate: string): string {
+  const date = new Date(`${isoDate}T00:00:00`);
+  return date.toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric" });
+}
+
+/**
+ * Formats a backend `HH:mm:ss` time string into a 12-hour clock time,
+ * e.g. `"09:30:00"` -> `"09:30 AM"`.
+ */
+export function formatTime(time: string): string {
+  const [hours, minutes] = time.split(":");
+  const date = new Date();
+  date.setHours(Number(hours), Number(minutes), 0, 0);
+  return date.toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit" });
+}
+
+/**
+ * Formats a backend start/end time pair into the display range used on the
+ * card, e.g. `"09:30:00"`/`"09:45:00"` -> `"09:30 AM - 09:45 AM"`.
+ */
+export function formatTimeRange(startTime: string, endTime: string): string {
+  return `${formatTime(startTime)} - ${formatTime(endTime)}`;
+}
+
+/**
+ * Formats a backend naive ISO-8601 `LocalDateTime` string (no timezone) into
+ * a display datetime, e.g. `"2026-07-02T14:30:00"` -> `"Jul 2, 2026, 02:30 PM"`.
+ */
+export function formatCheckInTime(isoDateTime: string): string {
+  const date = new Date(isoDateTime);
+  return date.toLocaleString("en-US", {
+    year: "numeric", month: "short", day: "numeric",
+    hour: "2-digit", minute: "2-digit",
+  });
+}
+
+/** Masks all but the last 4 digits of a bank account number, e.g. `"0123456789"` -> `"•••6789"`. */
+export function maskAccount(accountNumber: string): string {
+  return `•••${accountNumber.slice(-4)}`;
+}
+
+/** Formats a backend ISO datetime into `"HH:mm dd/MM/yyyy"`, e.g. `"14:30 12/07/2026"`. */
+export function formatRefundedAt(iso: string): string {
+  const date = new Date(iso);
+  const hh = String(date.getHours()).padStart(2, "0");
+  const mm = String(date.getMinutes()).padStart(2, "0");
+  const dd = String(date.getDate()).padStart(2, "0");
+  const MM = String(date.getMonth() + 1).padStart(2, "0");
+  return `${hh}:${mm} ${dd}/${MM}/${date.getFullYear()}`;
+}
+
+/**
+ * Formats a backend ISO datetime into `"dd/MM/yyyy"`, e.g. `"12/07/2026"`.
+ * Khác `formatAppointmentDate` ở chỗ nhận ISO datetime đầy đủ (có phần giờ),
+ * không phải chuỗi `yyyy-MM-dd` thuần.
+ */
+export function formatDateOnly(iso: string): string {
+  const date = new Date(iso);
+  const dd = String(date.getDate()).padStart(2, "0");
+  const MM = String(date.getMonth() + 1).padStart(2, "0");
+  return `${dd}/${MM}/${date.getFullYear()}`;
+}
+
+/**
+ * Derives the status to actually display (badge + refund captions) from a
+ * booking's refund fields, instead of trusting the raw `status` string to
+ * ever literally equal "REFUND_PENDING"/"REFUNDED" — the backend's "past"
+ * list endpoint is only documented to return PAID/CANCELED/NO_SHOW, so
+ * refund progress must be read from refundedAt/refundAmount instead.
+ */
+export function getEffectiveBookingStatus(booking: {
+  status: BookingStatus;
+  refundedAt?: string | null;
+  refundAmount?: number | null;
+}): BookingStatus {
+  if (booking.refundedAt) return "REFUNDED";
+  if (booking.refundAmount != null) return "REFUND_PENDING";
+  return booking.status;
+}

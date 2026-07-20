@@ -1,0 +1,250 @@
+import { useState, useEffect, useRef } from "react";
+import { useAuth } from "../../../hooks/useAuth";
+import type {
+  DashboardTab,
+  GroupBy,
+  DashboardSummary,
+  DashboardRevenueChart,
+  // DashboardTables,
+} from "../types/dashboard";
+import {
+  getDashboardSummary,
+  getDashboardRevenueChart,
+  // getDashboardTables,
+} from "../api/dashboardApi";
+import DashboardFilter from "../components/DashboardFilter";
+import SummaryCard from "../components/SummaryCard";
+import RevenueChart from "../components/RevenueChart";
+// import DashboardTable from "../components/DashboardTable";
+import type { BranchFilterSelection } from "../../station/components/BranchFilterDropdown";
+
+// ─── Helper: tính fromDate / toDate / groupBy từ tab active ──────────────────
+function pad(n: number) {
+  return String(n).padStart(2, "0");
+}
+function fmtDate(d: Date) {
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+}
+
+function getTabParams(tab: DashboardTab): {
+  fromDate: string;
+  toDate: string;
+  groupBy: GroupBy;
+} {
+  const now = new Date();
+
+  switch (tab) {
+    case "today": {
+      const today = fmtDate(now);
+      return { fromDate: today, toDate: today, groupBy: "HOUR" };
+    }
+    case "month": {
+      const first = new Date(now.getFullYear(), now.getMonth(), 1);
+      const last = new Date(now.getFullYear(), now.getMonth() + 1, 0);
+      return {
+        fromDate: fmtDate(first),
+        toDate: fmtDate(last),
+        groupBy: "DAY",
+      };
+    }
+    case "quarter":
+      return {
+        fromDate: `${now.getFullYear()}-01-01`,
+        toDate: `${now.getFullYear()}-12-31`,
+        groupBy: "QUARTER",
+      };
+    case "year":
+    default:
+      return {
+        fromDate: `${now.getFullYear()}-01-01`,
+        toDate: `${now.getFullYear()}-12-31`,
+        groupBy: "MONTH",
+      };
+  }
+}
+
+// ─── Shape filter state ───────────────────────────────────────────────────────
+interface FilterState {
+  activeTab: DashboardTab;
+  fromDate: string;
+  toDate: string;
+  branchFilter: BranchFilterSelection;
+}
+
+// ─── Dashboard Page ───────────────────────────────────────────────────────────
+export default function Dashboard() {
+  const { user } = useAuth();
+  const role = (user?.role as "ADMIN" | "STAFF") ?? "ADMIN";
+
+  // Khởi tạo với tab Year (default theo spec)
+  const initTabParams = getTabParams("today");
+  const initFilter: FilterState = {
+    activeTab: "today",
+    fromDate: initTabParams.fromDate,
+    toDate: initTabParams.toDate,
+    branchFilter: null,
+  };
+
+  // filter: state đang chỉnh trên UI
+  const [filter, setFilter] = useState<FilterState>(initFilter);
+  // appliedFilter: params đang dùng để fetch — thay đổi → trigger useEffect
+  const [appliedFilter, setAppliedFilter] = useState<FilterState>(initFilter);
+
+  // Dữ liệu 3 API
+  const [summary, setSummary] = useState<DashboardSummary | null>(null);
+  const [revenueChart, setRevenueChart] =
+    useState<DashboardRevenueChart | null>(null);
+  // const [tables, setTables] = useState<DashboardTables | null>(null);
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  // Tránh setState sau khi unmount
+  const isMountedRef = useRef(true);
+  useEffect(() => {
+    return () => {
+      isMountedRef.current = false;
+    };
+  }, []);
+
+  // Fetch cả 3 API khi appliedFilter thay đổi
+  useEffect(() => {
+    const { activeTab, fromDate, toDate, branchFilter } = appliedFilter;
+    const { groupBy } = getTabParams(activeTab);
+
+    if (fromDate > toDate) return; // validate trước khi gọi API
+
+    // Staff không gửi location params — BE tự lấy stationId từ JWT
+    const locationParams =
+      role === "ADMIN"
+        ? {
+            provinceId:
+              branchFilter?.level === "province" ? branchFilter.id : undefined,
+            communeId:
+              branchFilter?.level === "commune" ? branchFilter.id : undefined,
+            stationId:
+              branchFilter?.level === "station" ? branchFilter.id : undefined,
+          }
+        : {};
+
+    let cancelled = false;
+    queueMicrotask(() => {
+      if (!cancelled) {
+        setIsLoading(true);
+        setError(null);
+      }
+    });
+
+    Promise.all([
+      getDashboardSummary({ fromDate, toDate, ...locationParams }),
+      getDashboardRevenueChart({
+        fromDate,
+        toDate,
+        groupBy,
+        ...locationParams,
+      }),
+      // getDashboardTables({ fromDate, toDate, ...locationParams }),
+    ])
+      .then(([sum, chart /*, tabs*/]) => {
+        if (cancelled) return;
+        setSummary(sum);
+        setRevenueChart(chart);
+        // setTables(tabs);
+      })
+      .catch(() => {
+        if (cancelled) return;
+        setError("Unable to load dashboard data. Please try again.");
+      })
+      .finally(() => {
+        if (!cancelled) setIsLoading(false);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [appliedFilter, role]);
+
+  // ─── Handlers ─────────────────────────────────────────────────────────────
+
+  // Đổi tab → apply luôn, không cần bấm refresh
+  function handleTabChange(tab: DashboardTab) {
+    const tabParams = getTabParams(tab);
+    const newFilter: FilterState = {
+      activeTab: tab,
+      fromDate: tabParams.fromDate,
+      toDate: tabParams.toDate,
+      branchFilter: filter.branchFilter,
+    };
+    setFilter(newFilter);
+    setAppliedFilter(newFilter);
+  }
+
+  // Date thay đổi → chỉ update UI, chờ bấm Apply
+  const handleFromDateChange = (fromDate: string) =>
+    setFilter((prev) => ({ ...prev, fromDate }));
+
+  const handleToDateChange = (toDate: string) =>
+    setFilter((prev) => ({ ...prev, toDate }));
+
+  // Đổi branch (Province/Commune/Station) → apply luôn, giống pattern ở
+  // AdminCustomers — không cần chờ bấm Apply
+  function handleBranchChange(branchFilter: BranchFilterSelection) {
+    const newFilter: FilterState = { ...filter, branchFilter };
+    setFilter(newFilter);
+    setAppliedFilter(newFilter);
+  }
+
+  // Bấm nút refresh → apply filter hiện tại
+  const handleApply = () => setAppliedFilter({ ...filter });
+
+  // Validate date — hiển thị lỗi inline, block gọi API
+  const dateError =
+    filter.fromDate && filter.toDate && filter.fromDate > filter.toDate
+      ? "Start date must be before or equal to end date"
+      : null;
+
+  // ─── Render ───────────────────────────────────────────────────────────────
+  return (
+    <div className="mx-auto flex max-w-[1200px] flex-col gap-6 px-6 py-8">
+      {/* Header */}
+      <div className="flex flex-col gap-1">
+        <h1 className="font-heading text-2xl font-bold tracking-tight text-on-surface">
+          Performance Analytics
+        </h1>
+        <p className="text-sm text-outline">
+          Business performance overview by time period
+        </p>
+      </div>
+
+      {/* Filter bar */}
+      <DashboardFilter
+        role={role}
+        activeTab={filter.activeTab}
+        fromDate={filter.fromDate}
+        toDate={filter.toDate}
+        dateError={dateError}
+        isLoading={isLoading}
+        onTabChange={handleTabChange}
+        onFromDateChange={handleFromDateChange}
+        onToDateChange={handleToDateChange}
+        onBranchChange={handleBranchChange}
+        onApply={handleApply}
+      />
+
+      {/* Global error */}
+      {error && (
+        <div className="rounded-lg border border-error-container bg-error-container/20 px-4 py-3 text-sm font-medium text-error">
+          {error}
+        </div>
+      )}
+
+      {/* 3 Summary cards */}
+      <SummaryCard summary={summary} isLoading={isLoading} />
+
+      {/* Revenue Chart */}
+      <RevenueChart data={revenueChart} isLoading={isLoading} />
+
+      {/* 2 bảng: Service Packages + Tier Distribution */}
+      {/* <DashboardTable tables={tables} isLoading={isLoading} /> */}
+    </div>
+  );
+}

@@ -1,6 +1,7 @@
 // ====== Enums ======
 
 export type PromotionStatus = "ACTIVE" | "UPCOMING" | "EXPIRED";
+export type DiscountType = "FIXED" | "PERCENTAGE";
 
 // ====== Sub-types (khớp với response API-PR-01) ======
 
@@ -18,7 +19,8 @@ export interface PromotionTarget {
 export interface PromotionVoucher {
   id: number;
   voucherCode: string;
-  discountPercentage: number;
+  discountType: DiscountType;
+  discountValue: number;
   maxDiscountAmount: number;
   minOrderValue: number;
   usageLimit: number;
@@ -55,7 +57,8 @@ export interface GetAdminPromotionsParams {
 
 export interface CreateVoucherPayload {
   voucherCode: string;
-  discountPercentage: number;
+  discountType: DiscountType;
+  discountValue: number;
   maxDiscountAmount: number;
   minOrderValue: number;
   usageLimit: number;
@@ -65,10 +68,11 @@ export interface CreateVoucherPayload {
 export interface CreatePromotionRequest {
   configMode: 2; // luôn là 2 (Campaign + Voucher)
   campaignName: string;
+  description: string | null;
   campaignStartDate: string;
   campaignEndDate: string;
   stationIds: number[];
-  targetIds: number[] | null;
+  targetCustomerTierIds: number[] | null;
   vouchers: CreateVoucherPayload[];
   voucherStartDate: null; // luôn null — voucher theo ngày của campaign
   voucherEndDate: null;
@@ -84,7 +88,8 @@ export interface CreatePromotionResponse {
 export interface UpdateVoucherPayload {
   id: number | null; // có id = update voucher cũ, null = tạo voucher mới
   voucherCode: string;
-  discountPercentage: number;
+  discountType: DiscountType;
+  discountValue: number;
   maxDiscountAmount: number;
   minOrderValue: number;
   usageLimit: number;
@@ -93,6 +98,7 @@ export interface UpdateVoucherPayload {
 
 export interface UpdatePromotionRequest {
   title: string;
+  description: string | null;
   startDate: string;
   endDate: string;
   stationIds: number[];
@@ -106,7 +112,8 @@ export interface VoucherFormItem {
   key: string; // local key cho React list
   id: number | null; // null = voucher mới, có id = voucher cũ (dùng cho update)
   voucherCode: string;
-  discountPercentage: string;
+  discountType: DiscountType;
+  discountValue: string;
   maxDiscountAmount: string;
   minOrderValue: string;
   usageLimit: number | string;
@@ -115,6 +122,7 @@ export interface VoucherFormItem {
 
 export interface PromotionFormValues {
   campaignName: string;
+  description: string;
   startDate: string;
   endDate: string;
   selectedStations: { id: number; name: string }[];

@@ -1,5 +1,6 @@
-import { useEffect, useState } from "react";
-import { useNavigate, useParams } from "react-router-dom";
+import { useState, useEffect } from "react";
+import { useNavigate, useLocation } from "react-router-dom";
+import { getTierStyle } from "../../../constants/tierStyles";
 import {
   ArrowLeft,
   ChevronLeft,
@@ -10,11 +11,7 @@ import {
   Users,
   CalendarDays,
 } from "lucide-react";
-import {
-  getPromotionById,
-  softDeleteCampaign,
-  softDeleteVoucher,
-} from "../api/promotionApi";
+import { softDeleteCampaign, softDeleteVoucher } from "../api/promotionApi";
 import type {
   PromotionItem,
   PromotionVoucher,
@@ -65,24 +62,28 @@ function StatusPill({ status }: { status: PromotionStatus }) {
 
 export default function PromotionDetail() {
   const navigate = useNavigate();
-  const { id } = useParams<{ id: string }>();
-  const isInvalidId = !id || isNaN(Number(id));
+  const location = useLocation();
 
-  // ── State ──
-  const [promotion, setPromotion] = useState<PromotionItem | null>(null);
-  const [vouchers, setVouchers] = useState<PromotionVoucher[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [notFound, setNotFound] = useState(false);
+  // Nhận toàn bộ promotion object từ navigation state (đã có sẵn từ List)
+  // — KHÔNG gọi thêm API.
+  const locationState = location.state as {
+    promotion?: PromotionItem;
+    successMessage?: string;
+  } | null;
+  const promotion = locationState?.promotion;
+
+  // ── Tất cả useState phải khai báo trước early return ──
+  const [vouchers, setVouchers] = useState<PromotionVoucher[]>(
+    promotion?.vouchers ?? [],
+  );
   const [page, setPage] = useState(1);
 
-  // Delete campaign
   const [showDeleteCampaign, setShowDeleteCampaign] = useState(false);
   const [isDeletingCampaign, setIsDeletingCampaign] = useState(false);
   const [deleteCampaignError, setDeleteCampaignError] = useState<string | null>(
     null,
   );
 
-  // Delete voucher
   const [deleteVoucherTarget, setDeleteVoucherTarget] =
     useState<PromotionVoucher | null>(null);
   const [isDeletingVoucher, setIsDeletingVoucher] = useState(false);
@@ -90,37 +91,36 @@ export default function PromotionDetail() {
     null,
   );
 
-  // Load promotion theo id từ URL
+  const [successMessage, setSuccessMessage] = useState<string | null>(
+    locationState?.successMessage ?? null,
+  );
+
+  // Tự ẩn popup thành công sau 1.5s
   useEffect(() => {
-    if (isInvalidId) return;
+    if (!successMessage) return;
+    const timer = setTimeout(() => setSuccessMessage(null), 1500);
+    return () => clearTimeout(timer);
+  }, [successMessage]);
 
-    let isMounted = true;
+  // Guard: nếu vào thẳng bằng URL (không có state) → quay về list
+  // vì trang này chỉ hoạt động khi được navigate từ Overview kèm state.
+  useEffect(() => {
+    if (!promotion) {
+      navigate("/admin/promotions");
+    }
+  }, [promotion, navigate]);
 
-    getPromotionById(Number(id))
-      .then((data) => {
-        if (!isMounted) return;
-        if (!data) {
-          setNotFound(true);
-        } else {
-          setPromotion(data);
-          setVouchers(data.vouchers);
-        }
-      })
-      .finally(() => {
-        if (isMounted) setIsLoading(false);
-      });
+  if (!promotion) {
+    return null;
+  }
 
-    return () => {
-      isMounted = false;
-    };
-  }, [id, isInvalidId]);
+  const p = promotion;
 
   async function confirmDeleteCampaign() {
-    if (!promotion) return;
     setIsDeletingCampaign(true);
     setDeleteCampaignError(null);
     try {
-      await softDeleteCampaign(promotion.id);
+      await softDeleteCampaign(p.id);
       navigate("/admin/promotions");
     } catch {
       setDeleteCampaignError("Failed to delete promotion. Please try again.");
@@ -152,48 +152,15 @@ export default function PromotionDetail() {
     page * PAGE_SIZE,
   );
 
-  // ── Invalid ID ──
-  if (isInvalidId) {
-    return (
-      <div className="flex h-96 flex-col items-center justify-center gap-4">
-        <p className="text-base text-outline">Promotion not found.</p>
-        <button
-          onClick={() => navigate("/admin/promotions")}
-          className="text-sm font-semibold text-primary hover:underline"
-        >
-          Back to Promotions
-        </button>
-      </div>
-    );
-  }
-
-  // ── Loading ──
-  if (isLoading) {
-    return (
-      <div className="flex h-96 items-center justify-center text-base text-outline">
-        Loading...
-      </div>
-    );
-  }
-
-  // ── Not found ──
-  if (notFound || !promotion) {
-    return (
-      <div className="flex h-96 flex-col items-center justify-center gap-4">
-        <p className="text-base text-outline">Promotion not found.</p>
-        <button
-          onClick={() => navigate("/admin/promotions")}
-          className="text-sm font-semibold text-primary hover:underline"
-        >
-          Back to Promotions
-        </button>
-      </div>
-    );
-  }
-
   return (
     <div className="mx-auto flex max-w-[1440px] flex-col gap-8 px-12 py-8">
-      {/* ── Modals ── */}
+      <Modal
+        isOpen={!!successMessage}
+        onClose={() => setSuccessMessage(null)}
+        variant="success"
+        title="Success"
+        message={successMessage}
+      />
       <Modal
         isOpen={showDeleteCampaign}
         onClose={() => setShowDeleteCampaign(false)}
@@ -202,7 +169,7 @@ export default function PromotionDetail() {
         message={
           <>
             Are you sure you want to delete{" "}
-            <strong className="text-on-surface">{promotion.title}</strong>? All
+            <strong className="text-on-surface">{p.title}</strong>? All
             associated vouchers will also be deactivated. This action cannot be
             undone.
           </>
@@ -261,22 +228,20 @@ export default function PromotionDetail() {
           </button>
           <div className="flex items-center gap-3">
             <h1 className="font-heading text-headline-xl font-bold tracking-[-1.2px] text-on-surface">
-              {promotion.title}
+              {p.title}
             </h1>
-            <StatusPill status={promotion.status} />
+            <StatusPill status={p.status} />
           </div>
-          {promotion.description && (
-            <p className="text-sm text-on-surface-variant">
-              {promotion.description}
-            </p>
+          {p.description && (
+            <p className="text-sm text-on-surface-variant">{p.description}</p>
           )}
         </div>
 
         <div className="flex items-center gap-2">
           <button
             onClick={() =>
-              navigate(`/admin/promotions/${promotion.id}/edit`, {
-                state: { promotion },
+              navigate(`/admin/promotions/${p.id}/edit`, {
+                state: { promotion: p },
               })
             }
             className="flex items-center gap-2 rounded-lg border border-outline-variant bg-white px-4 py-2.5 text-sm font-semibold text-on-surface hover:bg-surface-container-low"
@@ -305,7 +270,7 @@ export default function PromotionDetail() {
               Campaign Period
             </p>
             <p className="text-sm font-semibold text-on-surface">
-              {promotion.startDate} → {promotion.endDate}
+              {p.startDate} → {p.endDate}
             </p>
           </div>
         </div>
@@ -318,9 +283,9 @@ export default function PromotionDetail() {
             <p className="text-xs font-semibold uppercase tracking-wider text-on-surface-variant">
               Applied Branches
             </p>
-            {promotion.stations.length > 0 ? (
+            {p.stations.length > 0 ? (
               <div className="flex flex-wrap gap-1">
-                {promotion.stations.map((s) => (
+                {p.stations.map((s) => (
                   <span
                     key={s.stationId}
                     className="rounded-md bg-white px-2 py-0.5 text-xs font-medium text-on-surface-variant"
@@ -330,7 +295,9 @@ export default function PromotionDetail() {
                 ))}
               </div>
             ) : (
-              <span className="text-xs text-outline">All branches</span>
+              <span className="rounded-md bg-white px-2 py-0.5 text-xs font-medium text-on-surface-variant">
+                All Stations
+              </span>
             )}
           </div>
         </div>
@@ -343,19 +310,24 @@ export default function PromotionDetail() {
             <p className="text-xs font-semibold uppercase tracking-wider text-on-surface-variant">
               Target Segments
             </p>
-            {promotion.targets.length > 0 ? (
+            {p.targets.length > 0 ? (
               <div className="flex flex-wrap gap-1">
-                {promotion.targets.map((t) => (
-                  <span
-                    key={t.targetId}
-                    className="rounded-md bg-white px-2 py-0.5 text-xs font-medium text-secondary"
-                  >
-                    {t.targetName}
-                  </span>
-                ))}
+                {p.targets.map((t) => {
+                  const style = getTierStyle(t.targetCode);
+                  return (
+                    <span
+                      key={t.targetId}
+                      className={`rounded-md px-2 py-0.5 text-xs font-semibold ${style.badge}`}
+                    >
+                      {t.targetCode}
+                    </span>
+                  );
+                })}
               </div>
             ) : (
-              <span className="text-xs text-outline">All customers</span>
+              <span className="rounded-md bg-white px-2 py-0.5 text-xs font-medium text-on-surface-variant">
+                All Customers
+              </span>
             )}
           </div>
         </div>
@@ -414,9 +386,11 @@ export default function PromotionDetail() {
                       </span>
                     </td>
 
-                    {/* Discount */}
+                    {/* Discount — hiện đúng theo discountType */}
                     <td className="px-6 py-5 text-sm text-on-surface">
-                      {v.discountPercentage}%
+                      {v.discountType === "PERCENTAGE"
+                        ? `${v.discountValue}%`
+                        : formatCurrency(v.discountValue)}
                     </td>
 
                     {/* Max Discount */}
@@ -487,7 +461,7 @@ export default function PromotionDetail() {
               <div className="flex items-center justify-between border-t border-outline-variant px-6 py-4">
                 <button
                   type="button"
-                  onClick={() => setPage((p) => Math.max(1, p - 1))}
+                  onClick={() => setPage((prev) => Math.max(1, prev - 1))}
                   disabled={page === 1}
                   className="flex items-center gap-1 rounded-lg px-3 py-2 text-sm font-medium text-on-surface-variant transition-colors hover:bg-surface-container-low disabled:cursor-not-allowed disabled:opacity-40"
                 >
@@ -496,25 +470,27 @@ export default function PromotionDetail() {
                 </button>
                 <div className="flex items-center gap-1">
                   {Array.from({ length: totalPages }, (_, i) => i + 1).map(
-                    (p) => (
+                    (pg) => (
                       <button
-                        key={p}
+                        key={pg}
                         type="button"
-                        onClick={() => setPage(p)}
+                        onClick={() => setPage(pg)}
                         className={`flex size-9 items-center justify-center rounded-lg text-sm font-medium transition-colors ${
-                          p === page
+                          pg === page
                             ? "bg-primary text-white"
                             : "text-on-surface-variant hover:bg-surface-container-low"
                         }`}
                       >
-                        {p}
+                        {pg}
                       </button>
                     ),
                   )}
                 </div>
                 <button
                   type="button"
-                  onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+                  onClick={() =>
+                    setPage((prev) => Math.min(totalPages, prev + 1))
+                  }
                   disabled={page === totalPages}
                   className="flex items-center gap-1 rounded-lg px-3 py-2 text-sm font-medium text-on-surface-variant transition-colors hover:bg-surface-container-low disabled:cursor-not-allowed disabled:opacity-40"
                 >

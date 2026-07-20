@@ -19,13 +19,16 @@ export default function PromotionCreate() {
     const body: CreatePromotionRequest = {
       configMode: 2,
       campaignName: values.campaignName,
+      description: values.description.trim() || null,
       campaignStartDate: values.startDate,
       campaignEndDate: values.endDate,
       stationIds: values.selectedStations.map((s) => s.id),
-      targetIds: values.targetIds.length > 0 ? values.targetIds : null,
+      targetCustomerTierIds:
+        values.targetIds.length > 0 ? values.targetIds : null,
       vouchers: values.vouchers.map((v) => ({
         voucherCode: v.voucherCode.toUpperCase(),
-        discountPercentage: Number(v.discountPercentage),
+        discountType: v.discountType,
+        discountValue: Number(v.discountValue),
         maxDiscountAmount: Number(v.maxDiscountAmount),
         minOrderValue: Number(v.minOrderValue),
         usageLimit: Number(v.usageLimit),
@@ -37,7 +40,9 @@ export default function PromotionCreate() {
 
     try {
       await createPromotion(body);
-      navigate("/admin/promotions");
+      navigate("/admin/promotions", {
+        state: { successMessage: "Promotion created successfully." },
+      });
     } catch (err: unknown) {
       const msg =
         (err as { response?: { data?: { message?: string } } })?.response?.data

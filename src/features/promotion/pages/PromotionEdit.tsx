@@ -1,7 +1,10 @@
 import { useEffect, useState } from "react";
 import { useNavigate, useParams, useLocation } from "react-router-dom";
-import { ArrowLeft } from "lucide-react";
-import { getPromotionById, updatePromotion } from "../api/promotionApi";
+import {
+  getPromotionById,
+  getAdminPromotions,
+  updatePromotion,
+} from "../api/promotionApi";
 import PromotionForm, {
   type PromotionFormValues,
 } from "../components/PromotionForm";
@@ -59,6 +62,7 @@ export default function PromotionEdit() {
 
     const body: UpdatePromotionRequest = {
       title: values.campaignName,
+      description: values.description.trim() || null,
       startDate: values.startDate,
       endDate: values.endDate,
       stationIds: values.selectedStations.map((s) => s.id),
@@ -66,7 +70,8 @@ export default function PromotionEdit() {
       vouchers: values.vouchers.map((v) => ({
         id: v.id, // có id = update voucher cũ, null = tạo voucher mới
         voucherCode: v.voucherCode.toUpperCase(),
-        discountPercentage: Number(v.discountPercentage),
+        discountType: v.discountType,
+        discountValue: Number(v.discountValue),
         maxDiscountAmount: Number(v.maxDiscountAmount),
         minOrderValue: Number(v.minOrderValue),
         usageLimit: Number(v.usageLimit),
@@ -76,7 +81,18 @@ export default function PromotionEdit() {
 
     try {
       await updatePromotion(promotion.id, body);
-      navigate(`/admin/promotions/${promotion.id}`);
+
+      // Gọi lại API list để lấy data mới nhất (không dùng state cũ đã lỗi thời)
+      const freshList = await getAdminPromotions();
+      const freshPromotion =
+        freshList.find((p) => p.id === promotion.id) ?? null;
+
+      navigate(`/admin/promotions/${promotion.id}`, {
+        state: {
+          promotion: freshPromotion ?? promotion,
+          successMessage: "Promotion updated successfully.",
+        },
+      });
     } catch (err: unknown) {
       const msg =
         (err as { response?: { data?: { message?: string } } })?.response?.data
@@ -90,6 +106,7 @@ export default function PromotionEdit() {
   function handleCancel() {
     navigate(
       promotion ? `/admin/promotions/${promotion.id}` : "/admin/promotions",
+      promotion ? { state: { promotion } } : undefined,
     );
   }
 
@@ -121,13 +138,6 @@ export default function PromotionEdit() {
     <div className="mx-auto flex max-w-[1440px] flex-col gap-8 px-12 py-8">
       {/* ── Header ── */}
       <div className="flex flex-col gap-3">
-        <button
-          onClick={() => navigate(`/admin/promotions/${promotion.id}`)}
-          className="flex items-center gap-1.5 text-sm font-medium text-on-surface-variant hover:text-primary"
-        >
-          <ArrowLeft className="size-4" />
-          Back to Promotion Detail
-        </button>
         <div>
           <h1 className="font-heading text-headline-xl font-bold tracking-[-1.2px] text-on-surface">
             Edit Promotion

@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
+import { getTierStyle } from "../../../constants/tierStyles";
 import {
   ArrowLeft,
   ChevronLeft,
@@ -65,7 +66,10 @@ export default function PromotionDetail() {
 
   // Nhận toàn bộ promotion object từ navigation state (đã có sẵn từ List)
   // — KHÔNG gọi thêm API.
-  const locationState = location.state as { promotion?: PromotionItem } | null;
+  const locationState = location.state as {
+    promotion?: PromotionItem;
+    successMessage?: string;
+  } | null;
   const promotion = locationState?.promotion;
 
   // ── Tất cả useState phải khai báo trước early return ──
@@ -86,6 +90,17 @@ export default function PromotionDetail() {
   const [deleteVoucherError, setDeleteVoucherError] = useState<string | null>(
     null,
   );
+
+  const [successMessage, setSuccessMessage] = useState<string | null>(
+    locationState?.successMessage ?? null,
+  );
+
+  // Tự ẩn popup thành công sau 1.5s
+  useEffect(() => {
+    if (!successMessage) return;
+    const timer = setTimeout(() => setSuccessMessage(null), 1500);
+    return () => clearTimeout(timer);
+  }, [successMessage]);
 
   // Guard: nếu vào thẳng bằng URL (không có state) → quay về list
   // vì trang này chỉ hoạt động khi được navigate từ Overview kèm state.
@@ -139,7 +154,13 @@ export default function PromotionDetail() {
 
   return (
     <div className="mx-auto flex max-w-[1440px] flex-col gap-8 px-12 py-8">
-      {/* ── Modals ── */}
+      <Modal
+        isOpen={!!successMessage}
+        onClose={() => setSuccessMessage(null)}
+        variant="success"
+        title="Success"
+        message={successMessage}
+      />
       <Modal
         isOpen={showDeleteCampaign}
         onClose={() => setShowDeleteCampaign(false)}
@@ -274,7 +295,9 @@ export default function PromotionDetail() {
                 ))}
               </div>
             ) : (
-              <span className="text-xs text-outline">All branches</span>
+              <span className="rounded-md bg-white px-2 py-0.5 text-xs font-medium text-on-surface-variant">
+                All Stations
+              </span>
             )}
           </div>
         </div>
@@ -289,17 +312,22 @@ export default function PromotionDetail() {
             </p>
             {p.targets.length > 0 ? (
               <div className="flex flex-wrap gap-1">
-                {p.targets.map((t) => (
-                  <span
-                    key={t.targetId}
-                    className="rounded-md bg-white px-2 py-0.5 text-xs font-medium text-secondary"
-                  >
-                    {t.targetName}
-                  </span>
-                ))}
+                {p.targets.map((t) => {
+                  const style = getTierStyle(t.targetCode);
+                  return (
+                    <span
+                      key={t.targetId}
+                      className={`rounded-md px-2 py-0.5 text-xs font-semibold ${style.badge}`}
+                    >
+                      {t.targetCode}
+                    </span>
+                  );
+                })}
               </div>
             ) : (
-              <span className="text-xs text-outline">All customers</span>
+              <span className="rounded-md bg-white px-2 py-0.5 text-xs font-medium text-on-surface-variant">
+                All Customers
+              </span>
             )}
           </div>
         </div>

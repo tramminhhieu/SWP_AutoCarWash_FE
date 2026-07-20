@@ -40,7 +40,9 @@ export default function PromotionCreate() {
 
     try {
       await createPromotion(body);
-      navigate("/admin/promotions");
+      navigate("/admin/promotions", {
+        state: { successMessage: "Promotion created successfully." },
+      });
     } catch (err: unknown) {
       const msg =
         (err as { response?: { data?: { message?: string } } })?.response?.data

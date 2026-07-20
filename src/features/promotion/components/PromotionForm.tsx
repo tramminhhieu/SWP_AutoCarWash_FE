@@ -1,12 +1,11 @@
 import { useEffect, useState } from "react";
 import type { ReactNode } from "react";
-import { AlertCircle, Plus, Trash2, X } from "lucide-react";
+import { AlertCircle, Plus, Trash2 } from "lucide-react";
 import {
   getProvinces,
   getCommunesByProvince,
 } from "../../station/api/addressApi";
 import { getStationsByCommune } from "../../station/api/stationApi";
-import type { Province, Commune } from "../../station/types/address";
 import type { Station } from "../../station/types/station";
 import type {
   PromotionItem,
@@ -157,32 +156,16 @@ function FormField({
   );
 }
 
-function StationTag({
-  name,
-  onRemove,
-}: {
-  name: string;
-  onRemove: () => void;
-}) {
-  return (
-    <div className="flex items-center gap-1.5 rounded-md bg-primary/10 px-2.5 py-1">
-      <span className="text-xs font-semibold text-primary">{name}</span>
-      <button
-        type="button"
-        onClick={onRemove}
-        className="text-primary/60 hover:text-primary"
-      >
-        <X className="size-3" />
-      </button>
-    </div>
-  );
-}
+// ─── Station Multi-Picker (Grouped Chips) ────────────────────────────────────
 
-// ─── Station Multi-Picker ─────────────────────────────────────────────────────
+interface StationGroup {
+  provinceId: number;
+  provinceName: string;
+  stations: Station[];
+}
 
 function StationMultiPicker({
   selectedIds,
-  selectedStations,
   onAdd,
   onRemove,
   error,
@@ -193,118 +176,145 @@ function StationMultiPicker({
   onRemove: (id: number) => void;
   error?: string;
 }) {
-  const [provinces, setProvinces] = useState<Province[]>([]);
-  const [communes, setCommunes] = useState<Commune[]>([]);
-  const [stations, setStations] = useState<Station[]>([]);
-  const [provinceId, setProvinceId] = useState<number | "">("");
-  const [communeId, setCommuneId] = useState<number | "">("");
+  const [groups, setGroups] = useState<StationGroup[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
 
+  // Load toàn bộ station 1 lần khi mount — gọi song song bằng Promise.all
   useEffect(() => {
+    let isMounted = true;
+
     getProvinces()
-      .then(setProvinces)
-      .catch(() => {});
+      .then(async (provinces) => {
+        // Lấy communes của tất cả province song song
+        const communesList = await Promise.all(
+          provinces.map((p) => getCommunesByProvince(p.id)),
+        );
+
+        // Lấy stations của tất cả commune song song
+        const allCommunes = communesList.flat();
+        const stationsList = await Promise.all(
+          allCommunes.map((c) => getStationsByCommune(c.id)),
+        );
+
+        if (!isMounted) return;
+
+        // Group stations theo province
+        const grouped: StationGroup[] = provinces
+          .map((province, pi) => {
+            const communesOfProvince = communesList[pi];
+            const communeIds = new Set(communesOfProvince.map((c) => c.id));
+
+            // Tìm index của từng commune trong allCommunes để lấy đúng stations
+            const provinceStations = allCommunes
+              .map((c, ci) => ({ commune: c, stations: stationsList[ci] }))
+              .filter(({ commune }) => communeIds.has(commune.id))
+              .flatMap(({ stations }) => stations);
+
+            return {
+              provinceId: province.id,
+              provinceName: province.provinceName,
+              stations: provinceStations,
+            };
+          })
+          .filter((g) => g.stations.length > 0);
+
+        setGroups(grouped);
+      })
+      .catch(() => {})
+      .finally(() => {
+        if (isMounted) setIsLoading(false);
+      });
+
+    return () => {
+      isMounted = false;
+    };
   }, []);
 
-  useEffect(() => {
-    if (!provinceId) return;
-    getCommunesByProvince(Number(provinceId))
-      .then(setCommunes)
-      .catch(() => {});
-  }, [provinceId]);
+  // Tất cả station đang hoạt động
+  const allOperating = groups.flatMap((g) =>
+    g.stations.filter((s) => s.operating),
+  );
+  const isAllSelected =
+    allOperating.length > 0 &&
+    allOperating.every((s) => selectedIds.includes(s.id));
 
-  useEffect(() => {
-    if (!communeId) return;
-    getStationsByCommune(Number(communeId))
-      .then(setStations)
-      .catch(() => {});
-  }, [communeId]);
-
-  function handleProvinceChange(val: number | "") {
-    setProvinceId(val);
-    setCommuneId("");
-    setCommunes([]);
-    setStations([]);
+  function handleSelectAll() {
+    if (isAllSelected) {
+      // Clear all
+      allOperating.forEach((s) => onRemove(s.id));
+    } else {
+      // Select all chưa được chọn
+      allOperating
+        .filter((s) => !selectedIds.includes(s.id))
+        .forEach((s) => onAdd({ id: s.id, name: s.stationName }));
+    }
   }
 
-  function handleCommuneChange(val: number | "") {
-    setCommuneId(val);
-    setStations([]);
+  function handleToggle(s: Station) {
+    if (!s.operating) return;
+    if (selectedIds.includes(s.id)) {
+      onRemove(s.id);
+    } else {
+      onAdd({ id: s.id, name: s.stationName });
+    }
   }
 
-  const selectClass =
-    "rounded-[8px] border border-outline-variant/40 bg-surface-container-low px-3 py-2 text-sm font-medium text-on-surface outline-none focus:border-primary";
+  if (isLoading) {
+    return (
+      <div className="flex h-20 items-center justify-center rounded-[12px] border border-outline-variant/30 bg-surface-container-low/30">
+        <span className="text-xs text-outline">Loading branches...</span>
+      </div>
+    );
+  }
 
   return (
     <div className="flex flex-col gap-3">
-      <div className="grid grid-cols-3 gap-3">
-        <select
-          value={provinceId}
-          onChange={(e) =>
-            handleProvinceChange(e.target.value ? Number(e.target.value) : "")
-          }
-          className={selectClass}
+      {/* Header + Select All */}
+      <div className="flex items-center justify-between">
+        <span className="text-xs text-outline">
+          {selectedIds.length} selected
+        </span>
+        <button
+          type="button"
+          onClick={handleSelectAll}
+          className="text-xs font-semibold text-primary hover:underline"
         >
-          <option value="">Select Province</option>
-          {provinces.map((p) => (
-            <option key={p.id} value={p.id}>
-              {p.provinceName}
-            </option>
-          ))}
-        </select>
-        <select
-          value={communeId}
-          onChange={(e) =>
-            handleCommuneChange(e.target.value ? Number(e.target.value) : "")
-          }
-          disabled={!provinceId}
-          className={`${selectClass} disabled:opacity-40`}
-        >
-          <option value="">Select Commune</option>
-          {communes.map((c) => (
-            <option key={c.id} value={c.id}>
-              {c.communeName}
-            </option>
-          ))}
-        </select>
-        <select
-          value=""
-          onChange={(e) => {
-            const s = stations.find((st) => st.id === Number(e.target.value));
-            if (s && !selectedIds.includes(s.id))
-              onAdd({ id: s.id, name: s.stationName });
-          }}
-          disabled={!communeId || stations.length === 0}
-          className={`${selectClass} disabled:opacity-40`}
-        >
-          <option value="">Add Station</option>
-          {stations.map((s) => (
-            <option
-              key={s.id}
-              value={s.id}
-              disabled={selectedIds.includes(s.id) || !s.operating}
-            >
-              {s.stationName}
-              {!s.operating ? " (Inactive)" : ""}
-              {selectedIds.includes(s.id) ? " ✓" : ""}
-            </option>
-          ))}
-        </select>
+          {isAllSelected ? "Clear All" : "Select All"}
+        </button>
       </div>
-      {selectedStations.length > 0 ? (
-        <div className="flex flex-wrap gap-2">
-          {selectedStations.map((s) => (
-            <StationTag
-              key={s.id}
-              name={s.name}
-              onRemove={() => onRemove(s.id)}
-            />
-          ))}
-        </div>
-      ) : (
-        <div className="flex h-10 items-center rounded-[8px] border border-dashed border-outline-variant/40 px-3">
-          <span className="text-xs text-outline">No branches selected yet</span>
-        </div>
-      )}
+
+      {/* Grouped chips */}
+      <div className="flex flex-col gap-4 rounded-[12px] border border-outline-variant/30 bg-surface-container-low/30 p-4">
+        {groups.map((group) => (
+          <div key={group.provinceId} className="flex flex-col gap-2">
+            <span className="text-xs font-bold uppercase tracking-wider text-outline">
+              {group.provinceName}
+            </span>
+            <div className="flex flex-wrap gap-2">
+              {group.stations.map((s) => {
+                const isSelected = selectedIds.includes(s.id);
+                return (
+                  <button
+                    key={s.id}
+                    type="button"
+                    onClick={() => handleToggle(s)}
+                    disabled={!s.operating}
+                    className={`rounded-[8px] border-2 px-3 py-1.5 text-sm font-medium transition-colors disabled:cursor-not-allowed disabled:opacity-40 ${
+                      isSelected
+                        ? "border-primary bg-primary/5 text-primary"
+                        : "border-outline-variant/30 text-on-surface-variant hover:border-primary/30 hover:text-on-surface"
+                    }`}
+                  >
+                    {s.stationName}
+                    {!s.operating && " (Inactive)"}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        ))}
+      </div>
+
       {error && (
         <span className="flex items-center gap-1 text-xs text-error">
           <AlertCircle className="size-3" />

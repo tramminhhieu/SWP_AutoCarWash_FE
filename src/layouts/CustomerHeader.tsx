@@ -11,6 +11,8 @@ import {
   Receipt,
   HeartHandshake,
   Infinity as InfinityIcon,
+  Car,
+  Award,
 } from "lucide-react";
 
 /**
@@ -208,6 +210,18 @@ export default function CustomerHeader({
                       My Profile
                     </Link>
                     <Link
+                      to="/vehicles/create"
+                      role="menuitem"
+                      className="flex items-center gap-2 px-4 py-2 font-body text-sm text-on-surface hover:bg-surface-container-low"
+                      onClick={() => setIsProfileOpen(false)}
+                    >
+                      <Car
+                        className="h-4 w-4 text-outline"
+                        strokeWidth={1.75}
+                      />
+                      Add Vehicle
+                    </Link>
+                    <Link
                       to="/booking/history"
                       role="menuitem"
                       className="flex items-center gap-2 px-4 py-2 font-body text-sm text-on-surface hover:bg-surface-container-low"
@@ -218,6 +232,18 @@ export default function CustomerHeader({
                         strokeWidth={1.75}
                       />
                       My Booking
+                    </Link>
+                    <Link
+                      to="/customer/loyalty"
+                      role="menuitem"
+                      className="flex items-center gap-2 px-4 py-2 font-body text-sm text-on-surface hover:bg-surface-container-low"
+                      onClick={() => setIsProfileOpen(false)}
+                    >
+                      <Award
+                        className="h-4 w-4 text-outline"
+                        strokeWidth={1.75}
+                      />
+                      My Point
                     </Link>
                     <Link
                       to="/customer/transactions"

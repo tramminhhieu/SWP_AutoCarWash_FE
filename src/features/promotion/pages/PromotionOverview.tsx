@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
+import { getTierStyle } from "../../../constants/tierStyles";
 import {
   ChevronLeft,
   ChevronRight,
@@ -20,6 +21,7 @@ import BranchFilterDropdown, {
   type BranchFilterSelection,
 } from "../../station/components/BranchFilterDropdown";
 import { formatCheckInTime } from "../../booking/utils/bookingFormatters";
+import Modal from "../../../components/ui/Modal";
 
 // ─── Constants ───────────────────────────────────────────────────────────────
 
@@ -96,10 +98,31 @@ function KpiCard({
 
 export default function PromotionOverview() {
   const navigate = useNavigate();
+  const location = useLocation();
 
   const [promotions, setPromotions] = useState<PromotionItem[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+
+  const [successMessage, setSuccessMessage] = useState<string | null>(
+    (location.state as { successMessage?: string } | null)?.successMessage ??
+      null,
+  );
+
+  // Xóa message khỏi history state sau khi đã hiển thị, tránh F5 hiện lại
+  useEffect(() => {
+    if (location.state) {
+      navigate(location.pathname, { replace: true, state: null });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // Tự ẩn popup thành công sau 1.5s
+  useEffect(() => {
+    if (!successMessage) return;
+    const timer = setTimeout(() => setSuccessMessage(null), 1500);
+    return () => clearTimeout(timer);
+  }, [successMessage]);
 
   // Search + status: filter client-side trên state
   const [searchInput, setSearchInput] = useState("");
@@ -174,6 +197,14 @@ export default function PromotionOverview() {
 
   return (
     <div className="mx-auto flex max-w-[1440px] flex-col gap-8 px-12 py-8">
+      {/* Thông báo thành công (create/update) */}
+      <Modal
+        isOpen={!!successMessage}
+        onClose={() => setSuccessMessage(null)}
+        variant="success"
+        title="Success"
+        message={successMessage}
+      />
       {/* ── Header ── */}
       <div className="flex items-start justify-between">
         <div className="flex flex-col gap-2">
@@ -350,10 +381,11 @@ export default function PromotionOverview() {
                       </div>
                     </td>
 
-                    {/* Stations — hiện tối đa 2, dư thì +N more */}
+                    {/* Stations — hiện tối đa 2, dư thì +N more; rỗng = all branches */}
                     <td className="px-6 py-5">
                       <div className="flex flex-wrap gap-1">
-                        {(row.stations ?? []).length > 0 ? (
+                        {(row.stations ?? []).length > 0 &&
+                        (row.stations ?? []).length < 7 ? (
                           <>
                             {(row.stations ?? [])
                               .slice(0, 2)
@@ -372,26 +404,32 @@ export default function PromotionOverview() {
                             )}
                           </>
                         ) : (
-                          <span className="text-sm text-outline">—</span>
+                          <span className="rounded-md bg-surface-container-high px-2 py-0.5 text-xs font-medium text-on-surface-variant">
+                            All Stations
+                          </span>
                         )}
                       </div>
                     </td>
 
-                    {/* Target Segments */}
+                    {/* Target Segments — hiện targetCode với màu tier; rỗng = all customers */}
                     <td className="px-6 py-5">
-                      <div className="flex flex-wrap gap-1">
-                        {(row.targets ?? []).length > 0 ? (
-                          (row.targets ?? []).map((t: PromotionTarget) => (
-                            <span
-                              key={t.targetId}
-                              className="rounded-md bg-secondary/10 px-2 py-0.5 text-xs font-medium text-secondary"
-                            >
-                              {t.targetName}
-                            </span>
-                          ))
+                      <div className="flex flex-col items-center gap-1">
+                        {(row.targets ?? []).length > 0 &&
+                        (row.targets ?? []).length < 4 ? (
+                          (row.targets ?? []).map((t: PromotionTarget) => {
+                            const style = getTierStyle(t.targetCode);
+                            return (
+                              <span
+                                key={t.targetId}
+                                className={`rounded-md px-2 py-0.5 text-xs font-semibold ${style.badge}`}
+                              >
+                                {t.targetCode}
+                              </span>
+                            );
+                          })
                         ) : (
-                          <span className="text-xs text-outline">
-                            All customers
+                          <span className="rounded-md bg-surface-container-high px-2 py-0.5 text-xs font-medium text-on-surface-variant">
+                            All Customers
                           </span>
                         )}
                       </div>

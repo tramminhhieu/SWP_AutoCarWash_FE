@@ -88,7 +88,10 @@ export default function PromotionEdit() {
         freshList.find((p) => p.id === promotion.id) ?? null;
 
       navigate(`/admin/promotions/${promotion.id}`, {
-        state: { promotion: freshPromotion ?? promotion },
+        state: {
+          promotion: freshPromotion ?? promotion,
+          successMessage: "Promotion updated successfully.",
+        },
       });
     } catch (err: unknown) {
       const msg =

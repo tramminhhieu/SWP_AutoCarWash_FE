@@ -1,5 +1,6 @@
 //@author: BaoNgoc
 import axiosClient from "../../../lib/axiosClient";
+import { API } from "../../../constants/apiEndpoints";
 import type { ApiSuccessResponse } from "../../../types/apiResponse";
 
 // ── Types ──────────────────────────────────────────────────────────────────
@@ -54,7 +55,7 @@ export const scanVehicle = async (
   licensePlate: string
 ): Promise<ScanVehicleResponse> => {
   const res = await axiosClient.post<ApiSuccessResponse<ScanVehicleResponse>>(
-    "/api/v1/staff/checkin/scan",
+    API.STAFF_CHECKIN.SCAN,
     { licensePlate }
   );
   return res.data.data;
@@ -65,7 +66,7 @@ export const confirmCheckIn = async (
   bookingId: number
 ): Promise<CheckInResultResponse> => {
   const res = await axiosClient.post<ApiSuccessResponse<CheckInResultResponse>>(
-    `/api/v1/staff/checkin/confirm/${bookingId}`
+    API.STAFF_CHECKIN.CONFIRM(bookingId)
   );
   return res.data.data;
 };
@@ -79,7 +80,7 @@ export const cancelGuestLeft = async (
   bookingId: number
 ): Promise<QueuePageData> => {
   const res = await axiosClient.patch<ApiSuccessResponse<QueueResponseData>>(
-    `/api/queue/${bookingId}/cancel-guest-left`
+    API.QUEUE.CANCEL_GUEST_LEFT(bookingId)
   );
   if (!res.data.success) {
     throw new Error(res.data.message || "Cancel guest left failed");
@@ -151,7 +152,7 @@ const mapBoard = (data: QueueResponseData): QueuePageData => {
 
 export const getQueueData = async (): Promise<QueuePageData> => {
   const res = await axiosClient.get<ApiSuccessResponse<QueueResponseData>>(
-    "/api/queue"
+    API.QUEUE.BOARD
   );
   return mapBoard(res.data.data);
 };
@@ -162,10 +163,11 @@ export const startService = async (
   bookingId: number,
   laneId?: number
 ): Promise<QueuePageData> => {
-  const url = laneId != null
-    ? `/api/queue/${bookingId}/start?laneId=${laneId}`
-    : `/api/queue/${bookingId}/start`;
-  const res = await axiosClient.patch<ApiSuccessResponse<QueueResponseData>>(url);
+  const res = await axiosClient.patch<ApiSuccessResponse<QueueResponseData>>(
+    API.QUEUE.START(bookingId),
+    undefined,
+    { params: { laneId } },
+  );
   return mapBoard(res.data.data);
 };
 
@@ -174,10 +176,11 @@ export const completeService = async (
   bookingId: number,
   laneId?: number
 ): Promise<QueuePageData> => {
-  const url = laneId != null
-    ? `/api/queue/${bookingId}/complete?laneId=${laneId}`
-    : `/api/queue/${bookingId}/complete`;
-  const res = await axiosClient.patch<ApiSuccessResponse<QueueResponseData>>(url);
+  const res = await axiosClient.patch<ApiSuccessResponse<QueueResponseData>>(
+    API.QUEUE.COMPLETE(bookingId),
+    undefined,
+    { params: { laneId } },
+  );
   return mapBoard(res.data.data);
 };
 
@@ -187,7 +190,9 @@ export const setLaneMaintenance = async (
   maintenance: boolean,
 ): Promise<QueuePageData> => {
   const res = await axiosClient.patch<ApiSuccessResponse<QueueResponseData>>(
-    `/api/queue/lanes/${laneId}/maintenance?maintenance=${maintenance}`,
+    API.QUEUE.LANE_MAINTENANCE(laneId),
+    undefined,
+    { params: { maintenance } },
   );
   return mapBoard(res.data.data);
 };
@@ -196,7 +201,7 @@ export const collectPenaltyDeposit = async (
   bookingId: number
 ): Promise<CheckInResultResponse> => {
   const res = await axiosClient.post<ApiSuccessResponse<CheckInResultResponse>>(
-    `/api/v1/staff/checkin/collect-penalty-deposit/${bookingId}`
+    API.STAFF_CHECKIN.COLLECT_PENALTY_DEPOSIT(bookingId)
   );
   return res.data.data;
 };

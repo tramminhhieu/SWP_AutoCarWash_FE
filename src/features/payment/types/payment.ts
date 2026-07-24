@@ -9,8 +9,8 @@ export type CustomerTier = "MEMBER" | "SILVER" | "GOLD" | "PLATINUM";
 /** Loại booking. */
 export type BookingType = "WALK_IN" | "ADVANCE" | "SUBSCRIPTION";
 
-/** Đổi điểm: 1 điểm = 10 VND khi trừ vào hóa đơn. */
-export const POINT_TO_VND = 10;
+/** Đổi điểm: 1 điểm = 100 VND khi trừ vào hóa đơn. */
+export const POINT_TO_VND = 100;
 
 /** 1.000 VND chi tiêu = 1 điểm (trước khi nhân hệ số hạng). */
 export const VND_PER_EARN_POINT = 1000;
@@ -64,7 +64,7 @@ export interface PaymentBookingDetail extends BookingDetail {
 
 export interface CashPaymentRequest {
   bookingId: number;
-  /** Số điểm khách dùng để đổi thưởng; BE tự tính point_discount = usedLoyaltyPoints * 10. Không đổi thì gửi 0. */
+  /** Số điểm khách dùng để đổi thưởng; BE tự tính point_discount = usedLoyaltyPoints * 100. Không đổi thì gửi 0. */
   usedLoyaltyPoints: number;
   receivedAmount: number;
 }

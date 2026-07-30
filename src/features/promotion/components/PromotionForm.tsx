@@ -479,22 +479,6 @@ function VoucherRow({
           />
         </FormField>
       </div>
-
-      {/* Reusable toggle */}
-      <div className="flex items-center gap-3">
-        <button
-          type="button"
-          onClick={() => onChange("reusable", !voucher.reusable)}
-          className={`relative h-6 w-11 rounded-full transition-colors ${voucher.reusable ? "bg-primary" : "bg-outline-variant"}`}
-        >
-          <span
-            className={`absolute left-0.5 top-0.5 size-5 rounded-full bg-white shadow transition-transform ${voucher.reusable ? "translate-x-5" : "translate-x-0.5"}`}
-          />
-        </button>
-        <span className="text-sm font-medium text-on-surface">
-          Allow reuse per customer
-        </span>
-      </div>
     </div>
   );
 }
@@ -541,7 +525,7 @@ export default function PromotionForm({
       maxDiscountAmount: String(v.maxDiscountAmount),
       minOrderValue: String(v.minOrderValue),
       usageLimit: v.usageLimit,
-      reusable: v.reusable,
+      reusable: true,
     })) ?? [
       {
         key: crypto.randomUUID(),
@@ -552,7 +536,7 @@ export default function PromotionForm({
         maxDiscountAmount: "",
         minOrderValue: "",
         usageLimit: "",
-        reusable: false,
+        reusable: true,
       },
     ],
   );
@@ -570,7 +554,7 @@ export default function PromotionForm({
         maxDiscountAmount: "",
         minOrderValue: "",
         usageLimit: "",
-        reusable: false,
+        reusable: true,
       },
     ]);
   }

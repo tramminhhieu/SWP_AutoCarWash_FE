@@ -494,7 +494,7 @@ export default function PaymentPage() {
                   <span className="text-on-surface-variant">
                     Points Redeemed
                   </span>
-                  <span className="text-green-600">
+                  <span className="text-error">
                     - {formatVND(redeemDiscount)}
                   </span>
                 </div>

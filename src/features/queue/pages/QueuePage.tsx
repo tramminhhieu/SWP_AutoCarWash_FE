@@ -1005,7 +1005,7 @@ export default function QueuePage() {
                       Lane {l.lane}
                     </span>
                     <span className="ml-auto text-xs px-2 py-0.5 rounded-full bg-surface-container text-outline">
-                      Trống
+                      Empty
                     </span>
                   </button>
                 ))}

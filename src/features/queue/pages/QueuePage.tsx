@@ -6,8 +6,6 @@ import {
   Search,
   X,
   XCircle,
-  ChevronUp,
-  ChevronDown,
   Droplets,
   Check,
   CreditCard,
@@ -88,19 +86,6 @@ interface CustomerResult {
   bookings?: BookingItem[];
 }
 
-// author: Ngọc — comment out mockCustomerDB vì dùng API thật
-// const mockCustomerDB: Record<string, CustomerResult> = { ... };
-
-// author: Ngọc — comment out mock Waiting Pool (bookingId giả 101-105 không tồn tại
-// trong DB nên Cancel luôn fail), thay bằng dữ liệu thật từ GET /api/queue
-// const initialWaitingPool: Vehicle[] = [
-//   { id: 1, bookingId: 101, licensePlate: "LMN-4455", model: "Audi Q7", color: "Metallic Grey", service: "Premium Wash", tier: "PLATINUM", finishedAt: "", totalAmount: 110 },
-//   { id: 2, bookingId: 102, licensePlate: "GHI-1122", model: "BMW X5", color: "Alpine White", service: "Deluxe Polish", tier: "GOLD", finishedAt: "", totalAmount: 85 },
-//   { id: 3, bookingId: 103, licensePlate: "JKT-3388", model: "Toyota Corolla", color: "Red", service: "Platinum Care", tier: "SILVER", finishedAt: "", totalAmount: 65 },
-//   { id: 4, bookingId: 104, licensePlate: "gET-0011", model: "Honda Civic", color: "Black", service: "Basic Rinse", tier: "Member", finishedAt: "", totalAmount: 30 },
-//   { id: 5, bookingId: 105, licensePlate: "MSu-2299", model: "Mazda CX-5", color: "Soul Red", service: "Express Clean", tier: "Guest", finishedAt: "", totalAmount: 45 },
-// ];
-
 const LICENSE_PLATE_REGEX = /^[0-9]{2}[A-HJ-NP-Z]{1,2}-[0-9]{4,5}$/;
 
 // author: Ngọc — map customerTier từ BE ("MEMBER"/"GOLD"/"SILVER"/"PLATINUM"/null)
@@ -167,8 +152,12 @@ export default function QueuePage() {
   const [notice, setNotice] = useState<{
     variant: "success" | "danger";
     message: string;
-    onDismiss?: () => void;
     icon?: ReactNode;
+    title?: string;
+    // hành động chính (nút phải). Khi có, popup render 2 nút: [cancelText] [actionLabel]
+    // — nút trái/dấu X chỉ đóng popup, KHÔNG chạy hành động này
+    actionLabel?: string;
+    onAction?: () => void;
   } | null>(null);
   // lane đang mở popup chọn trạng thái (click vào lane Empty/Maintenance)
   const [laneStatusPicker, setLaneStatusPicker] = useState<Lane | null>(null);
@@ -390,10 +379,16 @@ export default function QueuePage() {
       };
       if (result.requiresWalkIn) {
         closeCheckinModal();
+        // BE đã đổi booking sang NO_SHOW — refresh board ngay để nếu staff bấm OK/X
+        // ở lại trang Queue thì không thấy dữ liệu cũ
+        const board = await getQueueData();
+        applyBoard(board);
         setNotice({
           ...(isPenalized ? penalizedNotice : { variant: "success" as const }),
+          title: "Walk-in Required",
           message: result.message,
-          onDismiss: () =>
+          actionLabel: "Create Walk-in",
+          onAction: () =>
             navigate("/staff/walk-in", {
               state: { oldBookingId: result.oldBookingId },
             }),
@@ -418,16 +413,6 @@ export default function QueuePage() {
     } finally {
       setIsLoading(false);
     }
-  };
-
-  const moveVehicle = (index: number, dir: -1 | 1) => {
-    setWaitingPool((prev) => {
-      const target = index + dir;
-      if (target < 0 || target >= prev.length) return prev;
-      const next = [...prev];
-      [next[index], next[target]] = [next[target], next[index]];
-      return next;
-    });
   };
 
   // "+" button — auto-assign xe đầu tiên trong waiting pool vào làn trống đầu tiên.
@@ -685,28 +670,12 @@ export default function QueuePage() {
                 No vehicles waiting
               </p>
             )}
-            {waitingPool.map((v, idx) => (
+            {waitingPool.map((v) => (
               <div
                 key={v.id}
                 onClick={() => hasEmptyLane && setAssignCar(v)}
                 className={`rounded-xl px-3 py-2.5 flex items-center gap-2 bg-white border border-outline-variant/20 ${hasEmptyLane ? "cursor-pointer hover:bg-surface-container-low transition" : ""}`}
               >
-                <div className="flex flex-col justify-center gap-0.5 shrink-0">
-                  <button
-                    onClick={() => moveVehicle(idx, -1)}
-                    disabled={idx === 0}
-                    className="text-outline transition hover:text-primary disabled:opacity-30"
-                  >
-                    <ChevronUp className="w-3 h-3" />
-                  </button>
-                  <button
-                    onClick={() => moveVehicle(idx, 1)}
-                    disabled={idx === waitingPool.length - 1}
-                    className="text-outline transition hover:text-primary disabled:opacity-30"
-                  >
-                    <ChevronDown className="w-3 h-3" />
-                  </button>
-                </div>
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-1.5 mb-0.5">
                     <span className="text-xs font-bold text-on-surface">
@@ -1001,7 +970,7 @@ export default function QueuePage() {
             <div className="flex items-center justify-between px-6 pt-6 pb-4 border-b border-outline-variant">
               <div>
                 <h2 className="text-base font-bold font-heading text-on-surface">
-                  Chọn làn rửa
+                  Select washing lane
                 </h2>
                 <p className="text-xs text-outline mt-0.5">
                   {assignCar.licensePlate} • {assignCar.service}
@@ -1273,18 +1242,24 @@ export default function QueuePage() {
         }}
       />
 
+      {/* notice.onAction có giá trị -> dùng variant "confirm" để lấy layout 2 nút,
+          nút phải chạy onAction (vd điều hướng sang Create Walk-in), còn nút trái
+          và dấu X chỉ đóng popup */}
       <Modal
         isOpen={!!notice}
-        onClose={() => {
-          const onDismiss = notice?.onDismiss;
-          setNotice(null);
-          onDismiss?.();
-        }}
-        variant={notice?.variant ?? "success"}
+        onClose={() => setNotice(null)}
+        variant={notice?.onAction ? "confirm" : (notice?.variant ?? "success")}
         icon={notice?.icon}
-        title={notice?.variant === "danger" ? "Error" : "Notice"}
+        title={
+          notice?.title ?? (notice?.variant === "danger" ? "Error" : "Notice")
+        }
         message={notice?.message}
-        confirmText={notice?.variant === "danger" ? "OK" : undefined}
+        cancelText={notice?.onAction ? "OK" : undefined}
+        confirmText={
+          notice?.actionLabel ??
+          (notice?.variant === "danger" ? "OK" : undefined)
+        }
+        onConfirm={notice?.onAction}
       />
     </div>
   );

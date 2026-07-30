@@ -39,6 +39,9 @@ import Modal from "../../../components/ui/Modal";
 const SLOT_DURATION_MINUTES = 15; // 1 requiredSlot = 15 phút, theo comment BE WalkInFormDataResponse
 // Regex biển số VN — giống VehicleForm.tsx, dùng chung để validate nhất quán
 const LICENSE_PLATE_REGEX = /^[0-9]{2}[A-HJ-NP-Z]{1,2}-[0-9]{4,5}$/;
+// BE (WalkInCheckInService) luôn gán chuỗi này làm systemNotice mặc định rồi nối
+// các notice thật vào sau bằng " | " -> lọc bỏ đoạn này, không hiện ra UI.
+const PLACEHOLDER_NOTICE = "Provisional invoice valid";
 // Icon minh họa cho gói service, đồng bộ với BookingCreate.tsx (Basic, Medium, Premium)
 const SERVICE_ICONS = [Droplet, Sparkles, Wand2];
 
@@ -346,6 +349,14 @@ export default function WalkInPage() {
     (selectedService?.basePrice ?? 0) +
     selectedAddons.reduce((sum, a) => sum + a.price, 0);
   const displayTotal = summary?.remainingBalance ?? computedSubTotal;
+
+  // Tách theo "|" rồi bỏ đoạn mặc định — lọc từng đoạn thay vì so cả chuỗi, vì BE
+  // nối notice thật vào sau chuỗi mặc định nên so sánh cả chuỗi sẽ hụt.
+  const noticeText = (summary?.systemNotice ?? "")
+    .split("|")
+    .map((part) => part.trim())
+    .filter((part) => part && part !== PLACEHOLDER_NOTICE)
+    .join(" | ");
 
   // Tổng thời gian = thời lượng gói dịch vụ + tổng thời lượng các addon đã chọn (chỉ để hiển thị)
   const totalDurationMinutes =
@@ -1008,12 +1019,11 @@ export default function WalkInPage() {
                 </span>
               </div>
 
-              {summary?.systemNotice &&
-                summary.systemNotice !== "Provisional invoice valid" && (
-                  <p className="mb-3 rounded-lg bg-amber-50 px-3 py-2 text-body-md text-amber-700">
-                    {summary.systemNotice}
-                  </p>
-                )}
+              {noticeText && (
+                <p className="mb-3 rounded-lg bg-amber-50 px-3 py-2 text-body-md text-amber-700">
+                  {noticeText}
+                </p>
+              )}
               {summary?.actionBlock && !depositCollected && (
                 <div className="mb-3 flex flex-col gap-2 rounded-lg border border-error bg-error-container px-3 py-2">
                   <p className="text-body-md font-semibold text-on-error-container">

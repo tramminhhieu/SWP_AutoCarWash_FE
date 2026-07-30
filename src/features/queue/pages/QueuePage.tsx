@@ -948,7 +948,7 @@ export default function QueuePage() {
                     }
                     className="w-full py-3 rounded-xl text-sm font-semibold transition bg-primary text-on-primary disabled:opacity-50 disabled:cursor-not-allowed"
                   >
-                    {isLoading ? "Đang xử lý..." : "Confirm Check-in"}
+                    {isLoading ? "Processing..." : "Confirm Check-in"}
                   </button>
                 </div>
               )}

@@ -2,7 +2,12 @@ import { useEffect, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "../../../hooks/useAuth";
 import { Calendar, Car, ChevronRight, CirclePlus } from "lucide-react";
-import { getPastBookings, getUpcomingBookings } from "../api/bookingApi";
+import {
+  cancelBooking,
+  getBookingDetail,
+  getPastBookings,
+  getUpcomingBookings,
+} from "../api/bookingApi";
 import type { BookingCard } from "../types/booking";
 import BookingStatusBadge from "../../../components/ui/BookingStatusBadge";
 import CancelBookingModal from "../components/CancelBookingModal";
@@ -25,9 +30,40 @@ function BookingCardItem({
 }) {
   const navigate = useNavigate();
   const [showCancelModal, setShowCancelModal] = useState(false);
+  const [isResolvingCancel, setIsResolvingCancel] = useState(false);
+  const [showPlainCancelConfirm, setShowPlainCancelConfirm] = useState(false);
+  const [isCanceling, setIsCanceling] = useState(false);
+  const [cancelError, setCancelError] = useState<string | null>(null);
 
-  function handleCancel() {
-    setShowCancelModal(true);
+  async function handleCancel() {
+    setIsResolvingCancel(true);
+    try {
+      const detail = await getBookingDetail(booking.bookingId);
+      const hasPaidDeposit = detail.isDepositPaid && !!detail.depositAmount;
+      if (hasPaidDeposit) {
+        setShowCancelModal(true);
+      } else {
+        setShowPlainCancelConfirm(true);
+      }
+    } catch {
+      setCancelError("Không thể kiểm tra thông tin đặt cọc. Vui lòng thử lại.");
+    } finally {
+      setIsResolvingCancel(false);
+    }
+  }
+
+  async function handleConfirmPlainCancel() {
+    setIsCanceling(true);
+    setCancelError(null);
+    try {
+      await cancelBooking(booking.bookingId);
+      setShowPlainCancelConfirm(false);
+      onCancelled(booking.bookingId);
+    } catch {
+      setCancelError("Failed to cancel booking. Please try again.");
+    } finally {
+      setIsCanceling(false);
+    }
   }
   return (
     <div className="flex flex-col rounded-[8px] border border-outline-variant/50 bg-white shadow-[0px_10px_25px_-5px_rgba(17,24,39,0.05)]">
@@ -98,7 +134,8 @@ function BookingCardItem({
             {booking.allowedActions.includes("CANCEL") && (
               <button
                 onClick={handleCancel}
-                className="text-sm font-medium tracking-[0.14px] text-error"
+                disabled={isResolvingCancel}
+                className="text-sm font-medium tracking-[0.14px] text-error disabled:opacity-50"
               >
                 CANCEL
               </button>
@@ -118,6 +155,12 @@ function BookingCardItem({
         </div>
       )}
 
+      {cancelError && !showPlainCancelConfirm && (
+        <div className="border-t border-outline-variant/20 px-6 py-3 text-sm text-error">
+          {cancelError}
+        </div>
+      )}
+
       {showCancelModal && (
         <CancelBookingModal
           booking={booking}
@@ -125,6 +168,24 @@ function BookingCardItem({
           onRefunded={onCancelled}
         />
       )}
+
+      <Modal
+        isOpen={showPlainCancelConfirm}
+        onClose={() => {
+          if (isCanceling) return;
+          setShowPlainCancelConfirm(false);
+          setCancelError(null);
+        }}
+        variant="danger"
+        title="Cancel this booking?"
+        message={
+          cancelError ?? "This cannot be undone. Your slot will be released."
+        }
+        confirmText="Cancel Booking"
+        cancelText="Keep Booking"
+        onConfirm={handleConfirmPlainCancel}
+        isConfirmLoading={isCanceling}
+      />
     </div>
   );
 }

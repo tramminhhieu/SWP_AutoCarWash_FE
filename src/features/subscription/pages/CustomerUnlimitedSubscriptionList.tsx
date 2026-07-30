@@ -19,14 +19,6 @@ import { useRequireAuth } from "../../../hooks/useRequireAuth";
 const UNLIMITED_DURATION_OPTIONS = [1, 3, 6] as const;
 type UnlimitedDurationMonths = (typeof UNLIMITED_DURATION_OPTIONS)[number];
 
-// Nora: gộp các bản ghi cùng "gói" (vd Unlimited Basic 1/3/6 Month) thành 1 card duy nhất,
-// bấm chọn kỳ hạn thay vì hiện mỗi kỳ hạn là 1 card riêng. Nhóm theo planType +
-// servicePackageName (Basic/Premium) - đúng với cách data.sql tổ hợp 12 gói thật
-// (mỗi tổ hợp planType+servicePackage có 2-3 kỳ hạn: 1/3/6 tháng).
-function groupKey(plan: CustomerSubscriptionPlan): string {
-  return `${plan.planType}|${plan.servicePackageName}`;
-}
-
 function durationLabel(days: number): string {
   const months = Math.round(days / 30);
   return `${months} Month${months > 1 ? "s" : ""}`;
@@ -50,7 +42,7 @@ function UnlimitedPlanCard({
     <div className="relative flex h-full flex-col rounded-2xl bg-surface-container-lowest p-8 border border-outline-variant shadow-soft">
       <div className="flex-1">
         <h3 className="font-heading text-headline-md font-bold text-primary">
-          Unlimited {variant.servicePackageName}
+          {variant.planName}
         </h3>
         <p className="mt-2 font-body text-body-md text-on-surface-variant">
           {variant.description}
@@ -171,22 +163,20 @@ export default function SubscriptionPlanList() {
 
   // Lọc cứng UNLIMIT + gộp các kỳ hạn (1/3/6 tháng) của cùng 1 gói thành 1 nhóm,
   // sort theo tier Basic→Medium→Premium để thứ tự card luôn đúng.
-  const unlimitGroupedList = useMemo(() => {
-    const unlimitPlans = plans.filter((p) => p.planType === "UNLIMIT");
-    const groups = new Map<string, CustomerSubscriptionPlan[]>();
-    for (const plan of unlimitPlans) {
-      const key = groupKey(plan);
-      const existing = groups.get(key);
-      if (existing) existing.push(plan);
-      else groups.set(key, [plan]);
-    }
-    // Sort group theo tier: Basic → Medium → Premium
-    return Array.from(groups.values()).sort(
-      (a, b) =>
-        (TIER_ORDER[a[0].servicePackageName] ?? 99) -
-        (TIER_ORDER[b[0].servicePackageName] ?? 99),
-    );
-  }, [plans]);
+  const unlimitFilteredList = useMemo(
+    () =>
+      plans
+        .filter(
+          (p) =>
+            p.planType === "UNLIMIT" && p.durationDays === selectedMonths * 30,
+        )
+        .sort(
+          (a, b) =>
+            (TIER_ORDER[a.servicePackageName] ?? 99) -
+            (TIER_ORDER[b.servicePackageName] ?? 99),
+        ),
+    [plans, selectedMonths],
+  );
 
   // FE-60-US-02.1: chưa login -> chuyển sang /login kèm "from" để quay lại đúng bước
   // chọn xe sau khi login, giống pattern handleSelectPackage ở ServicePackageList.tsx.
@@ -218,7 +208,7 @@ export default function SubscriptionPlanList() {
           <div className="flex h-48 items-center justify-center text-body-md text-on-surface-variant">
             Loading...
           </div>
-        ) : unlimitGroupedList.length === 0 ? (
+        ) : unlimitFilteredList.length === 0 ? (
           <div className="flex h-48 items-center justify-center text-body-md text-on-surface-variant">
             No subscription plans available.
           </div>
@@ -245,25 +235,19 @@ export default function SubscriptionPlanList() {
             </div>
 
             <div className="mt-10 grid grid-cols-1 gap-6 md:grid-cols-3">
-              {unlimitGroupedList.map((variants) => {
-                const selected =
-                  variants.find(
-                    (v) => v.durationDays === selectedMonths * 30,
-                  ) ?? variants[variants.length - 1];
-                return (
-                  <UnlimitedPlanCard
-                    key={groupKey(variants[0])}
-                    variant={selected}
-                    allAddons={addonServices}
-                    includedAddonIds={
-                      includedAddonIdsByPackageName.get(
-                        selected.servicePackageName,
-                      ) ?? new Set()
-                    }
-                    onSubscribe={handleSubscribe}
-                  />
-                );
-              })}
+              {unlimitFilteredList.map((plan) => (
+                <UnlimitedPlanCard
+                  key={plan.id}
+                  variant={plan}
+                  allAddons={addonServices}
+                  includedAddonIds={
+                    includedAddonIdsByPackageName.get(
+                      plan.servicePackageName,
+                    ) ?? new Set()
+                  }
+                  onSubscribe={handleSubscribe}
+                />
+              ))}
             </div>
           </>
         )}

@@ -202,7 +202,6 @@ export interface BookingDetail {
   customerName: string | null;
   bookingType: string | null;
   serviceCategoryName: string | null;
-  checkInAt: string | null;
   checkOutAt: string | null;
   pointDiscountAmount: number;
   loyaltyPoint: number | null;

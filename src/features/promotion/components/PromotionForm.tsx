@@ -661,7 +661,6 @@ export default function PromotionForm({
               onRemove={(id) =>
                 setSelectedStations((prev) => prev.filter((s) => s.id !== id))
               }
-              error={errors.stationIds}
             />
           </FormField>
         </div>

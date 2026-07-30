@@ -168,11 +168,19 @@ export default function BookingDetail() {
                 <h3 className="font-heading text-lg font-semibold text-on-surface">
                   Price Breakdown
                 </h3>
-                {booking.customerTier && (
-                  <span className="rounded-[6px] border border-primary/10 bg-primary/5 px-2 py-1 text-xs font-semibold text-primary">
-                    {booking.customerTier}
-                  </span>
-                )}
+                <div className="flex items-center gap-2">
+                  {booking.isDepositPaid && (
+                    <span className="rounded-[6px] border border-secondary/10 bg-secondary/5 px-2 py-1 text-xs font-semibold text-secondary">
+                      Deposit
+                    </span>
+                  )}
+
+                  {booking.customerTier && (
+                    <span className="rounded-[6px] border border-primary/10 bg-primary/5 px-2 py-1 text-xs font-semibold text-primary">
+                      {booking.customerTier}
+                    </span>
+                  )}
+                </div>
               </div>
 
               <div className="flex flex-col gap-2 border-t border-outline-variant/20 pt-4">
@@ -198,14 +206,6 @@ export default function BookingDetail() {
                     </span>
                   </div>
                 ))}
-                <div className="flex items-center justify-between text-sm">
-                  <span className="text-on-surface-variant">
-                    Deposit {booking.isDepositPaid ? "(paid)" : "(unpaid)"}
-                  </span>
-                  <span className="font-semibold text-error">
-                    -{formatCurrency(booking.depositAmount ?? 0)}
-                  </span>
-                </div>
 
                 <div className="flex items-center justify-between text-sm">
                   <span className="text-on-surface-variant">
@@ -246,7 +246,7 @@ export default function BookingDetail() {
                     Total
                   </span>
                   <span className="text-xl font-bold text-primary">
-                    {formatCurrency(booking.remainingAmount)}
+                    {formatCurrency(booking.totalAmount)}
                   </span>
                 </div>
                 {booking.pointsEarned != null && (

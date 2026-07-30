@@ -85,9 +85,9 @@ const WashLaneList = ({ stationId, refreshKey }: WashLaneListProps) => {
     try {
       await deleteLane(laneToDelete.id);
       setSuccessMessage(
-        `Lane "${laneToDelete.laneName}" has been deleted successfully.`,
+        `"${laneToDelete.laneName}" has been deleted successfully.`,
       );
-      setTimeout(() => setSuccessMessage(null), 3000);
+      setTimeout(() => setSuccessMessage(null), 1000);
       setLaneToDelete(null);
       fetchLanes();
     } catch (err) {

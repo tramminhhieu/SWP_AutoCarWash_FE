@@ -1,4 +1,5 @@
 import axiosClient from "../../../lib/axiosClient";
+import { API } from "../../../constants/apiEndpoints";
 import type { ApiSuccessResponse } from "../../../types/apiResponse";
 
 // Mirrors BE CheckPhoneResponse.VehicleSubscriptionDTO (vietbinh_branch, WalkInCheckInService.checkPhone) —
@@ -109,14 +110,14 @@ export interface WalkInFormDataResponse {
 
 export const getWalkInFormData = async (): Promise<WalkInFormDataResponse> => {
   const res = await axiosClient.get<ApiSuccessResponse<WalkInFormDataResponse>>(
-    "/api/v1/staff/create-walkin/form-data"
+    API.WALK_IN.FORM_DATA
   );
   return res.data.data;
 };
 
 export const checkPhone = async (phone: string): Promise<CheckPhoneResponse> => {
   const res = await axiosClient.get<ApiSuccessResponse<CheckPhoneResponse>>(
-    "/api/v1/staff/create-walkin/check-phone",
+    API.WALK_IN.CHECK_PHONE,
     { params: { phone } }
   );
   return res.data.data;
@@ -126,7 +127,7 @@ export const calculateInvoice = async (
   req: CalculateInvoiceRequest
 ): Promise<BookingSummaryResponse> => {
   const res = await axiosClient.post<ApiSuccessResponse<BookingSummaryResponse>>(
-    "/api/v1/staff/create-walkin/calculate-invoice",
+    API.WALK_IN.CALCULATE_INVOICE,
     req
   );
   return res.data.data;
@@ -141,7 +142,7 @@ export const collectWalkInPenaltyDeposit = async (
   licensePlate: string
 ): Promise<CollectPenaltyDepositResponse> => {
   const res = await axiosClient.post<ApiSuccessResponse<CollectPenaltyDepositResponse>>(
-    "/api/v1/staff/create-walkin/collect-penalty-deposit",
+    API.WALK_IN.COLLECT_PENALTY_DEPOSIT,
     null,
     { params: { licensePlate } }
   );
@@ -152,7 +153,7 @@ export const createWalkIn = async (
   req: CreateWalkInRequest
 ): Promise<CreateWalkInResponse> => {
   const res = await axiosClient.post<ApiSuccessResponse<CreateWalkInResponse>>(
-    "/api/v1/staff/create-walkin/create",
+    API.WALK_IN.CREATE,
     req
   );
   return res.data.data;

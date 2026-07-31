@@ -11,4 +11,6 @@ export interface ApiErrorResponse {
   message: string;
   errorCode: string;
   error?: Record<string, unknown>;
+  // Số ngày còn lại tài khoản bị hạn chế đặt lịch, chỉ có khi errorCode là CUSTOMER_005
+  remainingDays?: number;
 }

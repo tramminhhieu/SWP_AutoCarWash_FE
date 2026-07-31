@@ -1,6 +1,13 @@
 import { useEffect, useRef, useState } from "react";
 import { useNavigate, useParams, useLocation } from "react-router-dom";
-import { Calendar, Car, CheckCircle2, Loader2, MapPin } from "lucide-react";
+import {
+  AlertTriangle,
+  Calendar,
+  Car,
+  CheckCircle2,
+  Loader2,
+  MapPin,
+} from "lucide-react";
 import { getBookingDetail, cancelBooking } from "../api/bookingApi";
 import type { BookingDetail } from "../types/booking";
 import BookingStatusBadge from "../../../components/ui/BookingStatusBadge";
@@ -13,6 +20,12 @@ import { formatCurrency } from "../../../utils";
 import { clearBookingDraft } from "../utils/bookingDraft";
 
 const POLL_INTERVAL_MS = 4000;
+
+function formatCountdown(seconds: number): string {
+  const m = Math.floor(seconds / 60);
+  const s = seconds % 60;
+  return `${m}:${s.toString().padStart(2, "0")}`;
+}
 
 // Trạng thái booking BE trả về khi deposit đã được xác nhận (qua webhook SePay
 // hoặc manual-confirm) - xem BE `payment.md` / BookingServiceImpl.createBooking
@@ -29,6 +42,7 @@ export default function BookingPayment() {
       depositAmount?: number;
       transferContent?: string;
       qrImageUrl?: string;
+      expiresAt?: string;
     } | null) ?? null;
 
   const bookingId = Number(bookingIdParam);
@@ -39,6 +53,8 @@ export default function BookingPayment() {
     state?.transferContent ?? null,
   );
   const [qrImageUrl] = useState<string | null>(state?.qrImageUrl ?? null);
+  const [expiresAt] = useState<string | null>(state?.expiresAt ?? null);
+  const [secondsLeft, setSecondsLeft] = useState<number | null>(null);
 
   const [booking, setBooking] = useState<BookingDetail | null>(null);
   const [isLoadingDetail, setIsLoadingDetail] = useState(true);
@@ -110,6 +126,19 @@ export default function BookingPayment() {
     return () => stopPolling();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [bookingId]);
+
+  useEffect(() => {
+    if (!expiresAt || isConfirmed) return;
+    const expiry = new Date(expiresAt).getTime();
+    const tick = () => {
+      setSecondsLeft(Math.max(0, Math.round((expiry - Date.now()) / 1000)));
+    };
+    tick();
+    const timerId = setInterval(tick, 1000);
+    return () => clearInterval(timerId);
+  }, [expiresAt, isConfirmed]);
+
+  const isExpired = expiresAt !== null && secondsLeft === 0;
 
   // Cọc được xác nhận -> tự động về Home kèm thông báo (dùng lại field
   // bookingSuccessMessage mà Home.tsx đã đọc sẵn qua location.state)
@@ -344,19 +373,31 @@ export default function BookingPayment() {
                 </p>
               </div>
 
-              <div className="flex justify-center pb-6">
-                {qrImageUrl ? (
-                  <img
-                    src={qrImageUrl}
-                    alt="VietQR bank transfer QR code"
-                    className="h-56 w-56 rounded-xl border border-outline-variant object-contain"
-                  />
-                ) : (
-                  <div className="flex h-56 w-56 items-center justify-center rounded-xl border border-outline-variant text-body-md text-on-surface-variant">
-                    QR code unavailable
-                  </div>
-                )}
-              </div>
+              {isExpired ? (
+                <div className="flex flex-col items-center gap-3 rounded-xl border border-error/30 bg-error-container p-6 text-center">
+                  <AlertTriangle size={28} className="text-on-error-container" />
+                  <p className="text-body-md font-semibold text-on-error-container">
+                    Payment window has expired.
+                  </p>
+                  <p className="text-label-sm text-on-error-container">
+                    Please cancel this booking and try again.
+                  </p>
+                </div>
+              ) : (
+                <div className="flex justify-center pb-6">
+                  {qrImageUrl ? (
+                    <img
+                      src={qrImageUrl}
+                      alt="VietQR bank transfer QR code"
+                      className="h-56 w-56 rounded-xl border border-outline-variant object-contain"
+                    />
+                  ) : (
+                    <div className="flex h-56 w-56 items-center justify-center rounded-xl border border-outline-variant text-body-md text-on-surface-variant">
+                      QR code unavailable
+                    </div>
+                  )}
+                </div>
+              )}
 
               <div className="flex flex-col gap-3 rounded-xl bg-surface-container-low p-4">
                 <div className="flex items-center justify-between">
@@ -377,6 +418,26 @@ export default function BookingPayment() {
                     </span>
                   </div>
                 )}
+                {expiresAt && (
+                  <div className="flex items-center justify-between">
+                    <span className="text-body-md text-on-surface-variant">
+                      Expires in
+                    </span>
+                    <span
+                      className={
+                        isExpired
+                          ? "text-body-md font-semibold text-error"
+                          : "text-body-md font-semibold text-on-surface"
+                      }
+                    >
+                      {isExpired
+                        ? "Expired"
+                        : secondsLeft !== null
+                          ? formatCountdown(secondsLeft)
+                          : "—"}
+                    </span>
+                  </div>
+                )}
               </div>
 
               {checkError && (
@@ -385,20 +446,22 @@ export default function BookingPayment() {
                 </p>
               )}
 
-              <div className="mt-6 flex flex-col items-center gap-3">
-                <p className="flex items-center gap-2 text-body-md text-on-surface-variant">
-                  <Loader2 size={16} className="animate-spin" />
-                  Waiting for payment confirmation...
-                </p>
-                <button
-                  type="button"
-                  onClick={handleManualCheck}
-                  disabled={isChecking}
-                  className="w-full rounded-lg border border-primary px-6 py-3 text-body-md font-semibold text-primary transition-colors hover:bg-primary/5 disabled:cursor-not-allowed disabled:opacity-50"
-                >
-                  {isChecking ? "Checking..." : "I've completed the transfer"}
-                </button>
-              </div>
+              {!isExpired && (
+                <div className="mt-6 flex flex-col items-center gap-3">
+                  <p className="flex items-center gap-2 text-body-md text-on-surface-variant">
+                    <Loader2 size={16} className="animate-spin" />
+                    Waiting for payment confirmation...
+                  </p>
+                  <button
+                    type="button"
+                    onClick={handleManualCheck}
+                    disabled={isChecking}
+                    className="w-full rounded-lg border border-primary px-6 py-3 text-body-md font-semibold text-primary transition-colors hover:bg-primary/5 disabled:cursor-not-allowed disabled:opacity-50"
+                  >
+                    {isChecking ? "Checking..." : "I've completed the transfer"}
+                  </button>
+                </div>
+              )}
             </aside>
           </div>
         )}

@@ -26,9 +26,6 @@ const AddonForm = ({
   const [duration, setDuration] = useState(
     initialData ? String(initialData.durationMinutes) : "",
   );
-  const [description, setDescription] = useState(
-    initialData?.description ?? "",
-  );
 
   /* Lỗi riêng từng field */
   const [nameError, setNameError] = useState<string | null>(null);
@@ -88,7 +85,7 @@ const AddonForm = ({
         name: name.trim(),
         price: Number(price),
         durationMinutes: Number(duration),
-        description: description.trim() || null,
+        description: null,
       };
 
       /* Page cha quyết định gọi create hay update */
@@ -195,27 +192,6 @@ const AddonForm = ({
             <p className="mt-1.5 text-label-md text-error">{durationError}</p>
           )}
         </div>
-      </div>
-
-      {/* Description — textarea optional */}
-      <div className="mb-5">
-        <label
-          htmlFor="addonDesc"
-          className="mb-1.5 block text-label-md uppercase tracking-wide text-on-surface-variant"
-        >
-          Description{" "}
-          <span className="normal-case tracking-normal text-on-surface-variant/60">
-            (optional)
-          </span>
-        </label>
-        <textarea
-          id="addonDesc"
-          rows={3}
-          value={description}
-          onChange={(e) => setDescription(e.target.value)}
-          placeholder="Short description of the add-on service..."
-          className="w-full resize-none rounded-lg border border-outline-variant px-4 py-2.5 text-body-md text-on-surface outline-none transition-colors placeholder:text-on-surface-variant/60 focus:border-primary"
-        />
       </div>
 
       {/* Divider */}

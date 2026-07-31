@@ -59,6 +59,9 @@ export interface BookingContext {
 // errorCode riêng khi customer chưa có xe (theo API-02-01 case fail)
 export const NO_VEHICLE_REGISTERED = "NO_VEHICLE_REGISTERED";
 
+// errorCode khi customer đang bị hạn chế đặt lịch do vi phạm quá số lần (API-02-03 case fail)
+export const CUSTOMER_RESTRICTED = "CUSTOMER_005";
+
 // ====== API-02-03: CREATE BOOKING ======
 
 export interface CreateBookingRequest {
@@ -80,6 +83,7 @@ export interface CreateBookingResponse {
   transferContent: string;
   // Ảnh QR VietQR (qua SePay) đã điền sẵn số tài khoản/số tiền/nội dung - FE chỉ cần <img src>
   qrImageUrl: string;
+  expiresAt: string; // ISO datetime (Instant) - hạn chót thanh toán cọc
 }
 
 // ====== API-02-04: PREVIEW BOOKING PRICE ======
@@ -198,7 +202,6 @@ export interface BookingDetail {
   customerName: string | null;
   bookingType: string | null;
   serviceCategoryName: string | null;
-  checkInAt: string | null;
   checkOutAt: string | null;
   pointDiscountAmount: number;
   loyaltyPoint: number | null;

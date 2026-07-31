@@ -214,4 +214,40 @@ export const API = {
     REVENUE_CHART: "/api/dashboard/revenue-chart",
     TABLES: "/api/dashboard/tables",
   },
+  QUEUE: {
+    // GET — bảng hàng đợi + làn của station nhân viên
+    BOARD: "/api/queue",
+    // PATCH — thêm xe vào làn (CHECK_IN -> WASHING); laneId qua ?params (null = auto-assign)
+    START: (bookingId: number | string) => `/api/queue/${bookingId}/start`,
+    // PATCH — hoàn tất rửa, giải phóng làn; laneId qua ?params
+    COMPLETE: (bookingId: number | string) => `/api/queue/${bookingId}/complete`,
+    // PATCH — huỷ khi khách bỏ về
+    CANCEL_GUEST_LEFT: (bookingId: number | string) =>
+      `/api/queue/${bookingId}/cancel-guest-left`,
+    // PATCH — bật/gỡ bảo trì 1 làn; maintenance qua ?params
+    LANE_MAINTENANCE: (laneId: number | string) =>
+      `/api/queue/lanes/${laneId}/maintenance`,
+  },
+  STAFF_CHECKIN: {
+    // POST — quét biển số xe tại quầy
+    SCAN: "/api/v1/staff/checkin/scan",
+    // POST — xác nhận check-in
+    CONFIRM: (bookingId: number | string) =>
+      `/api/v1/staff/checkin/confirm/${bookingId}`,
+    // POST — thu cọc phạt (LƯU Ý: BE hiện chưa có endpoint này, path giữ nguyên như code cũ)
+    COLLECT_PENALTY_DEPOSIT: (bookingId: number | string) =>
+      `/api/v1/staff/checkin/collect-penalty-deposit/${bookingId}`,
+  },
+  WALK_IN: {
+    // GET — master data gói dịch vụ + addon
+    FORM_DATA: "/api/v1/staff/create-walkin/form-data",
+    // GET ?phone= — tra cứu khách theo SĐT
+    CHECK_PHONE: "/api/v1/staff/create-walkin/check-phone",
+    // POST — xem hoá đơn tạm tính + slot trống real-time
+    CALCULATE_INVOICE: "/api/v1/staff/create-walkin/calculate-invoice",
+    // POST ?licensePlate= — thu cọc phạt cho xe walk-in bị phạt
+    COLLECT_PENALTY_DEPOSIT: "/api/v1/staff/create-walkin/collect-penalty-deposit",
+    // POST — tạo đơn walk-in thật
+    CREATE: "/api/v1/staff/create-walkin/create",
+  },
 };

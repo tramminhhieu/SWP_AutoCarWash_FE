@@ -40,11 +40,16 @@ export default axiosClient;
 // (dùng khi test với mock data, xem src/mocks/authMockData.ts).
 export const getApiErrorInfo = (
   error: unknown,
-): { errorCode: string | null; message: string | null } => {
+): {
+  errorCode: string | null;
+  message: string | null;
+  remainingDays: number | null;
+} => {
   if (axios.isAxiosError<ApiErrorResponse>(error)) {
     return {
       errorCode: error.response?.data?.errorCode ?? null,
       message: error.response?.data?.message ?? null,
+      remainingDays: error.response?.data?.remainingDays ?? null,
     };
   }
 
@@ -60,8 +65,9 @@ export const getApiErrorInfo = (
     return {
       errorCode: data?.errorCode ?? null,
       message: data?.message ?? null,
+      remainingDays: data?.remainingDays ?? null,
     };
   }
 
-  return { errorCode: null, message: null };
+  return { errorCode: null, message: null, remainingDays: null };
 };

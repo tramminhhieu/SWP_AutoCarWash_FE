@@ -12,6 +12,9 @@ const API_ERROR_MAP: Record<string, string> = {
   STATION_NOT_AVAILABLE: "Station does not exist or is no longer operating.",
 };
 
+const DEFAULT_RATIO = 3;
+const LANE_NAME_REGEX = /^Lane (?!00$)\d{2}$/;
+
 interface CreateLaneModalProps {
   stationId: number;
   stationName: string;
@@ -28,7 +31,6 @@ const CreateLaneModal = ({
 }: CreateLaneModalProps) => {
   const [laneName, setLaneName] = useState("");
   const STATUS_ON_CREATE = "AVAILABLE" as const;
-  const [ratio, setRatio] = useState("");
 
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -43,14 +45,10 @@ const CreateLaneModal = ({
 
     if (!laneName.trim()) {
       errors.laneName = "Lane name must not be blank.";
+    } else if (!LANE_NAME_REGEX.test(laneName.trim())) {
+      errors.laneName =
+        "Lane name must follow the format 'Lane XX' (e.g. Lane 01).";
     }
-
-    const ratioNum = Number(ratio);
-    if (!ratio || !Number.isInteger(ratioNum) || ratioNum <= 0) {
-      errors.ratio =
-        "Booking priority ratio must be a positive integer greater than 0 (minimum 1).";
-    }
-
     setFieldErrors(errors);
     return Object.keys(errors).length === 0;
   };
@@ -65,16 +63,14 @@ const CreateLaneModal = ({
         stationId,
         laneName: laneName.trim(),
         status: STATUS_ON_CREATE,
-        bookingWalkinRatio: Number(ratio),
+        bookingWalkinRatio: DEFAULT_RATIO,
       });
 
-      setSuccessMessage(
-        `Wash lane created and ratio configured successfully at ${stationName}!`,
-      );
+      setSuccessMessage(`Wash lane created successfully at ${stationName}!`);
       setTimeout(() => {
         onSuccess();
         onClose();
-      }, 1200);
+      }, 1000);
     } catch (err) {
       const { errorCode, message } = getApiErrorInfo(err);
       setApiError(
@@ -134,7 +130,8 @@ const CreateLaneModal = ({
             </label>
             <input
               type="text"
-              placeholder="Lane 1"
+              placeholder="Lane 01"
+              maxLength={7}
               value={laneName}
               onChange={(e) => {
                 setLaneName(e.target.value);
@@ -145,29 +142,6 @@ const CreateLaneModal = ({
             {fieldErrors.laneName && (
               <p className="mt-1 text-label-sm text-error">
                 {fieldErrors.laneName}
-              </p>
-            )}
-          </div>
-
-          {/* Booking / Walk-in Ratio */}
-          <div>
-            <label className="mb-1.5 block text-label-md font-semibold text-on-surface-variant">
-              Booking / Walk-in Ratio
-            </label>
-            <input
-              type="number"
-              min={1}
-              placeholder="3"
-              value={ratio}
-              onChange={(e) => {
-                setRatio(e.target.value);
-                setFieldErrors((prev) => ({ ...prev, ratio: "" }));
-              }}
-              className={`${inputClass} ${fieldErrors.ratio ? "border-error" : "border-outline-variant"}`}
-            />
-            {fieldErrors.ratio && (
-              <p className="mt-1 text-label-sm text-error">
-                {fieldErrors.ratio}
               </p>
             )}
           </div>

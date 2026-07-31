@@ -29,7 +29,7 @@ import type {
   BookingAddonService,
   BookingVoucher,
 } from "../types/booking";
-import { NO_VEHICLE_REGISTERED } from "../types/booking";
+import { NO_VEHICLE_REGISTERED, CUSTOMER_RESTRICTED } from "../types/booking";
 import type { BookingSlot } from "../types/bookingSlot";
 import { getSubscriptionStyle } from "../../../constants/subscriptionStyles";
 import { saveBookingDraft, loadBookingDraft } from "../utils/bookingDraft";
@@ -497,11 +497,20 @@ const BookingCreate = () => {
           depositAmount: result.depositAmount,
           transferContent: result.transferContent,
           qrImageUrl: result.qrImageUrl,
+          expiresAt: result.expiresAt,
         },
       });
     } catch (error) {
-      const { message } = getApiErrorInfo(error);
-      setBookingError(message ?? "Failed to create booking. Please try again.");
+      const { errorCode, message, remainingDays } = getApiErrorInfo(error);
+      if (errorCode === CUSTOMER_RESTRICTED && remainingDays != null) {
+        setBookingError(
+          `Your account is temporarily restricted from booking due to exceeding ` +
+            `the violation limit. Please come back after ${remainingDays} ` +
+            `day${remainingDays === 1 ? "" : "s"}, or check in directly at the store.`,
+        );
+      } else {
+        setBookingError(message ?? "Failed to create booking. Please try again.");
+      }
     } finally {
       setIsBookingSubmitting(false);
     }
